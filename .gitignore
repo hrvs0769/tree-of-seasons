@@ -1,0 +1,13 @@
+# 系统垃圾
+.DS_Store
+
+# 依赖
+node_modules/
+
+# 视觉迭代产物：每轮 7 张 PNG，一圈下来 100MB+，不进仓库。
+# 需要时重新跑 ./tools/shoot.sh rN 即可复现（定帧截图，结果一致）。
+shots/
+
+# 打包中间产物
+*.map
+/tmp/
