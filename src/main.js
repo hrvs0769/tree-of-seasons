@@ -585,12 +585,12 @@ function grassTuftTexture() {
   c.width = c.height = s;
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, s, s);
-  const blades = 14;
+  const blades = 22;
   for (let i = 0; i < blades; i++) {
     const baseX = s * 0.5 + (Math.random() - 0.5) * s * 0.62;
     const h = s * (0.22 + Math.random() * 0.34);
     const lean = (Math.random() - 0.5) * s * 0.62;
-    const w = 2.6 + Math.random() * 3.4;
+    const w = 1.6 + Math.random() * 2.2;
     const g = ctx.createLinearGradient(0, s, 0, s - h);
     const tone = 0.7 + Math.random() * 0.3;
     g.addColorStop(0, `rgba(${52 * tone | 0},${86 * tone | 0},${38 * tone | 0},1)`);
@@ -632,7 +632,7 @@ const GRASS_TEX = grassTuftTexture();
 
 function buildGrass(seed) {
   const rand = mulberry32(seed);
-  const COUNT = 5200;
+  const COUNT = 6400;
   const mat = new THREE.MeshStandardMaterial({
     map: GRASS_TEX, alphaTest: 0.22, side: THREE.DoubleSide, roughness: 1, metalness: 0,
   });
@@ -643,13 +643,13 @@ function buildGrass(seed) {
   const col = new THREE.Color();
   for (let i = 0; i < COUNT; i++) {
     const ang = rand() * Math.PI;             // 0..π → 只铺 z<=0 的半圆
-    const r = 1.05 + Math.pow(rand(), 1.0) * 17;
+    const r = 1.0 + Math.pow(rand(), 0.9) * 24;
     // 越远越稀：用拒绝采样做出长距离渐隐，避免出现一圈"草皮圆边"
-    if (rand() < smoothstep(5, 17, r) * 0.9) { i--; continue; }
+    if (rand() < smoothstep(3.5, 24, r) * 0.94) { i--; continue; }
     p.set(Math.cos(ang) * r, 0, -Math.sin(ang) * r);
     q.setFromAxisAngle(UP, rand() * Math.PI * 2);
-    const far = Math.min(1, Math.max(0, (r - 2) / 14));
-    const shrink = 1 - 0.3 * far;
+    const far = Math.min(1, Math.max(0, (r - 2) / 20));
+    const shrink = 1 - 0.45 * far;
     const k = (0.13 + rand() * 0.13) * shrink;   // 高度 13–26cm
     const w = (0.2 + rand() * 0.17) * shrink;    // 宽度 20–37cm
     s.set(w, k, w);
@@ -837,7 +837,7 @@ function buildTree(seed) {
 
   function makeBranch(start, dir, len, r0, depth, g0, g1) {
     const rings = depth === 0 ? 13 : depth === 1 ? 10 : 6;
-    const radial = depth === 0 ? 12 : depth === 1 ? 9 : 6;
+    const radial = depth === 0 ? 16 : depth === 1 ? 10 : 7;
     const pts = [start.clone()];
     const radii = [r0];
     const d = dir.clone();
@@ -852,19 +852,21 @@ function buildTree(seed) {
     for (let i = 1; i < rings; i++) {
       d.applyAxisAngle(bendAxis, bend / (rings - 1) + randRange(rand, -0.025, 0.025)).normalize();
       pts.push(pts[i - 1].clone().addScaledVector(d, step));
-      // 锥度：一路缓慢变细，最后两环再猛烈收尖，避免枝梢像被切断的棍子
+      // 锥度：缓慢变细，末梢微收；真正的收尖交给末端针尖环
       const k = i / (rings - 1);
-      radii.push(r0 * (1 - 0.46 * k) * (1 - 0.74 * Math.pow(k, 5)));
+      radii.push(r0 * (1 - 0.30 * k) * (1 - 0.30 * Math.pow(k, 4)));
     }
 
-    // 末端再补一个收成针尖的环：即便长到头，枝梢也是个尖，而不是敞口的管口
-    pts.push(pts[rings - 1].clone().addScaledVector(d, step * 0.8));
-    radii.push(Math.max(0.0016, r0 * 0.02));
+    // 末端再补一个收成针尖的环：即便长到头，枝梢也是个尖，而不是敞口的管口。
+    // 半径只收到 85%，好让「顶芽」（下一段同轴的延伸枝）能用这个半径接上，不留台阶
+    pts.push(pts[rings - 1].clone().addScaledVector(d, step * 0.35));
+    radii.push(radii[rings - 1] * 0.85);
     const ringCount = pts.length;
 
     const geo = sweepGeometry(pts, radii, radial);
     geos.push(geo);
     const mesh = new THREE.Mesh(geo, barkMat);
+    mesh.name = 'branch-d' + depth + '#' + branches.length;
     mesh.castShadow = true;
     mesh.receiveShadow = false;   // 细长管子接收阴影容易出现自阴影噪点，只投不接
     mesh.frustumCulled = false;
@@ -876,7 +878,7 @@ function buildTree(seed) {
       basePos: Float32Array.from(geo.attributes.position.array),
       lastK: -1,
     });
-    return { end: pts[ringCount - 1].clone(), endDir: d.clone(), pts, radii };
+    return { end: pts[ringCount - 1].clone(), endDir: d.clone(), pts, radii, endR: radii[ringCount - 1] };
   }
 
   function childDir(baseDir, tilt, azim) {
@@ -902,7 +904,22 @@ function buildTree(seed) {
 
   function spawn(start, dir, len, radius, depth, gStart) {
     const g1 = Math.min(1, gStart + DUR[depth]);
-    const { end, endDir, pts, radii } = makeBranch(start, dir, len, radius, depth, gStart, g1);
+    const { end, endDir, pts, radii, endR } = makeBranch(start, dir, len, radius, depth, gStart, g1);
+
+    // 主干的梢也带几片叶子：幼苗期是"一株小苗"，不是一根削尖的木桩
+    if (depth === 0 && gStart < 0.12) {
+      for (let i = 0; i < 9; i++) {
+        const { p, tangent } = pointAt(pts, randRange(rand, 0.62, 1));
+        const perp = new THREE.Vector3().crossVectors(tangent, UP);
+        if (perp.lengthSq() < 0.02) perp.set(1, 0, 0);
+        perp.normalize().applyAxisAngle(tangent, rand() * Math.PI * 2);
+        p.addScaledVector(perp, 0.02 + rand() * 0.07);
+        leafSites.push({
+          pos: p, dir: perp.clone().addScaledVector(tangent, randRange(rand, 0.1, 0.7)).normalize(),
+          g: 0.16 + i * 0.02, stag: rand(),
+        });
+      }
+    }
 
     // 叶子：沿枝条一圈圈长，朝向大致朝外
     if (depth >= 1) {
@@ -942,11 +959,11 @@ function buildTree(seed) {
     const nextLen = len * randRange(rand, 0.58, 0.7);
     const nextR = radius * randRange(rand, 0.58, 0.7);
 
-    // 主枝：比侧枝短、且略微偏斜，让树冠张开而不是一根杆顶个球
+    // 主枝：顶芽是「同一根轴的延续」，半径必须接上父枝的枝梢，否则顶端会顶着一块脱开的木头
     if (depth <= 1) {
       const leadDir = childDir(endDir, randRange(rand, 0.14, 0.32), rand() * Math.PI * 2);
       leadDir.y -= 0.04 + 0.05 * depth;
-      spawn(end, leadDir.normalize(), nextLen * 0.82, nextR * 1.0, depth + 1, g1);
+      spawn(end, leadDir.normalize(), nextLen * 0.82, Math.max(0.009, endR * randRange(rand, 0.96, 1.04)), depth + 1, g1);
     }
 
     // 侧枝：方位完全打乱（对生/轮生一眼就假），越往末梢越外张并轻微下垂
@@ -964,7 +981,7 @@ function buildTree(seed) {
         p.clone().addScaledVector(tangent, -0.07),
         d2.normalize(),
         nextLen * randRange(rand, 0.92, 1.18),
-        Math.max(0.024, localR * randRange(rand, 0.68, 0.86)),
+        Math.max(0.010, localR * randRange(rand, 0.68, 0.86)),
         depth + 1, g1
       );
     }
@@ -979,10 +996,10 @@ function buildTree(seed) {
   const roots = [];
   // 老根颜色深、新根浅，和真实根系一样有深浅差
   const rootMatA = new THREE.MeshStandardMaterial({
-    color: 0x8d6844, roughness: 0.95, metalness: 0, flatShading: true,
+    color: 0x7b5a3e, roughness: 0.95, metalness: 0, flatShading: true,
   });
   const rootMatB = new THREE.MeshStandardMaterial({
-    color: 0xc0a279, roughness: 0.9, metalness: 0, flatShading: true,
+    color: 0x9c7d59, roughness: 0.9, metalness: 0, flatShading: true,
   });
 
   // 一条根的骨架：从 start 出发，越走越细、越走越向下垂，并被夹在剖面里
@@ -1060,7 +1077,7 @@ function buildTree(seed) {
   rootChain(
     new THREE.Vector3(0, -0.05, 0.06),
     new THREE.Vector3(randRange(rand, -0.12, 0.12), -1, randRange(rand, -0.06, 0.14)),
-    randRange(rand, 2.0, 2.4), 0.058, 0, 0.012
+    randRange(rand, 2.0, 2.4), 0.075, 0, 0.012
   );
   // 根颈四周的板根：贴着地面向外铺，让树"抓"住土
   for (let i = 0; i < 4; i++) {
@@ -1068,13 +1085,17 @@ function buildTree(seed) {
     rootChain(
       new THREE.Vector3(Math.cos(a) * 0.07, -0.06, 0.02 + Math.sin(a) * 0.05),
       new THREE.Vector3(Math.cos(a) * 1.1, -0.55, Math.sin(a) * 0.5).normalize(),
-      randRange(rand, 0.7, 1.15), 0.041, 1, 0.13
+      randRange(rand, 0.7, 1.15), 0.055, 1, 0.13
     );
   }
 
-  // 树干入土处的“根盘”，随树干一起变粗，把树干和细根接起来
-  const flareGeo = new THREE.CylinderGeometry(0.36, 0.16, 0.62, 10, 1, false);
-  flareGeo.translate(0, -0.31, 0);
+  // 树干入土处的“根盘”：用一条凹曲线旋成，比直筒更像个活物
+  const flareProfile = [];
+  for (let i = 0; i <= 7; i++) {
+    const t = i / 7;                                  // 0 = 土面，1 = 更深处
+    flareProfile.push(new THREE.Vector2(0.135 + 0.235 * Math.pow(1 - t, 1.55), -0.6 * t + 0.02));
+  }
+  const flareGeo = new THREE.LatheGeometry(flareProfile, 14);
   geos.push(flareGeo);
   const flare = new THREE.Mesh(flareGeo, barkMat);
   flare.position.set(0, 0.02, 0);
@@ -1351,6 +1372,13 @@ let startTime = performance.now();
 const T0 = (() => { const v = parseFloat(new URLSearchParams(location.search).get('t0')); return isNaN(v) ? 0 : v; })();
 // 截图用：带 &freeze 时时间钉死在 t0，画面不再随时间漂移
 const FREEZE_T = /(^|[?&])freeze(=|&|$)/.test(location.search) ? T0 : null;
+// 视频模式：时间由外部一帧一帧喂进来（window.__setVideoT），便于离线逐帧录制
+const VIDEO = /(^|[?&])video(=|&|$)/.test(location.search);
+let videoT = 0;
+if (VIDEO) {
+  window.__setVideoT = (v) => { videoT = v; };
+  window.__videoReady = true;
+}
 let prevT = 0;
 const clock = { t: 0 };
 
@@ -1405,8 +1433,8 @@ function animate() {
   requestAnimationFrame(animate);
   const now = performance.now();
   // 定帧模式（?t0=N&freeze）：时间钉死在 N 秒，每帧完全一致 —— 截图才是可复现的
-  const t = FREEZE_T !== null ? FREEZE_T : (now - startTime) / 1000 + T0;
-  const dt = Math.min(0.05, Math.max(0.0001, t - prevT));
+  const t = VIDEO ? videoT : (FREEZE_T !== null ? FREEZE_T : (now - startTime) / 1000 + T0);
+  const dt = VIDEO ? 1 / 60 : Math.min(0.05, Math.max(0.0001, t - prevT));
   prevT = t;
 
   /* —— 时间推进 —— */
@@ -1605,7 +1633,9 @@ function animate() {
 
   /* —— 镜头 —— */
   // 剖面视角：镜头只在切面前方弧形范围内移动
-  if (now - lastInteract > 6000) {
+  if (VIDEO) {
+    cam.theta = 1.43 + Math.sin(t * 0.05) * 0.085;
+  } else if (now - lastInteract > 6000) {
     cam.theta += cam.dir * 0.035 * dt;
     if (cam.theta > THETA_MAX) { cam.theta = THETA_MAX; cam.dir = -1; }
     if (cam.theta < THETA_MIN) { cam.theta = THETA_MIN; cam.dir = 1; }
@@ -1618,7 +1648,7 @@ function animate() {
   const BOTTOM_Y = -0.62 - 1.95 * smoothstep(0, 0.34, g);
   cam.target.y = (topY + BOTTOM_Y) / 2;
   const fitR = ((topY - BOTTOM_Y) * 1.0) / (2 * Math.tan((camera.fov * Math.PI) / 360));
-  const effR = Math.max(2.6, fitR) * (cam.radius / 12.5) * aspectFix;
+  const effR = Math.max(3.1, fitR) * (cam.radius / 12.5) * aspectFix;
   const sp = Math.sin(cam.phi), cp = Math.cos(cam.phi);
   camera.position.set(
     cam.target.x + effR * sp * Math.cos(cam.theta),
@@ -1665,7 +1695,26 @@ window.addEventListener('keydown', (e) => {
 });
 
 document.getElementById('loading').style.display = 'none';
+if (VIDEO) {
+  document.getElementById('replant').style.display = 'none';
+  document.getElementById('tips').style.display = 'none';
+}
 if (window.matchMedia('(pointer: coarse)').matches) {
   document.getElementById('tips').textContent = '单指拖动可以环顾四周 · 双指可以靠近';
+}
+
+// 调试探针：?dbg 打开后可用 window.__probe(nx, ny) 射线拾取，定位画面上某个怪东西到底是谁
+if (/(^|[?&])dbg(=|&|$)/.test(location.search)) {
+  window.__probe = (nx, ny) => {
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(new THREE.Vector2(nx, ny), camera);
+    return rc.intersectObjects(scene.children, true).slice(0, 5).map((h) => ({
+      name: h.object.name || h.object.type,
+      geo: h.object.geometry && h.object.geometry.type,
+      verts: h.object.geometry && h.object.geometry.attributes.position ? h.object.geometry.attributes.position.count : 0,
+      dist: +h.distance.toFixed(2),
+      pt: [+h.point.x.toFixed(2), +h.point.y.toFixed(2), +h.point.z.toFixed(2)],
+    }));
+  };
 }
 animate();
