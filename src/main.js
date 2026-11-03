@@ -309,20 +309,20 @@ function soilTexture() {
   }
 
   // ---- 土块结构：不规则的团粒，靠明暗两层叠加做出体积 ----
-  for (let i = 0; i < 4200; i++) {
+  for (let i = 0; i < 9600; i++) {
     const x = rnd() * w, y = rnd() * h;
-    const rr = 1.5 + rnd() * 7;
+    const rr = 1.1 + rnd() * 3.9;
     const light = rnd() > 0.5;
     ctx.fillStyle = light
-      ? `rgba(168,142,104,${0.05 + rnd() * 0.13})`
-      : `rgba(28,18,10,${0.05 + rnd() * 0.16})`;
+      ? `rgba(150,124,90,${0.03 + rnd() * 0.075})`
+      : `rgba(26,16,9,${0.04 + rnd() * 0.10})`;
     ctx.beginPath();
     ctx.ellipse(x, y, rr, rr * (0.55 + rnd() * 0.7), rnd() * 3.14, 0, 6.283);
     ctx.fill();
     // 每颗团粒的下缘压一道暗边，读起来才有厚度
-    ctx.fillStyle = 'rgba(18,11,6,0.10)';
+    ctx.fillStyle = 'rgba(18,11,6,0.07)';
     ctx.beginPath();
-    ctx.ellipse(x + rr * 0.15, y + rr * 0.45, rr * 0.75, rr * 0.3, 0, 0, 6.283);
+    ctx.ellipse(x + rr * 0.15, y + rr * 0.45, rr * 0.72, rr * 0.28, 0, 0, 6.283);
     ctx.fill();
   }
 
@@ -352,9 +352,9 @@ function soilTexture() {
   }
 
   // ---- 石子：本体 + 受光面 + 落影 ----
-  for (let i = 0; i < 380; i++) {
+  for (let i = 0; i < 620; i++) {
     const x = rnd() * w, y = h * 0.1 + rnd() * h * 0.9;
-    const rr = 1.4 + Math.pow(rnd(), 2.4) * 3.6;
+    const rr = 1.0 + Math.pow(rnd(), 2.6) * 2.3;
     const tone = 0.55 + rnd() * 0.4;
     ctx.fillStyle = `rgba(${(128 * tone) | 0},${(116 * tone) | 0},${(98 * tone) | 0},0.72)`;
     ctx.beginPath();
@@ -371,11 +371,11 @@ function soilTexture() {
   }
 
   // ---- 细砂颗粒 ----
-  for (let i = 0; i < 14000; i++) {
+  for (let i = 0; i < 26000; i++) {
     const x = rnd() * w, y = rnd() * h;
     ctx.fillStyle = rnd() > 0.5
-      ? `rgba(22,14,8,${0.05 + rnd() * 0.12})`
-      : `rgba(196,168,126,${0.04 + rnd() * 0.1})`;
+      ? `rgba(20,13,7,${0.06 + rnd() * 0.12})`
+      : `rgba(178,150,110,${0.03 + rnd() * 0.07})`;
     ctx.fillRect(x, y, 1 + rnd() * 2, 1 + rnd() * 2);
   }
 
@@ -391,7 +391,7 @@ function soilTexture() {
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
   tex.flipY = false;      // 让画布的第一行对应断面的最上面（表土）
-  tex.repeat.set(3.0, 1);
+  tex.repeat.set(4.0, 1);
   tex.anisotropy = 8;
   return tex;
 }
@@ -581,24 +581,37 @@ const hills = new THREE.Group();
 
 /* 草丛：一张画好的草叶贴图 + 交叉面片，比三角片自然得多 */
 function grassTuftTexture() {
-  const s = 128, c = document.createElement('canvas');
+  const s = 192, c = document.createElement('canvas');
   c.width = c.height = s;
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, s, s);
-  const blades = 22;
-  for (let i = 0; i < blades; i++) {
-    const baseX = s * 0.5 + (Math.random() - 0.5) * s * 0.62;
-    const h = s * (0.22 + Math.random() * 0.34);
-    const lean = (Math.random() - 0.5) * s * 0.62;
-    const w = 1.6 + Math.random() * 2.2;
+  ctx.lineCap = 'round';
+  // 先铺一层贴地的矮草：把轮廓从"圆球"压成"一片"，远看不再是重复的绒球
+  for (let i = 0; i < 26; i++) {
+    const baseX = s * (0.04 + Math.random() * 0.92);
+    const h = s * (0.09 + Math.random() * 0.13);
+    const lean = (Math.random() - 0.5) * s * 0.3;
+    const tone = 0.55 + Math.random() * 0.22;
+    ctx.strokeStyle = `rgba(${44 * tone | 0},${74 * tone | 0},${34 * tone | 0},1)`;
+    ctx.lineWidth = 1.6 + Math.random() * 1.8;
+    ctx.beginPath();
+    ctx.moveTo(baseX, s);
+    ctx.quadraticCurveTo(baseX + lean * 0.4, s - h * 0.6, baseX + lean, s - h);
+    ctx.stroke();
+  }
+  // 再抽 26 根高低错落的长叶，横向铺满整张画布
+  for (let i = 0; i < 26; i++) {
+    const baseX = s * (0.05 + Math.random() * 0.9);
+    const h = s * (0.20 + Math.random() * 0.42);
+    const lean = (Math.random() - 0.5) * s * 0.5;
+    const w = 1.4 + Math.random() * 1.9;
     const g = ctx.createLinearGradient(0, s, 0, s - h);
     const tone = 0.7 + Math.random() * 0.3;
     g.addColorStop(0, `rgba(${52 * tone | 0},${86 * tone | 0},${38 * tone | 0},1)`);
     g.addColorStop(0.55, `rgba(${86 * tone | 0},${132 * tone | 0},${60 * tone | 0},1)`);
-    g.addColorStop(1, `rgba(${128 * tone | 0},${172 * tone | 0},${92 * tone | 0},1)`);
+    g.addColorStop(1, `rgba(${138 * tone | 0},${184 * tone | 0},${98 * tone | 0},1)`);
     ctx.strokeStyle = g;
     ctx.lineWidth = w;
-    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(baseX, s);
     ctx.quadraticCurveTo(baseX + lean * 0.35, s - h * 0.6, baseX + lean, s - h);
@@ -632,7 +645,7 @@ const GRASS_TEX = grassTuftTexture();
 
 function buildGrass(seed) {
   const rand = mulberry32(seed);
-  const COUNT = 6400;
+  const COUNT = 19000;
   const mat = new THREE.MeshStandardMaterial({
     map: GRASS_TEX, alphaTest: 0.22, side: THREE.DoubleSide, roughness: 1, metalness: 0,
   });
@@ -643,20 +656,21 @@ function buildGrass(seed) {
   const col = new THREE.Color();
   for (let i = 0; i < COUNT; i++) {
     const ang = rand() * Math.PI;             // 0..π → 只铺 z<=0 的半圆
-    const r = 1.0 + Math.pow(rand(), 0.9) * 24;
+    const r = 0.3 + Math.pow(rand(), 0.95) * 26;
     // 越远越稀：用拒绝采样做出长距离渐隐，避免出现一圈"草皮圆边"
-    if (rand() < smoothstep(3.5, 24, r) * 0.94) { i--; continue; }
+    if (rand() < smoothstep(6.0, 26, r) * 0.82) { i--; continue; }
     p.set(Math.cos(ang) * r, 0, -Math.sin(ang) * r);
     q.setFromAxisAngle(UP, rand() * Math.PI * 2);
-    const far = Math.min(1, Math.max(0, (r - 2) / 20));
-    const shrink = 1 - 0.45 * far;
-    const k = (0.13 + rand() * 0.13) * shrink;   // 高度 13–26cm
-    const w = (0.2 + rand() * 0.17) * shrink;    // 宽度 20–37cm
-    s.set(w, k, w);
+    const far = Math.min(1, Math.max(0, (r - 2) / 26));
+    const shrink = 1 - 0.22 * far;
+    // 单丛压矮压窄、x/z 不成比例：同样的贴图不再拼出整齐的"点阵"
+    const k = (0.12 + rand() * 0.14) * shrink;   // 高度 12–26cm
+    const w = (0.17 + rand() * 0.16) * shrink;    // 宽度 17–33cm
+    s.set(w * (0.72 + rand() * 0.6), k, w * (0.72 + rand() * 0.6));
     m.compose(p, q, s);
     mesh.setMatrixAt(i, m);
-    const tint = 0.74 + rand() * 0.28;
-    col.setRGB(tint * 0.92, tint, tint * 0.8);
+    const tint = (0.72 + rand() * 0.34) * (1 - 0.06 * far);
+    col.setRGB(tint * (0.94 + rand() * 0.08), tint, tint * (0.80 + rand() * 0.12));
     mesh.setColorAt(i, col);
   }
   mesh.instanceMatrix.needsUpdate = true;
@@ -908,15 +922,15 @@ function buildTree(seed) {
 
     // 主干的梢也带几片叶子：幼苗期是"一株小苗"，不是一根削尖的木桩
     if (depth === 0 && gStart < 0.12) {
-      for (let i = 0; i < 9; i++) {
-        const { p, tangent } = pointAt(pts, randRange(rand, 0.62, 1));
+      for (let i = 0; i < 15; i++) {
+        const { p, tangent } = pointAt(pts, randRange(rand, 0.5, 1));
         const perp = new THREE.Vector3().crossVectors(tangent, UP);
         if (perp.lengthSq() < 0.02) perp.set(1, 0, 0);
         perp.normalize().applyAxisAngle(tangent, rand() * Math.PI * 2);
         p.addScaledVector(perp, 0.02 + rand() * 0.07);
         leafSites.push({
           pos: p, dir: perp.clone().addScaledVector(tangent, randRange(rand, 0.1, 0.7)).normalize(),
-          g: 0.16 + i * 0.02, stag: rand(),
+          g: 0.15 + i * 0.012, stag: rand(), sizeScale: 1.35,
         });
       }
     }
@@ -1091,14 +1105,18 @@ function buildTree(seed) {
 
   // 树干入土处的“根盘”：用一条凹曲线旋成，比直筒更像个活物
   const flareProfile = [];
-  for (let i = 0; i <= 7; i++) {
-    const t = i / 7;                                  // 0 = 土面，1 = 更深处
-    flareProfile.push(new THREE.Vector2(0.135 + 0.235 * Math.pow(1 - t, 1.55), -0.6 * t + 0.02));
+  for (let i = 0; i <= 8; i++) {
+    const t = i / 8;                                  // 0 = 土面，1 = 更深处
+    flareProfile.push(new THREE.Vector2(0.10 + 0.125 * Math.pow(1 - t, 1.15), -0.75 * t));
   }
-  const flareGeo = new THREE.LatheGeometry(flareProfile, 14);
+  const flareGeo = new THREE.LatheGeometry(flareProfile, 16);
   geos.push(flareGeo);
-  const flare = new THREE.Mesh(flareGeo, barkMat);
-  flare.position.set(0, 0.02, 0);
+  // 根颈比露出地面的树皮更暗（常年被土和湿气染），不然会在幼苗期变成一个白亮的蘑菇头
+  const flareMat = new THREE.MeshStandardMaterial({
+    color: 0x6a4a30, map: BARK_TEX, roughness: 0.98, metalness: 0,
+  });
+  const flare = new THREE.Mesh(flareGeo, flareMat);
+  flare.position.set(0, -0.015, 0);
   flare.scale.setScalar(0.001);
   flare.castShadow = true;
   flare.receiveShadow = true;
@@ -1126,7 +1144,7 @@ function buildTree(seed) {
     else if (pick < 0.92) autumn.setHex(0xc9302c);
     else autumn.setHex(0x9d7b2a);
     leafData.push({
-      pos: site.pos, quat, size: randRange(rand, 0.14, 0.24),
+      pos: site.pos, quat, size: randRange(rand, 0.14, 0.24) * (site.sizeScale || 1),
       grow: site.g, stag: site.stag, autumn, tone: randRange(rand, 0.82, 1.14),
       phase: rand() * Math.PI * 2, spin: randRange(rand, 0.4, 1.2),
     });
@@ -1201,7 +1219,7 @@ function buildTree(seed) {
   }
 
   const result = {
-    group, branches, leaves, leafData, roots, flare, rootMats: [rootMatA, rootMatB], seedMesh, cotyledons, cotyledonMat, geos,
+    group, branches, leaves, leafData, roots, flare, flareMat, rootMats: [rootMatA, rootMatB], seedMesh, cotyledons, cotyledonMat, geos,
     fruits, stems, fruitData, fruitGeo, fruitMat, stemGeo, stemMat,
     radius: 0,
   };
@@ -1223,6 +1241,7 @@ function disposeTree(t) {
   t.seedMesh.material.dispose();
   t.cotyledonMat.dispose();
   for (const m of t.rootMats) m.dispose();
+  if (t.flareMat) t.flareMat.dispose();
   t.fruitGeo.dispose(); t.fruitMat.dispose();
   t.stemGeo.dispose(); t.stemMat.dispose();
 }
@@ -1393,9 +1412,10 @@ const _green = new THREE.Color();
 const _tip = new THREE.Vector3();
 
 // 枝条的生长：前 i0 环照常显示，i0 之后的环全部塌到「前端点」，形成一根越伸越长的锥尖
-function growBranch(b, k) {
-  if (Math.abs(k - b.lastK) < 0.003) return;
+function growBranch(b, k, fat = 1) {
+  if (Math.abs(k - b.lastK) < 0.003 && Math.abs(fat - (b.lastFat === undefined ? -1 : b.lastFat)) < 0.004) return;
   b.lastK = k;
+  b.lastFat = fat;
   const attr = b.mesh.geometry.attributes.position;
   const arr = attr.array;
   const base = b.basePos;
@@ -1408,7 +1428,7 @@ function growBranch(b, k) {
     const tipLen = Math.min(0.16, (b.radii ? b.radii[i0] : 0.05) * 2.2);
     _tip.addScaledVector(b.pts[i0 + 1].clone().sub(b.pts[i0]).normalize(), tipLen);
   }
-  const rs = 0.45 + 0.55 * Math.min(1, k * 1.7);   // 幼枝细、老枝粗
+  const rs = (0.45 + 0.55 * Math.min(1, k * 1.7)) * fat;   // 幼枝细、老枝粗
   for (let i = 0; i < n; i++) {
     const c = b.pts[i];
     const o = i * rad * 3;
@@ -1470,12 +1490,15 @@ function animate() {
   scene.__grass.material.color.setRGB(1 + 0.9 * grassAutumn, 1 + 0.12 * grassAutumn, 1 - 0.7 * grassAutumn);
 
   /* —— 树的生长（管状枝条按长度逐段显现） —— */
+  // 树干/枝条的粗细不只跟"自己长到哪"有关，还跟整棵树的年龄有关：
+  // 否则小苗一冒头就是一根成年粗腿，像根胡萝卜。树长成（g→1）时才到最终粗细。
+  const fat = 0.40 + 0.60 * smoothstep(0.20, 0.92, g);
   let crownTop = 0;
   for (const b of tree.branches) {
     const k = smoothstep(b.g0, b.g1, g);
     b.mesh.visible = k > 0.001;
     if (!b.mesh.visible) continue;
-    growBranch(b, k);
+    growBranch(b, k, fat);
     const top = b.start.y + b.len * k;
     if (top > crownTop) crownTop = top;
   }
@@ -1489,13 +1512,13 @@ function animate() {
   // 根盘跟着树干一起长粗
   {
     const fk = smoothstep(0.04, 0.34, g);
-    const rk = 0.22 + 0.62 * fk;
+    const rk = Math.max(0.03, fat * 1.06);   // 横向跟着树干粗细，永不带出"洋葱头"
     tree.flare.scale.set(rk, Math.max(0.0005, fk), rk);
     tree.flare.visible = fk > 0.02;
   }
 
   // 种子与子叶
-  const seedFade = 1 - smoothstep(0.30, 0.58, g);   // 根和芽长出来后才慢慢蜷缩
+  const seedFade = 1 - smoothstep(0.10, 0.21, g);   // 芽一出土，种皮就脱掉（否则长成大树了还挂着一颗大种子）
   tree.seedMesh.scale.set(1.15 * seedFade, 0.8 * seedFade, 1.5 * seedFade);
   tree.seedMesh.visible = seedFade > 0.01;
   const coty = smoothstep(0.12, 0.2, g) * (1 - smoothstep(0.38, 0.55, g));
