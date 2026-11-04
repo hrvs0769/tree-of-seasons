@@ -15,44 +15,46 @@
     -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
   }
   #app { position: fixed; inset: 0; }
-  #app canvas { display: block; }
+  #app canvas { display: block; filter: saturate(1.06) contrast(1.035); }
 
-  /* 顶部极淡的压暗，让白色文字在浅色天空上也看得清 */
+  /* 顶部极淡的压暗 + 底部字幕 scrim：让文字像字幕而不是展板 */
   body::before {
-    content: ""; position: fixed; left: 0; right: 0; top: 0; height: 230px;
-    background: linear-gradient(rgba(20, 48, 66, .26), rgba(20, 48, 66, 0));
+    content: ""; position: fixed; left: 0; right: 0; inset: 0;
+    background:
+      linear-gradient(rgba(16, 40, 58, .18), rgba(16, 40, 58, 0) 18%),
+      linear-gradient(to top, rgba(12, 22, 14, .46), rgba(12, 22, 14, 0) 30%);
     pointer-events: none; z-index: 1;
   }
   #hud, #tips, #replant { z-index: 2; }
 
   #hud {
-    position: fixed; left: max(4.5vw, 24px); top: max(4vh, 22px);
-    pointer-events: none; color: #fff;
-    text-shadow: 0 2px 22px rgba(18, 46, 66, .55), 0 1px 3px rgba(18, 46, 66, .5);
+    position: fixed; left: max(4.2vw, 22px); bottom: max(8.5vh, 44px);
+    pointer-events: none; color: #f5ecdc;
+    text-shadow: 0 2px 26px rgba(10, 28, 20, .65), 0 1px 3px rgba(10, 28, 20, .55);
   }
   #season {
-    font-size: clamp(56px, 11vmin, 132px);
+    font-size: clamp(38px, 6.6vmin, 72px);
     font-weight: 300;
-    letter-spacing: .06em;
+    letter-spacing: .14em;
     line-height: 1;
     font-family: "Songti SC", "STSong", "SimSun", serif;
   }
   @keyframes seasonIn {
-    from { opacity: 0; transform: translateY(14px) scale(.96); }
+    from { opacity: 0; transform: translateY(10px) scale(.97); }
     to { opacity: 1; transform: none; }
   }
   #sub {
-    margin-top: .5em;
-    font-size: clamp(13px, 2.1vmin, 20px);
-    letter-spacing: .32em;
-    opacity: .92;
+    margin-top: .55em;
+    font-size: clamp(11px, 1.55vmin, 15px);
+    letter-spacing: .38em;
+    opacity: .78;
     font-weight: 300;
   }
   #year {
-    margin-top: .9em;
-    font-size: clamp(11px, 1.7vmin, 15px);
-    letter-spacing: .2em;
-    opacity: .72;
+    margin-top: .8em;
+    font-size: clamp(10px, 1.25vmin, 12px);
+    letter-spacing: .28em;
+    opacity: .52;
     font-weight: 300;
   }
 
@@ -89,7 +91,8 @@
 
   /* 手机竖屏：文字缩小、按钮挪到底部居中，避免被挤出屏幕 */
   @media (max-width: 560px) {
-    #hud { left: 22px; top: 26px; }
+    #hud { left: 20px; top: auto; bottom: 118px; }
+    #season { font-size: 40px; }
     #sub { letter-spacing: .26em; }
     #tips {
       left: 0; right: 0; bottom: 84px; transform: none; text-align: center;
