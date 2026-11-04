@@ -2357,10 +2357,12 @@ function animate() {
 
   // 种子与子叶：种子按“吸水膨胀 → 裂壳 → 种皮脱落”的真实过程单独控制，
   // 不再只跟着 g 缩小，这样 0–56 秒能完整看到种子变化。
+  const seedPlant = smoothstep(0.0, 2.5, t);      // 种子从上方落下、落进土里
   const seedSwell = 1 + 0.14 * smoothstep(12, 26, t);
   const seedSplit = smoothstep(26, 38, t);
   const seedFade = 1 - smoothstep(46, 56, t);
   tree.seedMesh.visible = t < 56 && seedFade > 0.01;
+  tree.seedMesh.position.y = 0.055 + 0.32 * (1 - seedPlant);
   tree.seedMesh.scale.set(1.15 * seedSwell * seedFade, 0.8 * seedSwell * seedFade, 1.5 * seedSwell * seedFade);
   tree.seedTop.position.set(0.018 * seedSplit, 0.055 * seedSplit, 0.006 * seedSplit);
   tree.seedTop.rotation.z = -0.62 * seedSplit;
