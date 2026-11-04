@@ -1600,7 +1600,7 @@ function buildTree(seed) {
   if (stems.instanceColor) stems.instanceColor.needsUpdate = true;
 
   /* ---------------- 春花 ---------------- */
-  const BLOSSOM_COUNT = Math.min(3200, Math.floor(leafData.length * 0.14));
+  const BLOSSOM_COUNT = Math.min(2400, Math.floor(leafData.length * 0.11));
   const blossomGeo = new THREE.PlaneGeometry(1, 1);
   const blossomMat = new THREE.MeshStandardMaterial({
     map: FLOWER_TEX, alphaTest: 0.30, side: THREE.DoubleSide, roughness: 0.9, metalness: 0,
@@ -1616,7 +1616,7 @@ function buildTree(seed) {
     const src = leafData[Math.floor(rand() * leafData.length)];
     const pos = src.pos.clone();
     const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3));
-    const size = randRange(rand, 0.06, 0.11);
+    const size = randRange(rand, 0.045, 0.09);
     blossomData.push({ pos, quat, size });
     if (rand() < 0.7) blossomCol.setHex(0xfff6f8); else blossomCol.setHex(0xffd9e6);
     blossoms.setColorAt(i, blossomCol);
@@ -1778,7 +1778,7 @@ function spawnFallingLeaf(color) {
 
 /* ---------------- 镜头控制 ---------------- */
 const cam = { theta: 1.46, phi: 1.46, radius: 12.5, dir: 1, target: new THREE.Vector3(0, 3.3, 0) };
-const THETA_MIN = Math.PI / 2 - 0.95, THETA_MAX = Math.PI / 2 + 0.95;
+const THETA_MIN = Math.PI / 2 - 0.62, THETA_MAX = Math.PI / 2 + 0.62;
 let autoRotate = 1, lastInteract = -999;
 const pointers = new Map();
 let pinchStart = 0, pinchRadius = 0;
