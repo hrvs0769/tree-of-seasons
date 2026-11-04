@@ -1377,7 +1377,7 @@ function buildTree(seed) {
         p.addScaledVector(perp, 0.02 + rand() * 0.07);
         leafSites.push({
           pos: p, dir: perp.clone().addScaledVector(tangent, randRange(rand, 0.1, 0.7)).normalize(),
-          g: 0.15 + i * 0.012, stag: rand(), sizeScale: 1.35,
+          g: 0.15 + i * 0.012, stag: rand(), sizeScale: 0.45,
           branch: owner, siteT,
         });
       }
@@ -1764,7 +1764,7 @@ function buildTree(seed) {
   for (let i = 0; i < 2; i++) {
     const m = new THREE.Mesh(LEAF_GEO, cotyledonMat);
     m.scale.setScalar(0.001);
-    m.position.set(i === 0 ? -0.085 : 0.085, 0.12, 0.04);
+    m.position.set(i === 0 ? -0.035 : 0.035, 0.10, 0.03);
     m.rotation.set(i === 0 ? 0.35 : -0.35, i === 0 ? -1.15 : 1.15, i === 0 ? 0.85 : -0.85);
     group.add(m);
     cotyledons.push(m);
@@ -2363,7 +2363,7 @@ function animate() {
   const seedFade = 1 - smoothstep(46, 56, t);
   tree.seedMesh.visible = t < 56 && seedFade > 0.01;
   tree.seedMesh.position.y = 0.055 + 0.32 * (1 - seedPlant);
-  tree.seedMesh.scale.set(1.15 * seedSwell * seedFade, 0.8 * seedSwell * seedFade, 1.5 * seedSwell * seedFade);
+  tree.seedMesh.scale.set(0.52 * seedSwell * seedFade, 0.42 * seedSwell * seedFade, 0.68 * seedSwell * seedFade);
   tree.seedTop.position.set(0.018 * seedSplit, 0.055 * seedSplit, 0.006 * seedSplit);
   tree.seedTop.rotation.z = -0.62 * seedSplit;
   tree.seedTop.rotation.x = 0.22 * seedSplit;
@@ -2379,7 +2379,7 @@ function animate() {
   const trunkTop = trunkB ? trunkB.start.y + trunkB.len * trunkK : 0.2;
   const coty = smoothstep(0.09, 0.145, g) * (1 - smoothstep(0.34, 0.50, g));
   for (const m of tree.cotyledons) {
-    m.scale.setScalar(Math.max(0.001, 0.3 * coty));
+    m.scale.setScalar(Math.max(0.001, 0.12 * coty));
     m.position.y = Math.max(0.08, trunkTop * 0.94);
     m.visible = coty > 0.01;
   }
@@ -2389,7 +2389,7 @@ function animate() {
   // 春天发芽 → 夏天满树 → 秋天飘落 → 冬天光秃
   const leafAmount = p < 0.05 ? smoothstep(0.0, 0.05, p) : 1;
   const greenToDeep = smoothstep(0.10, 0.34, p);
-  const blossomF = 1 - smoothstep(0.03, 0.10, p);
+  const blossomF = 0;   // 春天用独立的小花实例，不再给整树叶子染白
 
   const leaves = tree.leaves;
   for (let i = 0; i < tree.leafData.length; i++) {
