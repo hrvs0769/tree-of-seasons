@@ -232,6 +232,10 @@ scene.add(sunRays);
 const hemi = new THREE.HemisphereLight(0xbfe7f8, 0x4a7a3a, 0.7);
 scene.add(hemi);
 
+// 极轻的环境光：把树冠暗部从死黑里提起来，保留逆光的层次
+const ambient = new THREE.AmbientLight(0xbcd8e8, 0.24);
+scene.add(ambient);
+
 const sun = new THREE.DirectionalLight(0xffffff, 2.4);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -1311,7 +1315,7 @@ function buildTree(seed) {
 
     // 叶子：沿枝条一圈圈长，朝向大致朝外
     if (depth >= 1) {
-      const n = depth === 1 ? 24 : depth === 2 ? 36 : depth === 3 ? 70 : 120;
+      const n = depth === 1 ? 28 : depth === 2 ? 42 : depth === 3 ? 80 : 140;
       for (let i = 0; i < n; i++) {
         const t = randRange(rand, depth === MAX_DEPTH ? 0.08 : 0.24, 1);
         const { p, tangent } = pointAt(pts, t);
@@ -1523,7 +1527,7 @@ function buildTree(seed) {
   group.add(flare);
 
   /* 叶子实例化网格 */
-  const count = Math.min(leafSites.length, 30000);
+  const count = Math.min(leafSites.length, 40000);
   const leaves = new THREE.InstancedMesh(LEAF_GEO, leafMat, count);
   leaves.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   leaves.castShadow = true;
