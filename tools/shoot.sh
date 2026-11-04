@@ -15,7 +15,7 @@ mkdir -p "$OUT"
   --alias:three="$ROOT/lib/three.module.min.js" --outfile="$ROOT/app.js" --log-level=warning
 
 # 2. 截图：时间点 = 种子 / 发芽 / 小树 / 夏 / 秋 / 冬
-TIMES=(4 12 26 34 52 74 140)
+TIMES=(4 16 30 50 70 92 120)
 for t in $TIMES; do
   "$CHROME" --headless=new --no-sandbox --use-gl=angle --use-angle=swiftshader \
     --enable-unsafe-swiftshader --hide-scrollbars --window-size=1280,800 \
@@ -28,8 +28,8 @@ done
 "$CHROME" --headless=new --no-sandbox --use-gl=angle --use-angle=swiftshader \
   --enable-unsafe-swiftshader --hide-scrollbars --window-size=390,844 \
   --virtual-time-budget=350 --user-data-dir="/tmp/sh_${ROUND}_m" \
-  --screenshot="$OUT/phone_52.png" \
-  "file://$ROOT/index.html?t0=52&freeze" >/dev/null 2>&1
+  --screenshot="$OUT/phone_145.png" \
+  "file://$ROOT/index.html?t0=145&freeze" >/dev/null 2>&1
 
 # 4. 拼图：把 6 张桌面图 + 1 张手机图排成一张
 SHEET="$OUT/sheet.html"
@@ -42,10 +42,10 @@ SHEET="$OUT/sheet.html"
   echo 'figcaption{position:absolute;left:8px;bottom:6px;background:#000a;padding:2px 8px;border-radius:4px}'
   echo '</style><div class=grid>'
   for t in $TIMES; do
-    if [ "$t" = "140" ]; then cap="第 2 年秋 · 结果"; else cap="t=${t}s"; fi
+    if [ "$t" = "120" ]; then cap="秋 · 落叶"; else cap="t=${t}s"; fi
     echo "<figure><img src=\"desktop_$t.png\"><figcaption>${cap}</figcaption></figure>"
   done
-  echo "<figure><img src=\"phone_52.png\" style=\"max-height:520px;width:auto;margin:0 auto\"><figcaption>手机 390×844</figcaption></figure>"
+  echo "<figure><img src=\"phone_145.png\" style=\"max-height:520px;width:auto;margin:0 auto\"><figcaption>手机 390×844</figcaption></figure>"
 } > "$SHEET"
 
 "$CHROME" --headless=new --no-sandbox --hide-scrollbars --window-size=1500,900 \

@@ -9,6 +9,15 @@ const smoothstep = (e0, e1, x) => {
 };
 const randRange = (r, a, b) => a + (b - a) * r();
 
+// 在折线骨架 pts 上按 0..1 取点（生长动画和叶片挂点共用）
+function pointOnPolyline(pts, t, out) {
+  const seg = Math.min(pts.length - 1, Math.max(0, t * (pts.length - 1)));
+  const i0 = Math.min(pts.length - 2, Math.max(0, Math.floor(seg)));
+  const f = seg - i0;
+  const v = out || new THREE.Vector3();
+  return v.copy(pts[i0]).lerp(pts[i0 + 1], f);
+}
+
 function mulberry32(a) {
   return function () {
     a |= 0; a = (a + 0x6D2B79F5) | 0;
@@ -20,8 +29,49 @@ function mulberry32(a) {
 
 /* ---------------- 时间参数 ---------------- */
 const DEBUG = /debug/.test(location.search);
-const SEASON_SECONDS = 22;        // 每个季节多少秒
-const GROW_SECONDS = 30;          // 从种子长成大树需要多少秒（要在一季半内长成，别等长完已经入秋）
+const SEASON_SECONDS = 16;        // 每个季节多少秒（一年 = 64 秒）
+const GROW_END = 92;              // 从种子到长成大树的故事时长（秒）
+const GROW_END_P = 0.25;          // 长成时刚好是初夏（p=0.25）
+const STORY_END = GROW_END + (1 - GROW_END_P) * SEASON_SECONDS * 4 + SEASON_SECONDS * 4 - 0.1; // ≈ 203.9 秒（停在第 2 年冬末）
+
+// 生长曲线：不是匀速。种子/发芽/扎根/幼苗占大部分时间，后面抽枝成树越来越快，
+// 这样小朋友能看清“种子怎么变成小苗”，而不是几秒钟就过去了。
+const GROW_KEYS = [
+  [0, 0.000],
+  [12, 0.004],   // 种子吸水
+  [24, 0.020],   // 破壳
+  [40, 0.060],   // 主根向下、主干开始
+  [55, 0.140],   // 破土、子叶
+  [68, 0.280],   // 幼苗
+  [78, 0.500],   // 小树
+  [86, 0.750],   // 树冠展开
+  [92, 1.000],   // 大树
+];
+function growthAt(t) {
+  if (t <= 0) return 0;
+  if (t >= GROW_END) return 1;
+  for (let i = 1; i < GROW_KEYS.length; i++) {
+    const [t1, g1] = GROW_KEYS[i];
+    if (t <= t1) {
+      const [t0, g0] = GROW_KEYS[i - 1];
+      const u = smoothstep(0, 1, (t - t0) / Math.max(0.001, t1 - t0));
+      return g0 + (g1 - g0) * u;
+    }
+  }
+  return 1;
+}
+
+// 故事季节：生长阶段停在“春末”，长成后从夏初开始正常四季循环
+function storySeason(t) {
+  if (t < GROW_END) {
+    return 0.02 + (GROW_END_P - 0.02) * (t / GROW_END); // 春 0.02 → 夏初 0.25
+  }
+  return GROW_END_P + (t - GROW_END) / (SEASON_SECONDS * 4);
+}
+function storyYear(t) {
+  if (t < GROW_END) return 1;
+  return 1 + Math.floor((t - GROW_END) / (SEASON_SECONDS * 4) + GROW_END_P);
+}
 
 /* ---------------- 四季配色（春 / 夏 / 秋 / 冬） ---------------- */
 const SEASONS = [
@@ -68,7 +118,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.06;
+renderer.toneMappingExposure = 1.12;
 canvasHost.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -233,7 +283,7 @@ const hemi = new THREE.HemisphereLight(0xbfe7f8, 0x4a7a3a, 0.7);
 scene.add(hemi);
 
 // 极轻的环境光：把树冠暗部从死黑里提起来，保留逆光的层次
-const ambient = new THREE.AmbientLight(0xbcd8e8, 0.24);
+const ambient = new THREE.AmbientLight(0xbcd8e8, 0.38);
 scene.add(ambient);
 
 const sun = new THREE.DirectionalLight(0xffffff, 2.4);
@@ -252,7 +302,7 @@ rim.position.set(-14, 9, -16);
 scene.add(rim);
 
 // 正面补光：逆光时把树从剪影里拉回来，保留暗部层次
-const frontFill = new THREE.DirectionalLight(0xfff1dc, 1.15);
+const frontFill = new THREE.DirectionalLight(0xfff1dc, 2.35);
 frontFill.position.set(8, 12, 20);
 frontFill.target.position.set(0, 4, 0);
 scene.add(frontFill);
@@ -342,14 +392,25 @@ function seedTexture() {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, s, s);
 
-  // 纵向的木质感纹理
-  for (let i = 0; i < 90; i++) {
-    ctx.strokeStyle = `rgba(${Math.random() > 0.5 ? '48,30,14' : '176,140,98'},${0.05 + Math.random() * 0.12})`;
-    ctx.lineWidth = 0.7 + Math.random() * 2.4;
-    const x = Math.random() * s;
+  // 种皮：斑驳的深浅色块 + 几条细裂纹，避免球体 UV 拉出放射状木纹
+  for (let i = 0; i < 180; i++) {
+    const x = Math.random() * s, y = Math.random() * s;
+    const rx = 2 + Math.random() * 13, ry = 1.5 + Math.random() * 8;
+    const light = Math.random() > 0.55;
+    ctx.fillStyle = light
+      ? `rgba(190,150,104,${0.03 + Math.random() * 0.07})`
+      : `rgba(52,32,16,${0.03 + Math.random() * 0.08})`;
     ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.bezierCurveTo(x + 6, s * 0.33, x - 6, s * 0.66, x + 2, s);
+    ctx.ellipse(x, y, rx, ry, Math.random() * 3.14, 0, 6.283);
+    ctx.fill();
+  }
+  for (let i = 0; i < 9; i++) {
+    const x = Math.random() * s, y = Math.random() * s;
+    ctx.strokeStyle = `rgba(40,24,12,${0.12 + Math.random() * 0.12})`;
+    ctx.lineWidth = 0.8 + Math.random() * 1.1;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.bezierCurveTo(x + 8, y + 6, x + 3, y + 22, x + 10, y + 34);
     ctx.stroke();
   }
 
@@ -511,8 +572,9 @@ function soilTexture() {
   return tex;
 }
 
+const SOIL_TEX = soilTexture();
 const soilFaceMat = new THREE.MeshStandardMaterial({
-  map: soilTexture(), roughness: 1, metalness: 0,
+  map: SOIL_TEX, bumpMap: SOIL_TEX, bumpScale: 0.12, roughness: 1, metalness: 0,
   color: 0xffffff, emissive: 0x2a1a0e, emissiveIntensity: 0.25,
 });
 const soilWallMat = new THREE.MeshStandardMaterial({ color: 0x3d2a1c, roughness: 1, metalness: 0, flatShading: true });
@@ -931,6 +993,7 @@ function buildGrass(seed) {
   const COUNT = 16000;
   const mat = windMaterial(new THREE.MeshStandardMaterial({
     map: GRASS_TEX, alphaTest: 0.28, side: THREE.DoubleSide, roughness: 1, metalness: 0,
+    transparent: true, opacity: 1,
   }), 0.085);
   const mesh = new THREE.InstancedMesh(CROSS_GEO, mat, COUNT);
   mesh.receiveShadow = true;
@@ -1041,18 +1104,21 @@ function buildGroundLeaves(seed) {
   const e = new THREE.Euler();
   const col = new THREE.Color();
   const palette = [0xd9542c, 0xe89a2a, 0xc9302c, 0xb47a24, 0x9e6b2c];
+  const info = [];
   for (let i = 0; i < COUNT; i++) {
     const ang = rand() * Math.PI;
     const r = 0.4 + Math.pow(rand(), 0.75) * 10.5;
-    p.set(Math.cos(ang) * r, 0.012 + rand() * 0.015, -Math.sin(ang) * r);
+    p.set(Math.cos(ang) * r, 0.025 + rand() * 0.025, -Math.sin(ang) * r);
     q.setFromEuler(e.set(-Math.PI / 2 + (rand() - 0.5) * 0.35, rand() * Math.PI * 2, (rand() - 0.5) * 0.25));
-    const k = 0.10 + rand() * 0.11;
+    const k = 0.16 + rand() * 0.16;
     s.set(k, k, k);
     m.compose(p, q, s);
     mesh.setMatrixAt(i, m);
     col.setHex(palette[Math.floor(rand() * palette.length)]);
     mesh.setColorAt(i, col);
+    info.push({ pos: p.clone(), quat: q.clone(), size: k, color: col.clone() });
   }
+  mesh.userData.leafInfo = info;
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   return mesh;
@@ -1165,7 +1231,8 @@ function barkTexture() {
 const BARK_TEX = barkTexture();
 
 const barkMat = new THREE.MeshStandardMaterial({
-  color: 0x5a4632, map: BARK_TEX, roughness: 0.95, metalness: 0,
+  color: 0x5a4632, map: BARK_TEX, bumpMap: BARK_TEX, bumpScale: 0.09,
+  roughness: 0.93, metalness: 0,
 });
 
 let tree = null;   // 当前这棵树的所有数据
@@ -1178,7 +1245,7 @@ function buildTree(seed) {
   const geos = [];
 
   const MAX_DEPTH = 4;
-  const DUR = [0.22, 0.22, 0.20, 0.18, 0.14];
+  const DUR = [0.40, 0.18, 0.14, 0.10, 0.06];
 
   // 沿折线扫出一个带锥度的圆管（可弯曲），索引按长度顺序排列，方便做生长动画
   function sweepGeometry(points, radii, radial) {
@@ -1297,11 +1364,13 @@ function buildTree(seed) {
   function spawn(start, dir, len, radius, depth, gStart) {
     const g1 = Math.min(1, gStart + DUR[depth]);
     const { end, endDir, pts, radii, endR } = makeBranch(start, dir, len, radius, depth, gStart, g1);
+    const owner = branches[branches.length - 1];
 
     // 主干的梢也带几片叶子：幼苗期是"一株小苗"，不是一根削尖的木桩
     if (depth === 0 && gStart < 0.12) {
       for (let i = 0; i < 15; i++) {
-        const { p, tangent } = pointAt(pts, randRange(rand, 0.5, 1));
+        const siteT = randRange(rand, 0.5, 1);
+        const { p, tangent } = pointAt(pts, siteT);
         const perp = new THREE.Vector3().crossVectors(tangent, UP);
         if (perp.lengthSq() < 0.02) perp.set(1, 0, 0);
         perp.normalize().applyAxisAngle(tangent, rand() * Math.PI * 2);
@@ -1309,16 +1378,17 @@ function buildTree(seed) {
         leafSites.push({
           pos: p, dir: perp.clone().addScaledVector(tangent, randRange(rand, 0.1, 0.7)).normalize(),
           g: 0.15 + i * 0.012, stag: rand(), sizeScale: 1.35,
+          branch: owner, siteT,
         });
       }
     }
 
     // 叶子：沿枝条一圈圈长，朝向大致朝外
     if (depth >= 1) {
-      const n = depth === 1 ? 28 : depth === 2 ? 42 : depth === 3 ? 80 : 140;
+      const n = depth === 1 ? 34 : depth === 2 ? 48 : depth === 3 ? 84 : 140;
       for (let i = 0; i < n; i++) {
-        const t = randRange(rand, depth === MAX_DEPTH ? 0.08 : 0.24, 1);
-        const { p, tangent } = pointAt(pts, t);
+        const siteT = randRange(rand, depth === MAX_DEPTH ? 0.08 : 0.24, 1);
+        const { p, tangent } = pointAt(pts, siteT);
         const perp = new THREE.Vector3().crossVectors(tangent, UP);
         if (perp.lengthSq() < 0.02) perp.set(1, 0, 0);
         perp.normalize().applyAxisAngle(tangent, rand() * Math.PI * 2);
@@ -1327,21 +1397,22 @@ function buildTree(seed) {
           .multiplyScalar(randRange(rand, 0.65, 1.0))
           .addScaledVector(tangent, randRange(rand, -0.4, 0.6))
           .normalize();
-        leafSites.push({ pos: p, dir: bladeDir, g: Math.min(0.82, gStart + 0.06), stag: rand() });
+        leafSites.push({ pos: p, dir: bladeDir, g: Math.min(0.82, gStart + 0.02), stag: rand(), branch: owner, siteT });
       }
     }
 
     // 枝梢的一小簇叶子：每根枝的顶端都不秃
     if (depth >= 1) {
       for (let i = 0; i < 8; i++) {
-        const { p, tangent } = pointAt(pts, randRange(rand, 0.86, 1));
+        const siteT = randRange(rand, 0.86, 1);
+        const { p, tangent } = pointAt(pts, siteT);
         const perp = new THREE.Vector3().crossVectors(tangent, UP);
         if (perp.lengthSq() < 0.02) perp.set(1, 0, 0);
         perp.normalize().applyAxisAngle(tangent, rand() * Math.PI * 2);
         p.addScaledVector(perp, 0.02 + rand() * 0.1);
         leafSites.push({
           pos: p, dir: perp.clone().addScaledVector(tangent, randRange(rand, -0.3, 0.5)).normalize(),
-          g: Math.min(0.9, gStart + 0.08), stag: rand(),
+          g: Math.min(0.9, gStart + 0.03), stag: rand(), branch: owner, siteT,
         });
       }
     }
@@ -1360,7 +1431,7 @@ function buildTree(seed) {
     }
 
     // 侧枝：方位完全打乱（对生/轮生一眼就假），越往末梢越外张并轻微下垂
-    const sides = depth === 0 ? 5 : depth === 1 ? 3 : depth === 2 ? 2 : 1;
+    const sides = depth === 0 ? 5 : depth === 1 ? 4 : depth === 2 ? 2 : 1;
     for (let i = 0; i < sides; i++) {
       const azim = depth <= 1
         ? (i / sides) * Math.PI * 2 + randRange(rand, -0.42, 0.42)
@@ -1436,7 +1507,7 @@ function buildTree(seed) {
       // 夹在土壤剖面可见的薄层里
       p.y = Math.max(-2.9, p.y);
       if (p.x > 5.1) p.x = 5.1; else if (p.x < -5.1) p.x = -5.1;
-      p.z = Math.min(0.3, Math.max(-0.02, p.z));
+      p.z = Math.min(0.24, Math.max(0.035, p.z));   // 根系保持在切面前薄层里，始终可见
       pts.push(p);
       radii.push(Math.max(0.0035, r0 * (1 - 0.88 * Math.pow(t, 0.8))));
     }
@@ -1463,7 +1534,7 @@ function buildTree(seed) {
     const segs = depth === 0 ? 12 : depth === 1 ? 7 : depth === 2 ? 5 : 4;
     const radial = depth === 0 ? 9 : depth === 1 ? 6 : 4;
     const { pts, radii } = rootPath(start, dir, len, r0, segs, depth === 0 ? 0.13 : 0.24);
-    const dur = [0.17, 0.10, 0.075, 0.05][Math.min(3, depth)];
+    const dur = [0.080, 0.055, 0.040, 0.030][Math.min(3, depth)];
     const g1 = Math.min(0.86, gStart + dur);
     addRoot(pts, radii, radial, gStart, g1, depth);
 
@@ -1517,7 +1588,8 @@ function buildTree(seed) {
   geos.push(flareGeo);
   // 根颈比露出地面的树皮更暗（常年被土和湿气染），不然会在幼苗期变成一个白亮的蘑菇头
   const flareMat = new THREE.MeshStandardMaterial({
-    color: 0x6a4a30, map: BARK_TEX, roughness: 0.98, metalness: 0,
+    color: 0x6a4a30, map: BARK_TEX, bumpMap: BARK_TEX, bumpScale: 0.07,
+    roughness: 0.98, metalness: 0,
   });
   const flare = new THREE.Mesh(flareGeo, flareMat);
   flare.position.set(0, -0.015, 0);
@@ -1550,17 +1622,20 @@ function buildTree(seed) {
     const leafPos = site.pos.clone();
     leafPos.z = Math.min(leafPos.z, -0.03 - rand() * 0.12);   // 树冠也限制在切面后方
     leafPos.y = Math.max(0.18, leafPos.y);
+    const branchPoint = site.branch ? pointOnPolyline(site.branch.pts, site.siteT) : leafPos.clone();
+    const offset = leafPos.clone().sub(branchPoint);
     leafData.push({
       pos: leafPos, quat, size: randRange(rand, 0.20, 0.34) * (site.sizeScale || 1),
       grow: site.g, stag: site.stag, autumn, tone: randRange(rand, 0.82, 1.14),
       phase: rand() * Math.PI * 2, spin: randRange(rand, 0.4, 1.2),
+      branch: site.branch, siteT: site.siteT, offset,
     });
     leaves.setColorAt(i, c.setHex(0xffffff));
   }
   if (leaves.instanceColor) leaves.instanceColor.needsUpdate = true;
 
   /* ---------------- 果实（第二年秋天） ---------------- */
-  const FRUIT_COUNT = 64;
+  const FRUIT_COUNT = 56;
   const fruitGeo = new THREE.SphereGeometry(1, 14, 11);
   const fruitMat = new THREE.MeshStandardMaterial({ roughness: 0.38, metalness: 0.0 });
   const fruits = new THREE.InstancedMesh(fruitGeo, fruitMat, FRUIT_COUNT);
@@ -1579,7 +1654,7 @@ function buildTree(seed) {
 
   // 挑挂果的位置：树冠外缘、靠上的枝梢
   const fruitData = [];
-  const outer = leafData.filter((d) => d.pos.y > 0.9 && Math.hypot(d.pos.x, d.pos.z) > 0.4);
+  const outer = leafData.filter((d) => d.pos.y > 1.2 && Math.hypot(d.pos.x, d.pos.z) > 1.6);
   const pool = outer.length > 20 ? outer : leafData;
   for (let i = 0; i < FRUIT_COUNT; i++) {
     const src = pool[Math.floor(rand() * pool.length)];
@@ -1593,9 +1668,9 @@ function buildTree(seed) {
     else if (pick < 0.86) cc.setHex(0xd8552c);     // 偏橙
     else cc.setHex(0xe0b23a);                      // 黄果
     fruitData.push({
-      pos, size: randRange(rand, 0.058, 0.09),
+      pos, size: randRange(rand, 0.085, 0.135),
       quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3)),
-      phase: rand() * Math.PI * 2,
+      phase: rand() * Math.PI * 2, stag: rand(),
     });
     fruits.setColorAt(i, cc);
     stems.setColorAt(i, c.setHex(0xffffff));
@@ -1639,7 +1714,7 @@ function buildTree(seed) {
       const p = b.pts[idx].clone();
       const r = b.radii ? b.radii[idx] : 0.02;
       p.y += r * 1.05 + 0.008;
-      snowPts.push({ pos: p, s: 0.028 + r * 1.9 });
+      snowPts.push({ pos: p, s: 0.024 + r * 1.2 });
     }
   }
   const snowCapGeo = new THREE.SphereGeometry(1, 6, 4);
@@ -1650,7 +1725,7 @@ function buildTree(seed) {
   group.add(snowCaps);
   const snowCapData = snowPts.map((d) => ({
     pos: d.pos, quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 0.4, rand() * 3, rand() * 0.4)),
-    sx: d.s * randRange(rand, 0.9, 1.5), sy: d.s * 0.22, sz: d.s * randRange(rand, 0.8, 1.3),
+    sx: d.s * randRange(rand, 0.55, 0.85), sy: d.s * 0.42, sz: d.s * randRange(rand, 0.55, 0.85),
   }));
   for (let i = 0; i < snowCapData.length; i++) {
     const d = snowCapData[i];
@@ -1658,15 +1733,30 @@ function buildTree(seed) {
   }
   snowCaps.instanceMatrix.needsUpdate = true;
 
-  /* 种子 & 子叶 */
-  const seedMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.145, 20, 16),
-    new THREE.MeshStandardMaterial({ map: seedTexture(), roughness: 0.45, metalness: 0.06 })
-  );
-  seedMesh.scale.set(1.0, 0.78, 1.3);
+  /* 种子 & 子叶：种皮做成上下两半，吸水后从中间裂开，比一颗实心球真实 */
+  const seedMat = new THREE.MeshStandardMaterial({ map: seedTexture(), roughness: 0.52, metalness: 0.02 });
+  const seedMesh = new THREE.Group();
   seedMesh.position.set(0, 0.055, 0.07);
   seedMesh.rotation.set(0.42, 0.6, 0.15);
-  seedMesh.castShadow = true;
+  const seedTop = new THREE.Mesh(
+    new THREE.SphereGeometry(0.145, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.5),
+    seedMat
+  );
+  const seedBottom = new THREE.Mesh(
+    new THREE.SphereGeometry(0.145, 24, 16, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5),
+    seedMat
+  );
+  seedTop.scale.set(1.0, 0.78, 1.3);
+  seedBottom.scale.set(1.0, 0.78, 1.3);
+  seedTop.castShadow = true;
+  seedBottom.castShadow = true;
+  seedMesh.add(seedTop, seedBottom);
+  const seedCrack = new THREE.Mesh(
+    new THREE.TorusGeometry(0.128, 0.006, 6, 32),
+    new THREE.MeshStandardMaterial({ color: 0x2a190c, roughness: 1, metalness: 0 })
+  );
+  seedCrack.rotation.x = Math.PI / 2;
+  seedMesh.add(seedCrack);
   group.add(seedMesh);
 
   const cotyledonMat = leafMat.clone();
@@ -1674,14 +1764,14 @@ function buildTree(seed) {
   for (let i = 0; i < 2; i++) {
     const m = new THREE.Mesh(LEAF_GEO, cotyledonMat);
     m.scale.setScalar(0.001);
-    m.position.set(i === 0 ? -0.26 : 0.26, 0.12, 0.04);
+    m.position.set(i === 0 ? -0.085 : 0.085, 0.12, 0.04);
     m.rotation.set(i === 0 ? 0.35 : -0.35, i === 0 ? -1.15 : 1.15, i === 0 ? 0.85 : -0.85);
     group.add(m);
     cotyledons.push(m);
   }
 
   const result = {
-    group, branches, leaves, leafData, roots, flare, flareMat, rootMats: [rootMatA, rootMatB], seedMesh, cotyledons, cotyledonMat, geos,
+    group, branches, leaves, leafData, roots, flare, flareMat, rootMats: [rootMatA, rootMatB], seedMesh, seedTop, seedBottom, seedCrack, seedMat, cotyledons, cotyledonMat, geos,
     fruits, stems, fruitData, fruitGeo, fruitMat, stemGeo, stemMat,
     blossoms, blossomMat, blossomGeo, snowCaps, snowCapGeo, snowCapMat,
     radius: 0,
@@ -1700,8 +1790,10 @@ function disposeTree(t) {
   treeRoot.remove(t.group);
   for (const g of t.geos) g.dispose();
   t.leaves.dispose();
-  t.seedMesh.geometry.dispose();
-  t.seedMesh.material.dispose();
+  t.seedMesh.traverse((o) => {
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) o.material.dispose();
+  });
   t.cotyledonMat.dispose();
   for (const m of t.rootMats) m.dispose();
   if (t.flareMat) t.flareMat.dispose();
@@ -1747,6 +1839,53 @@ const snow = new THREE.Points(snowGeo, snowMat);
 snow.frustumCulled = false;
 scene.add(snow);
 
+/* 雨：生长阶段的“风吹雨露”。用竖直雨丝贴图 + Points，照顾性能 */
+function rainTexture() {
+  const w = 32, h = 128, c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, 'rgba(210,230,245,0)');
+  g.addColorStop(0.25, 'rgba(220,238,250,0.55)');
+  g.addColorStop(0.75, 'rgba(235,246,255,0.75)');
+  g.addColorStop(1, 'rgba(235,246,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(w * 0.4, 0, w * 0.2, h);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const RAIN_COUNT = 900;
+const rainGeo = new THREE.BufferGeometry();
+const rainPos = new Float32Array(RAIN_COUNT * 3);
+const rainVel = new Float32Array(RAIN_COUNT);
+for (let i = 0; i < RAIN_COUNT; i++) {
+  rainPos[i * 3] = (Math.random() - 0.5) * 30;
+  rainPos[i * 3 + 1] = Math.random() * 18;
+  rainPos[i * 3 + 2] = -14 + Math.random() * 24;
+  rainVel[i] = 10 + Math.random() * 8;
+}
+rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+const rainMat = new THREE.PointsMaterial({
+  size: 0.22, map: rainTexture(), transparent: true, opacity: 0,
+  depthWrite: false, sizeAttenuation: true, color: 0xd6e8f6, fog: false,
+});
+const rain = new THREE.Points(rainGeo, rainMat);
+rain.frustumCulled = false;
+scene.add(rain);
+// 雨的时间窗：扎根、破土、幼苗、夏天各来一阵
+const RAIN_WINDOWS = [[27, 37, 0.7], [49, 57, 0.5], [70, 76, 0.45], [96, 103, 0.55], [154, 161, 0.4]];
+function weatherAt(t) {
+  let a = 0;
+  for (const [s, e, amt] of RAIN_WINDOWS) {
+    if (t > s && t < e) {
+      const u = (t - s) / (e - s);
+      a = Math.max(a, amt * smoothstep(0, 0.18, u) * (1 - smoothstep(0.82, 1, u)));
+    }
+  }
+  return a;
+}
+
 /* 飘落的花瓣 / 落叶 */
 const FALL_COUNT = 220;
 const fallMat = new THREE.MeshStandardMaterial({
@@ -1783,6 +1922,32 @@ function spawnFallingLeaf(color) {
 /* ---------------- 镜头控制 ---------------- */
 const cam = { theta: 1.46, phi: 1.46, radius: 12.5, dir: 1, target: new THREE.Vector3(0, 3.3, 0) };
 const THETA_MIN = Math.PI / 2 - 0.62, THETA_MAX = Math.PI / 2 + 0.62;
+
+// 生长阶段的镜头脚本：种子微距 → 根系剖面 → 破土 → 幼苗 → 后拉看全树
+const CAM_KEYS = [
+  [0, 0.10, 0.9],
+  [10, 0.08, 1.1],
+  [20, 0.00, 1.3],
+  [28, -0.55, 2.6],
+  [40, -0.65, 2.9],
+  [48, 0.00, 1.7],
+  [55, 0.25, 2.0],
+  [68, 0.90, 3.4],
+  [78, 1.80, 4.8],
+  [92, 3.00, 10.8],
+];
+function cameraFrameAt(t) {
+  if (t >= CAM_KEYS[CAM_KEYS.length - 1][0]) return null;
+  for (let i = 1; i < CAM_KEYS.length; i++) {
+    const [t1, y1, h1] = CAM_KEYS[i];
+    if (t <= t1) {
+      const [t0, y0, h0] = CAM_KEYS[i - 1];
+      const u = smoothstep(0, 1, (t - t0) / Math.max(0.001, t1 - t0));
+      return { targetY: y0 + (y1 - y0) * u, viewH: h0 + (h1 - h0) * u };
+    }
+  }
+  return null;
+}
 let autoRotate = 1, lastInteract = -999;
 const pointers = new Map();
 let pinchStart = 0, pinchRadius = 0;
@@ -1824,22 +1989,136 @@ dom.addEventListener('wheel', (e) => {
   lastInteract = performance.now();
 }, { passive: false });
 
-/* ---------------- 状态 ---------------- */
+/* ---------------- 状态、旁白与播放器 ---------------- */
 const seasonEl = document.getElementById('season');
 const subEl = document.getElementById('sub');
 const yearEl = document.getElementById('year');
+const chapterIndexEl = document.getElementById('chapterIndex');
+const chapterTitleEl = document.getElementById('chapterTitle');
+const chapterTextEl = document.getElementById('chapterText');
+const playerEl = document.getElementById('player');
+const playBtn = document.getElementById('playBtn');
+const replayBtn = document.getElementById('replayBtn');
+const timelineEl = document.getElementById('timeline');
+const timecodeEl = document.getElementById('timecode');
+const marksEl = document.getElementById('marks');
+const narrationEl = document.getElementById('narration');
 let currentSeasonLabel = '';
+let currentChapter = -1;
+
+const CHAPTERS = [
+  { start: 0, end: 12, title: '种子入土', text: '一颗小小的种子落进松软的泥土里。它安静地躺着，等待水分和温暖把它唤醒。' },
+  { start: 12, end: 24, title: '吸水膨胀', text: '下雨了，种子喝饱了水，身体慢慢胀大，坚硬的外壳从中间裂开一条缝。' },
+  { start: 24, end: 40, title: '向下扎根', text: '最先钻出来的不是叶子，而是根。主根向下探索，侧根向四周铺开，把泥土牢牢抓住。' },
+  { start: 40, end: 55, title: '破土发芽', text: '嫩芽顶着种壳钻出地面，两片子叶慢慢展开，第一次见到阳光。' },
+  { start: 55, end: 68, title: '幼苗初长', text: '小苗把根扎得更深，茎秆变粗，第一片真叶舒展开来，它开始自己制造养分。' },
+  { start: 68, end: 78, title: '小树成形', text: '风吹过，雨落下，小树在一次次摇晃中变得更结实，枝丫一层层向外伸展。' },
+  { start: 78, end: 92, title: '长成大树', text: '一年又一年，树干粗壮，树冠如伞，它终于长成了一棵大树。' },
+  { start: 92, end: 108, title: '第一年 · 夏', text: '夏天到了，叶子浓绿，阳光穿过树冠，树荫下凉快极了。' },
+  { start: 108, end: 124, title: '第一年 · 秋', text: '秋天，叶子变成红和金，一片片飘落，慢慢腐烂，变成泥土里的养分。' },
+  { start: 124, end: 140, title: '第一年 · 冬', text: '冬天，枝头落满白雪，树安静地睡着，根还在土里呼吸。' },
+  { start: 140, end: 156, title: '第二年 · 春', text: '第二年春天，树又醒来，新芽和花朵一起冒出来。' },
+  { start: 156, end: 172, title: '第二年 · 夏', text: '夏天，树荫像一把大伞，小鸟和昆虫都来这里休息。' },
+  { start: 172, end: 188, title: '第二年 · 秋', text: '第二年秋天，枝头结出果实，果实里有新的种子，生命就这样传下去。' },
+  { start: 188, end: 204, title: '第二年 · 冬', text: '冬天又来了，一年结束，新的轮回又要开始。' },
+];
+
+const T0 = (() => { const v = parseFloat(new URLSearchParams(location.search).get('t0')); return isNaN(v) ? 0 : v; })();
+const FREEZE_T = /(^|[?&])freeze(=|&|$)/.test(location.search) ? T0 : null;
+const VIDEO = /(^|[?&])video(=|&|$)/.test(location.search);
+let videoT = 0;
+if (VIDEO) {
+  window.__setVideoT = (v) => { videoT = v; };
+  window.__videoReady = true;
+}
+let storyTime = clamp(T0, 0, STORY_END);
+let playing = !VIDEO && FREEZE_T === null;
+let scrubbing = false;
+let prevT = storyTime;
+let lastReal = performance.now();
+
+function fmtTime(s) {
+  s = Math.max(0, Math.floor(s));
+  return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+}
+function chapterIndexAt(t) {
+  let idx = 0;
+  for (let i = 0; i < CHAPTERS.length; i++) if (t >= CHAPTERS[i].start) idx = i;
+  return idx;
+}
+function updateChapterUI(t) {
+  const idx = chapterIndexAt(t);
+  if (idx === currentChapter) return;
+  currentChapter = idx;
+  const c = CHAPTERS[idx];
+  chapterIndexEl.textContent = '第 ' + (idx + 1) + ' 章 / 共 ' + CHAPTERS.length + ' 章';
+  chapterTitleEl.textContent = c.title;
+  chapterTextEl.textContent = c.text;
+  chapterTitleEl.style.animation = 'none';
+  void chapterTitleEl.offsetWidth;
+  chapterTitleEl.style.animation = 'seasonIn .5s ease both';
+}
+function syncPlayer() {
+  if (!timelineEl) return;
+  if (!scrubbing) timelineEl.value = String(storyTime);
+  timelineEl.style.setProperty('--progress', (storyTime / STORY_END * 100).toFixed(2) + '%');
+  timecodeEl.textContent = fmtTime(storyTime) + ' / ' + fmtTime(STORY_END);
+  playBtn.textContent = playing ? '⏸' : '▶';
+  playBtn.setAttribute('aria-label', playing ? '暂停' : '播放');
+}
+function setStoryTime(t, pause = true) {
+  storyTime = clamp(t, 0, STORY_END);
+  if (pause) playing = false;
+  prevT = storyTime;
+  updateChapterUI(storyTime);
+  syncPlayer();
+}
+function togglePlay() {
+  if (storyTime >= STORY_END - 0.01) { storyTime = 0; prevT = 0; updateChapterUI(0); }
+  playing = !playing;
+  syncPlayer();
+}
+
+// 给进度条加章节刻度和 tooltip
+for (const c of CHAPTERS) {
+  if (c.start <= 0) continue;
+  const mark = document.createElement('span');
+  mark.style.left = (c.start / STORY_END * 100) + '%';
+  mark.title = c.title;
+  if (c.start >= 92) mark.className = 'chapter-major';
+  marksEl.appendChild(mark);
+}
+timelineEl.max = STORY_END.toFixed(1);
+timelineEl.value = String(storyTime);
+updateChapterUI(storyTime);
+syncPlayer();
+
+if (FREEZE_T !== null || VIDEO) {
+  playerEl.style.display = 'none';
+  narrationEl.style.display = 'none';
+  document.getElementById('tips').style.display = 'none';
+  document.getElementById('replant').style.display = 'none';
+}
+
+function disposeEnvironment() {
+  for (const key of ['__grass', '__flowers', '__groundLeaves']) {
+    const mesh = scene[key];
+    if (!mesh) continue;
+    scene.remove(mesh);
+    if (mesh.material) mesh.material.dispose();
+    // CROSS_GEO / LEAF_GEO 是共享几何，不能在这里 dispose
+  }
+  scene.__grass = null; scene.__flowers = null; scene.__groundLeaves = null;
+}
 
 function plant(seed) {
   disposeTree(tree);
+  disposeEnvironment();
   const rand = mulberry32(seed ^ 0x9e3779b9);
-  scene.__grass && scene.remove(scene.__grass);
   scene.__grass = buildGrass(seed ^ 0x5f3759df);
   scene.add(scene.__grass);
-  scene.__flowers && scene.remove(scene.__flowers);
   scene.__flowers = buildFlowers(seed ^ 0x27d4eb2f);
   scene.add(scene.__flowers);
-  scene.__groundLeaves && scene.remove(scene.__groundLeaves);
   scene.__groundLeaves = buildGroundLeaves(seed ^ 0x165667b1);
   scene.add(scene.__groundLeaves);
   tree = buildTree(seed);
@@ -1851,27 +2130,36 @@ function plant(seed) {
 let seedCounter = Math.floor(Math.random() * 100000);
 plant(seedCounter);
 
+playBtn.addEventListener('click', togglePlay);
+replayBtn.addEventListener('click', () => {
+  storyTime = 0; prevT = 0; playing = true;
+  updateChapterUI(0); syncPlayer();
+});
+timelineEl.addEventListener('pointerdown', () => { scrubbing = true; });
+timelineEl.addEventListener('input', (e) => { setStoryTime(parseFloat(e.target.value), true); });
+timelineEl.addEventListener('change', () => { scrubbing = false; syncPlayer(); });
+window.addEventListener('pointerup', () => { if (scrubbing) { scrubbing = false; syncPlayer(); } });
 document.getElementById('replant').addEventListener('click', () => {
   seedCounter = Math.floor(Math.random() * 100000);
-  startTime = performance.now();
   plant(seedCounter);
+  storyTime = 0; prevT = 0; playing = true;
+  updateChapterUI(0); syncPlayer();
+});
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); setStoryTime(storyTime - 5, true); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); setStoryTime(storyTime + 5, true); }
+  else if (e.key === 'Home') { e.preventDefault(); setStoryTime(0, true); }
+  else if (e.key === 'End') { e.preventDefault(); setStoryTime(STORY_END, true); }
+  else if (e.key === 'r' || e.key === 'R') {
+    seedCounter = Math.floor(Math.random() * 100000);
+    plant(seedCounter);
+    storyTime = 0; prevT = 0; playing = true;
+    updateChapterUI(0); syncPlayer();
+  }
 });
 
 /* ---------------- 主循环 ---------------- */
-let startTime = performance.now();
-const T0 = (() => { const v = parseFloat(new URLSearchParams(location.search).get('t0')); return isNaN(v) ? 0 : v; })();
-// 截图用：带 &freeze 时时间钉死在 t0，画面不再随时间漂移
-const FREEZE_T = /(^|[?&])freeze(=|&|$)/.test(location.search) ? T0 : null;
-// 视频模式：时间由外部一帧一帧喂进来（window.__setVideoT），便于离线逐帧录制
-const VIDEO = /(^|[?&])video(=|&|$)/.test(location.search);
-let videoT = 0;
-if (VIDEO) {
-  window.__setVideoT = (v) => { videoT = v; };
-  window.__videoReady = true;
-}
-let prevT = 0;
-const clock = { t: 0 };
-
 const _m = new THREE.Matrix4();
 const _q = new THREE.Quaternion();
 const _q2 = new THREE.Quaternion();
@@ -1881,6 +2169,7 @@ const _e = new THREE.Euler();
 const _color = new THREE.Color();
 const _green = new THREE.Color();
 const _tip = new THREE.Vector3();
+const _leafP = new THREE.Vector3();
 const _sunDir = new THREE.Vector3();
 const _sunNdc = new THREE.Vector3();
 const _sunUv = new THREE.Vector2(0.5, 0.8);
@@ -1900,7 +2189,7 @@ function growBranch(b, k, fat = 1) {
   _tip.copy(b.pts[i0]).lerp(b.pts[i0 + 1], f - i0);
   // 锥尖再往前拉一截，生长中的枝头是尖的，不是平口
   if (i0 + 1 < n) {
-    const tipLen = Math.min(0.16, (b.radii ? b.radii[i0] : 0.05) * 2.2);
+    const tipLen = Math.min(0.10, (b.radii ? b.radii[i0] : 0.05) * 1.4);
     _tip.addScaledVector(b.pts[i0 + 1].clone().sub(b.pts[i0]).normalize(), tipLen);
   }
   const rs = (0.45 + 0.55 * Math.min(1, k * 1.7)) * fat;   // 幼枝细、老枝粗
@@ -1927,23 +2216,36 @@ function growBranch(b, k, fat = 1) {
 function animate() {
   requestAnimationFrame(animate);
   const now = performance.now();
-  // 定帧模式（?t0=N&freeze）：时间钉死在 N 秒，每帧完全一致 —— 截图才是可复现的
-  const t = VIDEO ? videoT : (FREEZE_T !== null ? FREEZE_T : (now - startTime) / 1000 + T0);
+  const realDt = Math.min(0.10, Math.max(0.001, (now - lastReal) / 1000));
+  lastReal = now;
+  if (!VIDEO && FREEZE_T === null && playing) {
+    storyTime = Math.min(STORY_END, storyTime + realDt);
+    if (storyTime >= STORY_END - 0.001) {
+      storyTime = STORY_END;
+      playing = false;
+    }
+  }
+  // 定帧模式（?t0=N&freeze）：时间钉死在 N 秒；视频模式由外部喂时间
+  const t = VIDEO ? videoT : (FREEZE_T !== null ? FREEZE_T : storyTime);
   const dt = VIDEO ? 1 / 60 : Math.min(0.05, Math.max(0.0001, t - prevT));
   prevT = t;
+  updateChapterUI(t);
+  syncPlayer();
 
   /* —— 时间推进 —— */
-  const p = (t / SEASON_SECONDS) % 4 / 4;           // 0..1 一年
-  const yearIndex = Math.floor(t / (SEASON_SECONDS * 4)) + 1;
-  const g = smoothstep(0, 1, clamp(t / GROW_SECONDS, 0, 1));  // 生长进度
+  const pRaw = storySeason(t);
+  const p = ((pRaw % 1) + 1) % 1;                    // 0..1 一年
+  const yearIndex = storyYear(t);
+  const g = growthAt(t);                             // 种子→大树的非线性生长进度
 
   const pal = samplePalette(p, palette);
+  const rainA = weatherAt(t);
 
   /* —— 天空 / 光 —— */
   skyUniforms.topColor.value.copy(pal.skyTop);
   skyUniforms.horizonColor.value.copy(pal.horizon);
   skyUniforms.sunColor.value.copy(pal.sun);
-  skyUniforms.cloudCover.value = pal.cloud;
+  skyUniforms.cloudCover.value = Math.min(1, pal.cloud + rainA * 0.55);
   skyUniforms.cloudWarm.value = pal.cloudWarm;
   skyUniforms.time.value = t;
   scene.fog.color.copy(pal.fog);
@@ -1951,21 +2253,22 @@ function animate() {
   hemi.groundColor.copy(pal.ground).multiplyScalar(0.6);
   hemi.intensity = pal.hemi;
   sun.color.copy(pal.sun);
-  sun.intensity = pal.sunI;
+  sun.intensity = pal.sunI * (1 - 0.38 * rainA);
 
   // 太阳位置：黄金时刻的低角度逆光，太阳落在画面内、树后偏右
-  const sunElev = 0.08 + 0.10 * (0.5 + 0.5 * Math.cos((p - 0.25) * Math.PI * 2));
-  const sunAz = -1.35 + Math.sin(t * 0.03) * 0.15;
+  // 侧逆光：太阳放在左后方，既保留轮廓光，又不会把树的正脸压成黑块
+  const sunElev = 0.16 + 0.10 * (0.5 + 0.5 * Math.cos((p - 0.25) * Math.PI * 2));
+  const sunAz = -2.02 + Math.sin(t * 0.03) * 0.12;
   const sunDir = _sunDir.set(Math.cos(sunAz) * Math.cos(sunElev), Math.sin(sunElev), Math.sin(sunAz) * Math.cos(sunElev)).normalize();
   sun.position.copy(sunDir).multiplyScalar(34);
   sunSprite.position.copy(sunDir).multiplyScalar(150);
   sunRays.position.copy(sunDir).multiplyScalar(148);
   sunSprite.material.color.copy(pal.sun);
   sunRays.material.color.copy(pal.sun);
-  sunRays.material.opacity = 0.48 * (0.65 + 0.35 * (1 - smoothstep(0.6, 0.9, p)));
+  sunRays.material.opacity = 0.42 * (0.65 + 0.35 * (1 - smoothstep(0.6, 0.9, p))) * (1 - 0.6 * rainA);
   skyUniforms.sunDir.value.copy(sunDir);
 
-  groundMat.color.copy(pal.ground);
+  groundMat.color.copy(pal.ground).multiplyScalar(1 - 0.16 * rainA);
   // 远山：取地表色的暗版，再往雾色里拉，形成柔和的空气透视
   if (ridgeMats.length === 3) {
     ridgeMats[0].color.copy(pal.fog).lerp(pal.skyTop, 0.10).multiplyScalar(0.98);
@@ -1977,15 +2280,32 @@ function animate() {
   scene.__grass.material.color.setRGB(1 + 0.95 * grassAutumn, 1 - 0.08 * grassAutumn, 1 - 0.85 * grassAutumn);
   grassTime.value = t;
   // 野花：春天冒出，初夏最盛，秋天退场
-  const flowerF = smoothstep(0.01, 0.07, p) * (1 - smoothstep(0.46, 0.58, p));
+  const flowerF = smoothstep(0.01, 0.07, p) * (1 - smoothstep(0.40, 0.48, p));
   scene.__flowers.visible = flowerF > 0.02;
-  scene.__flowers.scale.set(1, Math.max(0.001, flowerF), 1);
-  // 秋叶毯：入秋后草地上慢慢铺满落叶
-  const carpetK = smoothstep(0.52, 0.68, p) * (1 - smoothstep(0.72, 0.80, p));
-  scene.__groundLeaves.visible = carpetK > 0.02;
-  scene.__groundLeaves.material.opacity = carpetK * 0.95;
+  scene.__flowers.material.opacity = flowerF;
+  // 秋叶毯：铺开后在秋末—冬天慢慢变暗、下沉、腐烂进土里（不是收回去）
+  const groundLeafShow = smoothstep(0.52, 0.68, p);
+  const groundLeafDecay = smoothstep(0.70, 0.94, p);
+  scene.__groundLeaves.visible = p > 0.50 && p < 0.96;
+  if (scene.__groundLeaves.visible) {
+    scene.__groundLeaves.material.opacity = 1.0 - 0.62 * groundLeafDecay;
+    const info = scene.__groundLeaves.userData.leafInfo;
+    for (let i = 0; i < info.length; i++) {
+      const d = info[i];
+      const grow = 0.18 + 0.82 * groundLeafShow;
+      const size = d.size * grow * (1 - 0.85 * groundLeafDecay);
+      _p.set(d.pos.x, d.pos.y - groundLeafDecay * (0.015 + d.size * 0.35), d.pos.z);
+      _s.set(size, size, size);
+      _m.compose(_p, d.quat, _s);
+      scene.__groundLeaves.setMatrixAt(i, _m);
+      _color.copy(d.color).lerp(tmpA.setHex(0x241b12), Math.min(1, groundLeafDecay * 1.25));
+      scene.__groundLeaves.setColorAt(i, _color);
+    }
+    scene.__groundLeaves.instanceMatrix.needsUpdate = true;
+    if (scene.__groundLeaves.instanceColor) scene.__groundLeaves.instanceColor.needsUpdate = true;
+  }
   // 晨雾：春浓、夏淡、秋薄、冬再来一层雪雾
-  const mistSeason = p < 0.25 ? 1.0 : p < 0.5 ? 0.55 : p < 0.75 ? 0.38 : 0.9;
+  const mistSeason = 0.45 + 0.35 * Math.cos((p - 0.03) * Math.PI * 2);
   for (let i = 0; i < mistMats.length; i++) {
     mistMats[i].opacity = [0.16, 0.10, 0.06][i] * mistSeason * (0.88 + 0.12 * Math.sin(t * 0.05 + i));
   }
@@ -2010,7 +2330,7 @@ function animate() {
   /* —— 树的生长（管状枝条按长度逐段显现） —— */
   // 树干/枝条的粗细不只跟"自己长到哪"有关，还跟整棵树的年龄有关：
   // 否则小苗一冒头就是一根成年粗腿，像根胡萝卜。树长成（g→1）时才到最终粗细。
-  const fat = 0.40 + 0.60 * smoothstep(0.20, 0.92, g);
+  const fat = 0.18 + 0.82 * smoothstep(0.20, 0.92, g);
   let crownTop = 0;
   for (const b of tree.branches) {
     const k = smoothstep(b.g0, b.g1, g);
@@ -2035,12 +2355,27 @@ function animate() {
     tree.flare.visible = fk > 0.02;
   }
 
-  // 种子与子叶
-  const seedFade = 1 - smoothstep(0.10, 0.21, g);   // 芽一出土，种皮就脱掉（否则长成大树了还挂着一颗大种子）
-  tree.seedMesh.scale.set(1.15 * seedFade, 0.8 * seedFade, 1.5 * seedFade);
-  tree.seedMesh.visible = seedFade > 0.01;
-  const coty = smoothstep(0.12, 0.2, g) * (1 - smoothstep(0.38, 0.55, g));
-  const trunkTop = tree.branches[0] ? tree.branches[0].len * tree.branches[0].mesh.scale.y : 0.2;
+  // 种子与子叶：种子按“吸水膨胀 → 裂壳 → 种皮脱落”的真实过程单独控制，
+  // 不再只跟着 g 缩小，这样 0–56 秒能完整看到种子变化。
+  const seedSwell = 1 + 0.14 * smoothstep(12, 26, t);
+  const seedSplit = smoothstep(26, 38, t);
+  const seedFade = 1 - smoothstep(46, 56, t);
+  tree.seedMesh.visible = t < 56 && seedFade > 0.01;
+  tree.seedMesh.scale.set(1.15 * seedSwell * seedFade, 0.8 * seedSwell * seedFade, 1.5 * seedSwell * seedFade);
+  tree.seedTop.position.set(0.018 * seedSplit, 0.055 * seedSplit, 0.006 * seedSplit);
+  tree.seedTop.rotation.z = -0.62 * seedSplit;
+  tree.seedTop.rotation.x = 0.22 * seedSplit;
+  tree.seedBottom.position.y = -0.008 * seedSplit;
+  tree.seedCrack.visible = seedSplit > 0.01 && seedFade > 0.02;
+  tree.seedCrack.material.transparent = true;
+  tree.seedCrack.material.opacity = (1 - seedFade) * Math.min(1, seedSplit * 2.2);
+  tree.seedCrack.scale.setScalar(1 + 0.12 * seedSplit);
+
+  // 子叶挂点必须用“当前主干顶端”，不能用成年主干长度
+  const trunkB = tree.branches[0];
+  const trunkK = trunkB ? smoothstep(trunkB.g0, trunkB.g1, g) : 0;
+  const trunkTop = trunkB ? trunkB.start.y + trunkB.len * trunkK : 0.2;
+  const coty = smoothstep(0.09, 0.145, g) * (1 - smoothstep(0.34, 0.50, g));
   for (const m of tree.cotyledons) {
     m.scale.setScalar(Math.max(0.001, 0.3 * coty));
     m.position.y = Math.max(0.08, trunkTop * 0.94);
@@ -2057,8 +2392,11 @@ function animate() {
   const leaves = tree.leaves;
   for (let i = 0; i < tree.leafData.length; i++) {
     const d = tree.leafData[i];
-    const growK = smoothstep(d.grow, d.grow + 0.14, g);
-    const dropT = smoothstep(0.50 + d.stag * 0.12, 0.66 + d.stag * 0.12, p); // 秋天一片片落下
+    const branchK = d.branch ? smoothstep(d.branch.g0, d.branch.g1, g) : 1;
+    // 叶片只在枝条真正长到它那一段之后才出现，并跟着当前枝梢走
+    const reach = d.branch ? smoothstep(Math.max(0.02, d.siteT - 0.06), d.siteT + 0.06, branchK) : 1;
+    const growK = smoothstep(d.grow, Math.min(1.0, d.grow + 0.10), g) * reach;
+    const dropT = smoothstep(0.58 + d.stag * 0.08, 0.72 + d.stag * 0.05, p); // 秋天中后段一片片落下，冬天前落完
     const sc = d.size * growK * leafAmount * (1 - dropT);
     if (sc < 0.002) {
       _m.makeScale(0.0001, 0.0001, 0.0001);
@@ -2066,7 +2404,12 @@ function animate() {
       continue;
     }
     const sway = Math.sin(t * 1.6 + d.phase) * 0.06 * growK;
-    _p.copy(d.pos);
+    if (d.branch) {
+      pointOnPolyline(d.branch.pts, Math.min(d.siteT, branchK), _leafP);
+      _p.copy(_leafP).add(d.offset);
+    } else {
+      _p.copy(d.pos);
+    }
     _p.x += sway; _p.z += Math.cos(t * 1.3 + d.phase) * 0.05 * growK;
     _q.copy(d.quat);
     _e.set(sway * 0.8, sway * 0.5, sway * 0.6);
@@ -2077,7 +2420,7 @@ function animate() {
 
     // 颜色：嫩绿 → 深绿 → 秋色 → 花白
     const autumnK = smoothstep(0.46 + d.stag * 0.1, 0.62 + d.stag * 0.1, p);
-    _color.setHex(0x5f9f38).lerp(tmpA.setHex(0x2b5c1e), greenToDeep);
+    _color.setHex(0x4f8a2d).lerp(tmpA.setHex(0x2b5c1e), greenToDeep);
     _color.lerp(d.autumn, autumnK);
     if (blossomF > 0.01) _color.lerp(tmpB.setHex(0xffd9e6), blossomF * 0.75);
     _color.multiplyScalar(d.tone);
@@ -2087,37 +2430,38 @@ function animate() {
   if (leaves.instanceColor) leaves.instanceColor.needsUpdate = true;
 
   /* —— 春花与枝头积雪 —— */
-  const blossomK = smoothstep(0.02, 0.07, p) * (1 - smoothstep(0.22, 0.30, p)) * smoothstep(0.45, 0.70, g);
+  const blossomK = smoothstep(0.02, 0.07, p) * (1 - smoothstep(0.22, 0.30, p)) * smoothstep(0.70, 0.90, g);
   tree.blossoms.visible = blossomK > 0.02;
   tree.blossomMat.opacity = blossomK * 0.95;
-  const snowCapK = smoothstep(0.78, 0.88, p);
+  const snowCapK = smoothstep(0.78, 0.88, p) * (1 - smoothstep(0.96, 1.0, p));
   tree.snowCaps.visible = snowCapK > 0.02;
   tree.snowCapMat.opacity = snowCapK;
 
   /* —— 果实：第二年秋天结果，入冬前落光 —— */
-  const fruitMature = yearIndex >= 2
-    ? smoothstep(0.42, 0.55, p) * (1 - smoothstep(0.84, 0.94, p))
-    : 0;
+  const fruitGrow = yearIndex >= 2 ? smoothstep(0.40, 0.52, p) : 0;
+  const fruitFall = smoothstep(0.70, 0.80, p);
+  const fruitMature = fruitGrow * (1 - smoothstep(0.70, 0.80, p));
   {
     const fd = tree.fruitData;
     const fruits = tree.fruits, stems = tree.stems;
     const q0 = _q.set(0, 0, 0, 1);
     for (let i = 0; i < fd.length; i++) {
       const d = fd[i];
-      const sc = d.size * fruitMature;
+      const sc = d.size * fruitGrow * (1 - smoothstep(0.80, 0.86, p));
       if (sc < 0.002) {
         fruits.setMatrixAt(i, hideM);
         stems.setMatrixAt(i, hideM);
         continue;
       }
-      const sway = Math.sin(t * 1.5 + d.phase) * 0.02 * fruitMature;
+      const sway = Math.sin(t * 1.5 + d.phase) * 0.02 * fruitGrow;
       _p.copy(d.pos);
       _p.x += sway;
+      _p.y -= fruitFall * (1.2 + d.stag * 0.9);   // 熟透后自然落下，而不是原地缩小
       _m.compose(_p, d.quat, _s.setScalar(sc));
       fruits.setMatrixAt(i, _m);
       _p.y += sc * 0.92;
       _m.compose(_p, q0, _s.set(1, 1, 1));
-      stems.setMatrixAt(i, _m);
+      if (fruitFall < 0.35) stems.setMatrixAt(i, _m); else stems.setMatrixAt(i, hideM);
     }
     fruits.instanceMatrix.needsUpdate = true;
     stems.instanceMatrix.needsUpdate = true;
@@ -2159,8 +2503,28 @@ function animate() {
   snowMat.opacity = snowA * 0.95;
   snow.visible = snowA > 0.01;
   const winterF = smoothstep(0.72, 0.80, p);
-  const grassK = Math.max(0.0001, 1 - winterF);   // 冬天草整株缩到地里，不会留下绿色碎片
-  scene.__grass.scale.set(grassK, grassK, grassK);
+  // 草不是“瞬间弹回来”：深冬最后一点时间从土里慢慢返青，避免跨年一帧跳变
+  const grassSpring = p > 0.985 ? smoothstep(0.985, 1.0, p) : (p < 0.02 ? 1 : 0);
+  const grassK = Math.max(0.0001, Math.max(1 - winterF, grassSpring));
+  scene.__grass.material.opacity = grassK;
+  scene.__grass.scale.set(1, 1, 1);
+  // 雨：只在下雨窗口可见，落在树/土上时画面变暗
+  rainMat.opacity = rainA * 0.62;
+  rain.visible = rainA > 0.01;
+  if (rain.visible) {
+    const rp = rainGeo.attributes.position.array;
+    for (let i = 0; i < RAIN_COUNT; i++) {
+      const i3 = i * 3;
+      rp[i3 + 1] -= rainVel[i] * dt;
+      rp[i3] += 1.2 * dt;
+      if (rp[i3 + 1] < 0) {
+        rp[i3 + 1] = 16 + Math.random() * 6;
+        rp[i3] = (Math.random() - 0.5) * 30;
+        rp[i3 + 2] = -14 + Math.random() * 24;
+      }
+    }
+    rainGeo.attributes.position.needsUpdate = true;
+  }
   if (snow.visible) {
     const pos = snowGeo.attributes.position.array;
     for (let i = 0; i < SNOW_COUNT; i++) {
@@ -2179,14 +2543,14 @@ function animate() {
 
   /* —— 风：整棵树轻轻摇 —— */
   const wind = smoothstep(0, 1, g);
-  treeRoot.rotation.z = Math.sin(t * 0.62) * 0.012 * wind;
-  treeRoot.rotation.x = Math.cos(t * 0.48) * 0.010 * wind;
+  treeRoot.rotation.z = Math.sin(t * 0.62) * (0.012 + 0.018 * rainA) * wind;
+  treeRoot.rotation.x = Math.cos(t * 0.48) * (0.010 + 0.012 * rainA) * wind;
 
   /* —— 镜头 —— */
   // 剖面视角：镜头只在切面前方弧形范围内移动
   if (VIDEO) {
     cam.theta = 1.43 + Math.sin(t * 0.05) * 0.085;
-  } else if (now - lastInteract > 6000) {
+  } else if (playing && now - lastInteract > 6000) {
     cam.theta += cam.dir * 0.035 * dt;
     if (cam.theta > THETA_MAX) { cam.theta = THETA_MAX; cam.dir = -1; }
     if (cam.theta < THETA_MIN) { cam.theta = THETA_MIN; cam.dir = 1; }
@@ -2194,13 +2558,20 @@ function animate() {
   // 竖屏（手机）时视野变窄，需要把镜头拉远，否则树会被裁掉
   const aspectNow = window.innerWidth / window.innerHeight;
   const aspectFix = aspectNow < 1.15 ? Math.min(2.8, Math.pow(1.15 / aspectNow, 0.9)) : 1;
-  // 自动取景：从“贴着种子”开始，随着树长大一点点后拉；树心略偏右，给左侧字幕留白
-  const topY = Math.max(0.9, crownTop + 0.52);
-  const BOTTOM_Y = -0.62 - 1.95 * smoothstep(0, 0.34, g);
-  cam.target.y = (topY + BOTTOM_Y) / 2;
+  // 生长阶段走镜头脚本（种子微距、根系剖面、破土、幼苗、后拉），长成后自动框住全树
+  const camFrame = cameraFrameAt(t);
+  let fitR;
+  if (camFrame) {
+    cam.target.y = camFrame.targetY;
+    fitR = camFrame.viewH / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  } else {
+    const topY = Math.max(0.9, crownTop + 0.52);
+    const BOTTOM_Y = -0.62 - 1.95 * smoothstep(0, 0.34, g);
+    cam.target.y = (topY + BOTTOM_Y) / 2;
+    fitR = ((topY - BOTTOM_Y) * 1.0) / (2 * Math.tan((camera.fov * Math.PI) / 360));
+  }
   cam.target.x = 0.5 * smoothstep(0.15, 0.70, g);
-  const fitR = ((topY - BOTTOM_Y) * 1.0) / (2 * Math.tan((camera.fov * Math.PI) / 360));
-  const effR = Math.max(3.1, fitR) * (cam.radius / 12.5) * aspectFix;
+  const effR = Math.max(1.35, fitR) * (cam.radius / 12.5) * aspectFix;
   const sp = Math.sin(cam.phi), cp = Math.cos(cam.phi);
   camera.position.set(
     cam.target.x + effR * sp * Math.cos(cam.theta),
@@ -2242,21 +2613,9 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'r' || e.key === 'R') {
-    seedCounter = Math.floor(Math.random() * 100000);
-    startTime = performance.now();
-    plant(seedCounter);
-  }
-});
-
 document.getElementById('loading').style.display = 'none';
-if (VIDEO) {
-  document.getElementById('replant').style.display = 'none';
-  document.getElementById('tips').style.display = 'none';
-}
 if (window.matchMedia('(pointer: coarse)').matches) {
-  document.getElementById('tips').textContent = '单指拖动可以环顾四周 · 双指可以靠近';
+  document.getElementById('tips').textContent = '单指拖动环顾 · 双指缩放 · 用底部进度条控制播放';
 }
 
 // 调试探针：?dbg 打开后可用 window.__probe(nx, ny) 射线拾取，定位画面上某个怪东西到底是谁

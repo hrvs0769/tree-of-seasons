@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>一棵树的四季</title>
 <style>
-  :root { color-scheme: light; }
+  :root { color-scheme: light; --gold: #e8c47a; --ink: #f7f0e3; }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0; height: 100%; overflow: hidden;
@@ -17,98 +17,166 @@
   #app { position: fixed; inset: 0; }
   #app canvas { display: block; filter: saturate(1.06) contrast(1.035); }
 
-  /* 顶部极淡的压暗 + 底部字幕 scrim：让文字像字幕而不是展板 */
   body::before {
-    content: ""; position: fixed; left: 0; right: 0; inset: 0;
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
     background:
-      linear-gradient(rgba(16, 40, 58, .18), rgba(16, 40, 58, 0) 18%),
-      linear-gradient(to top, rgba(12, 22, 14, .46), rgba(12, 22, 14, 0) 30%);
-    pointer-events: none; z-index: 1;
+      linear-gradient(rgba(10, 30, 42, .24), rgba(10, 30, 42, 0) 20%),
+      linear-gradient(to top, rgba(8, 18, 12, .58), rgba(8, 18, 12, 0) 32%);
   }
-  #hud, #tips, #replant { z-index: 2; }
 
+  /* 左上角课堂旁白：大字号、深色底，投影上也能读清 */
+  #narration {
+    position: fixed; left: max(3.6vw, 22px); top: max(4vh, 20px);
+    width: min(560px, calc(100vw - 44px));
+    padding: 18px 24px 17px;
+    color: var(--ink);
+    background: linear-gradient(135deg, rgba(10, 26, 20, .73), rgba(10, 26, 20, .56));
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-left: 4px solid var(--gold);
+    border-radius: 4px 14px 14px 4px;
+    box-shadow: 0 14px 45px rgba(0, 0, 0, .20);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    pointer-events: none; z-index: 3;
+  }
+  #chapterIndex {
+    font-size: 10px; letter-spacing: .32em; color: var(--gold); opacity: .9;
+  }
+  #chapterTitle {
+    margin-top: 7px;
+    font-family: "Songti SC", "STSong", "SimSun", serif;
+    font-size: clamp(24px, 3.1vmin, 34px); font-weight: 300; letter-spacing: .10em; line-height: 1.25;
+    text-shadow: 0 2px 18px rgba(0, 0, 0, .3);
+  }
+  #chapterText {
+    margin-top: 9px;
+    font-size: clamp(14px, 1.72vmin, 19px);
+    line-height: 1.85; letter-spacing: .035em; color: rgba(247, 240, 227, .92);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  }
+  #chapterHint {
+    margin-top: 9px; font-size: 10px; letter-spacing: .16em;
+    color: rgba(247, 240, 227, .42);
+  }
+
+  /* 右上角季节徽标 */
   #hud {
-    position: fixed; left: max(4.2vw, 22px); bottom: max(8.5vh, 44px);
-    pointer-events: none; color: #f5ecdc;
-    text-shadow: 0 2px 26px rgba(10, 28, 20, .65), 0 1px 3px rgba(10, 28, 20, .55);
+    position: fixed; right: max(3.6vw, 22px); top: max(4vh, 20px);
+    text-align: right; pointer-events: none; color: var(--ink);
+    text-shadow: 0 2px 22px rgba(10, 28, 20, .55);
+    z-index: 3;
   }
   #season {
-    font-size: clamp(38px, 6.6vmin, 72px);
-    font-weight: 300;
-    letter-spacing: .14em;
-    line-height: 1;
     font-family: "Songti SC", "STSong", "SimSun", serif;
+    font-size: clamp(34px, 5.8vmin, 58px); font-weight: 300; letter-spacing: .12em; line-height: 1;
   }
   @keyframes seasonIn {
-    from { opacity: 0; transform: translateY(10px) scale(.97); }
+    from { opacity: 0; transform: translateY(8px) scale(.97); }
     to { opacity: 1; transform: none; }
   }
-  #sub {
-    margin-top: .55em;
-    font-size: clamp(11px, 1.55vmin, 15px);
-    letter-spacing: .38em;
-    opacity: .78;
-    font-weight: 300;
-  }
-  #year {
-    margin-top: .8em;
-    font-size: clamp(10px, 1.25vmin, 12px);
-    letter-spacing: .28em;
-    opacity: .52;
-    font-weight: 300;
-  }
+  #sub { margin-top: .6em; font-size: 11px; letter-spacing: .34em; opacity: .8; font-weight: 300; }
+  #year { margin-top: .75em; font-size: 10px; letter-spacing: .26em; opacity: .52; font-weight: 300; }
 
-  #tips {
-    position: fixed; left: 50%; bottom: max(3vh, 18px); transform: translateX(-50%);
-    font-size: clamp(11px, 1.6vmin, 14px); letter-spacing: .16em;
-    color: rgba(255,255,255,.88); text-shadow: 0 1px 12px rgba(18,46,66,.55), 0 1px 3px rgba(18,46,66,.45);
-    pointer-events: none; white-space: nowrap; transition: opacity 1s ease;
+  /* 底部播放器：暂停 / 进度条 / 跳转 */
+  #player {
+    position: fixed; left: 50%; bottom: max(2.2vh, 14px); transform: translateX(-50%);
+    width: min(1040px, calc(100vw - 40px));
+    padding: 9px 14px 11px;
+    background: rgba(9, 22, 15, .76);
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 16px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, .22);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    color: var(--ink); z-index: 5;
   }
-
+  #player .row { display: flex; align-items: center; gap: 12px; }
+  #playBtn, #replayBtn, #replant {
+    border: 0; cursor: pointer; font: inherit; white-space: nowrap;
+    transition: transform .16s ease, background .16s ease;
+  }
+  #playBtn {
+    flex: none; width: 40px; height: 40px; border-radius: 50%; padding: 0;
+    background: var(--gold); color: #1d2b1e; font-size: 15px; line-height: 1;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+  }
+  #playBtn:hover { transform: scale(1.06); }
+  #timecode {
+    flex: none; min-width: 104px; font-variant-numeric: tabular-nums;
+    font-size: 11px; letter-spacing: .06em; color: rgba(247, 240, 227, .78);
+  }
+  #timelineWrap { position: relative; flex: 1; height: 30px; display: flex; align-items: center; }
+  #timeline {
+    appearance: none; -webkit-appearance: none; width: 100%; height: 6px; border-radius: 99px;
+    background: linear-gradient(90deg, var(--gold) 0%, var(--gold) var(--progress, 0%), rgba(255,255,255,.22) var(--progress, 0%), rgba(255,255,255,.22) 100%);
+    outline: none; cursor: pointer; margin: 0;
+  }
+  #timeline::-webkit-slider-thumb {
+    appearance: none; -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; border: 3px solid var(--gold); box-shadow: 0 1px 8px rgba(0,0,0,.25); cursor: grab;
+  }
+  #timeline::-moz-range-thumb {
+    width: 12px; height: 12px; border-radius: 50%; background: #fff;
+    border: 3px solid var(--gold); box-shadow: 0 1px 8px rgba(0,0,0,.25); cursor: grab;
+  }
+  #marks { position: absolute; left: 0; right: 0; top: 2px; height: 9px; pointer-events: none; }
+  #marks span { position: absolute; top: 0; width: 2px; height: 7px; border-radius: 2px; background: rgba(255,255,255,.38); transform: translateX(-1px); }
+  #marks span.chapter-major { background: rgba(232,196,122,.86); height: 9px; }
+  #replayBtn {
+    flex: none; padding: 7px 10px; border-radius: 9px; font-size: 11px;
+    color: rgba(247,240,227,.82); background: rgba(255,255,255,.10);
+  }
+  #replayBtn:hover, #replant:hover { background: rgba(255,255,255,.20); }
   #replant {
-    position: fixed; right: max(4vw, 20px); bottom: max(3vh, 16px);
-    padding: 12px 22px; border-radius: 999px; cursor: pointer;
-    font: inherit; font-size: clamp(13px, 1.9vmin, 16px); letter-spacing: .12em;
-    color: #2c4a34; background: rgba(255,255,255,.72);
-    border: 1px solid rgba(255,255,255,.85);
-    box-shadow: 0 8px 26px rgba(40, 80, 60, .16);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    transition: transform .18s ease, background .18s ease;
+    flex: none; padding: 8px 13px; border-radius: 9px; font-size: 11px;
+    color: #223a26; background: var(--gold);
   }
-  #replant:hover { transform: translateY(-2px); background: #fff; }
-  #replant:active { transform: translateY(0) scale(.97); }
-
+  #tips {
+    position: fixed; left: 50%; bottom: max(10.5vh, 86px); transform: translateX(-50%);
+    font-size: 10px; letter-spacing: .16em; color: rgba(255,255,255,.78);
+    text-shadow: 0 1px 10px rgba(10,30,20,.6); white-space: nowrap;
+    pointer-events: none; z-index: 3;
+  }
   #vignette {
     position: fixed; inset: 0; pointer-events: none; z-index: 1;
-    background: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,0) 45%, rgba(12,26,20,.28) 100%);
+    background: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,0) 45%, rgba(12,26,20,.25) 100%);
   }
-
   #loading {
     position: fixed; inset: 0; display: grid; place-items: center;
     color: #4b7a5e; letter-spacing: .3em; font-size: 15px;
-    background: linear-gradient(#bfe7f8, #e6f6ff);
+    background: linear-gradient(#bfe7f8, #e6f6ff); z-index: 20;
   }
 
-  /* 手机竖屏：文字缩小、按钮挪到底部居中，避免被挤出屏幕 */
-  @media (max-width: 560px) {
-    #hud { left: 20px; top: auto; bottom: 118px; }
-    #season { font-size: 40px; }
-    #sub { letter-spacing: .26em; }
-    #tips {
-      left: 0; right: 0; bottom: 84px; transform: none; text-align: center;
-      font-size: 11px; letter-spacing: .1em; white-space: normal; padding: 0 20px;
+  @media (max-width: 700px) {
+    #narration {
+      left: 12px; right: 12px; top: 12px; width: auto;
+      padding: 13px 16px 13px; border-radius: 4px 12px 12px 4px;
     }
-    #replant {
-      left: 50%; right: auto; transform: translateX(-50%);
-      bottom: max(3vh, 26px); padding: 10px 26px; font-size: 14px;
-    }
-    #replant:hover { transform: translateX(-50%); }
-    #replant:active { transform: translateX(-50%) scale(.97); }
+    #chapterIndex { font-size: 9px; letter-spacing: .24em; }
+    #chapterTitle { font-size: 22px; margin-top: 5px; }
+    #chapterText { font-size: 14px; line-height: 1.75; margin-top: 6px; }
+    #chapterHint { display: none; }
+    #hud { display: none; }
+    #season { font-size: 30px; }
+    #sub { font-size: 9px; letter-spacing: .22em; }
+    #year { font-size: 9px; }
+    #player { width: calc(100vw - 22px); bottom: 8px; padding: 8px 10px 9px; border-radius: 14px; }
+    #player .row { gap: 8px; flex-wrap: wrap; }
+    #playBtn { width: 36px; height: 36px; font-size: 14px; }
+    #timecode { min-width: 86px; font-size: 10px; }
+    #timelineWrap { order: 3; flex-basis: 100%; height: 24px; }
+    #replayBtn, #replant { font-size: 10px; padding: 7px 9px; }
+    #tips { bottom: 122px; font-size: 9px; white-space: normal; width: 90vw; text-align: center; }
   }
 </style>
 </head>
 <body>
   <div id="app"></div>
+
+  <div id="narration">
+    <div id="chapterIndex">第 1 章 / 共 14 章</div>
+    <div id="chapterTitle">种子入土</div>
+    <div id="chapterText">一颗小小的种子落进松软的泥土里，安静地躺着，等待水分和温暖把它唤醒。</div>
+    <div id="chapterHint">空格暂停 · ← → 前后 5 秒 · 拖动进度条跳到任意时刻</div>
+  </div>
 
   <div id="hud">
     <div id="season">春</div>
@@ -116,8 +184,20 @@
     <div id="year">第 1 年</div>
   </div>
 
-  <div id="tips">拖动可以环顾四周 · 滚轮或双指可以靠近</div>
-  <button id="replant">再种一棵</button>
+  <div id="player">
+    <div class="row">
+      <button id="playBtn" aria-label="播放/暂停">⏸</button>
+      <div id="timecode">00:00 / 03:24</div>
+      <div id="timelineWrap">
+        <input id="timeline" type="range" min="0" max="204" step="0.1" value="0" aria-label="播放进度">
+        <div id="marks"></div>
+      </div>
+      <button id="replayBtn">↻ 重播</button>
+      <button id="replant">再种一棵</button>
+    </div>
+  </div>
+
+  <div id="tips">拖动环顾 · 滚轮缩放 · 空格暂停 · ←/→ 前后 5 秒</div>
   <div id="vignette"></div>
   <div id="loading">正在种树…</div>
 
