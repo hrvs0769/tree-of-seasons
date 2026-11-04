@@ -2362,7 +2362,7 @@ function animate() {
   const seedSplit = smoothstep(26, 38, t);
   const seedFade = 1 - smoothstep(46, 56, t);
   tree.seedMesh.visible = t < 56 && seedFade > 0.01;
-  tree.seedMesh.position.y = 0.055 + 0.32 * (1 - seedPlant);
+  tree.seedMesh.position.y = 0.055 + 0.10 * (1 - seedPlant);
   tree.seedMesh.scale.set(0.52 * seedSwell * seedFade, 0.42 * seedSwell * seedFade, 0.68 * seedSwell * seedFade);
   tree.seedTop.position.set(0.018 * seedSplit, 0.055 * seedSplit, 0.006 * seedSplit);
   tree.seedTop.rotation.z = -0.62 * seedSplit;
