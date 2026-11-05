@@ -1881,7 +1881,7 @@ const rain = new THREE.Points(rainGeo, rainMat);
 rain.frustumCulled = false;
 scene.add(rain);
 // 雨的时间窗：扎根、破土、幼苗、夏天各来一阵
-const RAIN_WINDOWS = [[15, 31, 0.62], [40, 54, 0.55], [62, 72, 0.45], [128, 138, 0.5], [206, 216, 0.4]];
+const RAIN_WINDOWS = [[16, 31, 0.62], [40, 54, 0.55], [62, 72, 0.45], [128, 138, 0.5], [206, 216, 0.4]];
 function weatherAt(t) {
   let a = 0;
   for (const [s, e, amt] of RAIN_WINDOWS) {
