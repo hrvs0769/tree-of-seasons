@@ -137,7 +137,28 @@
     flex: none; padding: 7px 10px; border-radius: 8px; font-size: 11px;
     color: rgba(247,240,227,.82); background: rgba(255,255,255,.10);
   }
-  #replayBtn:hover, #replant:hover { background: rgba(255,255,255,.20); }
+  #replayBtn:hover, #replant:hover, #musicBtn:hover { background: rgba(255,255,255,.20); }
+  /* 背景音乐开关 + 音量：课堂上念旁白时方便随时压低或关掉 */
+  #musicBtn {
+    flex: none; padding: 7px 10px; border-radius: 8px; font-size: 11px;
+    border: 0; cursor: pointer; white-space: nowrap; font-family: inherit;
+    color: rgba(247,240,227,.82); background: rgba(255,255,255,.10);
+    transition: background .16s ease, color .16s ease;
+  }
+  #musicBtn.off { color: rgba(247,240,227,.42); background: rgba(255,255,255,.05); }
+  #volume {
+    flex: none; appearance: none; -webkit-appearance: none;
+    width: 62px; height: 4px; border-radius: 99px; margin: 0 2px;
+    background: rgba(255,255,255,.22); outline: none; cursor: pointer;
+  }
+  #volume::-webkit-slider-thumb {
+    appearance: none; -webkit-appearance: none; width: 11px; height: 11px;
+    border-radius: 50%; background: var(--gold); border: 0; box-shadow: 0 1px 6px rgba(0,0,0,.3);
+  }
+  #volume::-moz-range-thumb {
+    width: 11px; height: 11px; border-radius: 50%; background: var(--gold);
+    border: 0; box-shadow: 0 1px 6px rgba(0,0,0,.3);
+  }
   #replant {
     flex: none; padding: 8px 13px; border-radius: 8px; font-size: 11px;
     color: #223a26; background: var(--gold);
@@ -176,7 +197,8 @@
     #playBtn { width: 36px; height: 36px; font-size: 14px; }
     #timecode { min-width: 86px; font-size: 10px; }
     #timelineWrap { order: 3; flex-basis: 100%; height: 24px; }
-    #replayBtn, #replant { font-size: 10px; padding: 7px 9px; }
+    #replayBtn, #replant, #musicBtn { font-size: 10px; padding: 7px 9px; }
+    #volume { display: none; }
     #vignette { left: 0; bottom: var(--player-h); }
   }
 </style>
@@ -197,7 +219,7 @@
       <div id="chapterText">一颗小小的种子落进松软的泥土里。它安静地躺着，等待水分和温暖把它唤醒。</div>
       <div id="chapterHint">空格暂停 · ← → 前后 5 秒 · 拖动进度条跳到任意时刻</div>
     </div>
-    <div id="tips">拖动环顾 · 滚轮缩放 · 空格暂停 · ←/→ 前后 5 秒</div>
+    <div id="tips">拖动环顾 · 滚轮缩放 · 空格暂停 · ←/→ 前后 5 秒 · M 音乐开关</div>
   </aside>
 
   <div id="player">
@@ -209,6 +231,8 @@
         <div id="marks"></div>
       </div>
       <button id="replayBtn">↻ 重播</button>
+      <button id="musicBtn" aria-label="开启背景音乐" title="背景音乐">♫ 开启音乐</button>
+      <input id="volume" type="range" min="0" max="100" step="1" value="85" aria-label="背景音乐音量">
       <button id="replant">再种一棵</button>
     </div>
   </div>
@@ -216,6 +240,8 @@
   <div id="vignette"></div>
   <div id="loading">正在种树…</div>
 
+  <audio id="bgm" src="./assets/tree-of-seasons-bgm-v3.mp3" preload="auto"></audio>
   <script src="./app.js"></script>
+  <script src="./src/bgm.js"></script>
 </body>
 </html>
