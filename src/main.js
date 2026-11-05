@@ -29,23 +29,23 @@ function mulberry32(a) {
 
 /* ---------------- 时间参数 ---------------- */
 const DEBUG = /debug/.test(location.search);
-const SEASON_SECONDS = 16;        // 每个季节多少秒（一年 = 64 秒）
-const GROW_END = 92;              // 从种子到长成大树的故事时长（秒）
+const SEASON_SECONDS = 20;        // 每个季节多少秒（一年 = 80 秒，给雪景和细节留出时间）
+const GROW_END = 120;             // 从种子到长成大树的故事时长（秒）
 const GROW_END_P = 0.25;          // 长成时刚好是初夏（p=0.25）
-const STORY_END = GROW_END + (1 - GROW_END_P) * SEASON_SECONDS * 4 + SEASON_SECONDS * 4 - 0.1; // ≈ 203.9 秒（停在第 2 年冬末）
+const STORY_END = GROW_END + (1 - GROW_END_P) * SEASON_SECONDS * 4 + SEASON_SECONDS * 4 - 0.1; // ≈ 259.9 秒（停在第 2 年冬末）
 
 // 生长曲线：不是匀速。种子/发芽/扎根/幼苗占大部分时间，后面抽枝成树越来越快，
 // 这样小朋友能看清“种子怎么变成小苗”，而不是几秒钟就过去了。
 const GROW_KEYS = [
   [0, 0.000],
-  [12, 0.004],   // 种子吸水
-  [24, 0.020],   // 破壳
-  [40, 0.060],   // 主根向下、主干开始
-  [55, 0.140],   // 破土、子叶
-  [68, 0.280],   // 幼苗
-  [78, 0.500],   // 小树
-  [86, 0.750],   // 树冠展开
-  [92, 1.000],   // 大树
+  [16, 0.004],   // 种子吸水
+  [32, 0.020],   // 破壳
+  [56, 0.060],   // 主根向下、主干开始
+  [76, 0.140],   // 破土、子叶
+  [94, 0.280],   // 幼苗
+  [108, 0.500],  // 小树
+  [116, 0.750],  // 树冠展开
+  [120, 1.000],  // 大树
 ];
 function growthAt(t) {
   if (t <= 0) return 0;
@@ -1512,9 +1512,9 @@ function buildTree(seed) {
       d.normalize();
       const p = pts[i - 1].clone().addScaledVector(d, step);
       // 夹在土壤剖面可见的薄层里
-      p.y = Math.max(-2.9, p.y);
-      if (p.x > 5.1) p.x = 5.1; else if (p.x < -5.1) p.x = -5.1;
-      p.z = Math.min(0.24, Math.max(0.035, p.z));   // 根系保持在切面前薄层里，始终可见
+      p.y = Math.max(-5.8, p.y);
+      if (p.x > 8.0) p.x = 8.0; else if (p.x < -8.0) p.x = -8.0;
+      p.z = Math.min(0.26, Math.max(0.035, p.z));   // 根系保持在切面前薄层里，始终可见
       pts.push(p);
       radii.push(Math.max(0.0035, r0 * (1 - 0.88 * Math.pow(t, 0.8))));
     }
@@ -1538,16 +1538,16 @@ function buildTree(seed) {
   }
 
   function rootChain(start, dir, len, r0, depth, gStart) {
-    const segs = depth === 0 ? 12 : depth === 1 ? 7 : depth === 2 ? 5 : 4;
-    const radial = depth === 0 ? 9 : depth === 1 ? 6 : 4;
-    const { pts, radii } = rootPath(start, dir, len, r0, segs, depth === 0 ? 0.13 : 0.24);
-    const dur = [0.080, 0.055, 0.040, 0.030][Math.min(3, depth)];
+    const segs = depth === 0 ? 16 : depth === 1 ? 9 : depth === 2 ? 6 : 4;
+    const radial = depth === 0 ? 10 : depth === 1 ? 7 : depth === 2 ? 5 : 4;
+    const { pts, radii } = rootPath(start, dir, len, r0, segs, depth === 0 ? 0.22 : 0.28);
+    const dur = [0.060, 0.040, 0.030, 0.020][Math.min(3, depth)];
     const g1 = Math.min(0.86, gStart + dur);
     addRoot(pts, radii, radial, gStart, g1, depth);
 
     if (depth >= 3) return;
     // 侧根：沿主根不同高度发出，方向、粗细、长度都不一样
-    const n = depth === 0 ? 9 : depth === 1 ? 3 : 2;
+    const n = depth === 0 ? 12 : depth === 1 ? 3 : 2;
     for (let k = 0; k < n; k++) {
       const t = depth === 0 ? randRange(rand, 0.06, 0.94) : randRange(rand, 0.18, 0.92);
       const i0 = Math.min(segs, Math.max(1, Math.round(t * segs)));
@@ -1563,7 +1563,7 @@ function buildTree(seed) {
       rootChain(
         p, nd,
         len * randRange(rand, 0.3, 0.55),
-        Math.max(0.007, localR * randRange(rand, 0.5, 0.74)),
+        Math.max(0.010, localR * randRange(rand, 0.56, 0.80)),
         depth + 1, g1 + 0.012 * k
       );
     }
@@ -1573,15 +1573,15 @@ function buildTree(seed) {
   rootChain(
     new THREE.Vector3(0, -0.05, 0.06),
     new THREE.Vector3(randRange(rand, -0.12, 0.12), -1, randRange(rand, -0.06, 0.14)),
-    randRange(rand, 2.0, 2.4), 0.075, 0, 0.012
+    randRange(rand, 2.8, 3.4), 0.11, 0, 0.012
   );
   // 根颈四周的板根：贴着地面向外铺，让树"抓"住土
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + randRange(rand, -0.5, 0.5);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2 + randRange(rand, -0.5, 0.5);
     rootChain(
       new THREE.Vector3(Math.cos(a) * 0.07, -0.06, 0.02 + Math.sin(a) * 0.05),
       new THREE.Vector3(Math.cos(a) * 1.1, -0.55, Math.sin(a) * 0.5).normalize(),
-      randRange(rand, 0.7, 1.15), 0.055, 1, 0.13
+      randRange(rand, 1.2, 1.7), 0.075, 1, 0.13
     );
   }
 
@@ -1721,7 +1721,7 @@ function buildTree(seed) {
       const p = b.pts[idx].clone();
       const r = b.radii ? b.radii[idx] : 0.02;
       p.y += r * 1.05 + 0.008;
-      snowPts.push({ pos: p, s: 0.024 + r * 1.2 });
+      snowPts.push({ pos: p, s: 0.038 + r * 1.8 });
     }
   }
   const snowCapGeo = new THREE.SphereGeometry(1, 6, 4);
@@ -1732,7 +1732,7 @@ function buildTree(seed) {
   group.add(snowCaps);
   const snowCapData = snowPts.map((d) => ({
     pos: d.pos, quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 0.4, rand() * 3, rand() * 0.4)),
-    sx: d.s * randRange(rand, 0.55, 0.85), sy: d.s * 0.42, sz: d.s * randRange(rand, 0.55, 0.85),
+    sx: d.s * randRange(rand, 0.65, 0.95), sy: d.s * 0.48, sz: d.s * randRange(rand, 0.65, 0.95),
   }));
   for (let i = 0; i < snowCapData.length; i++) {
     const d = snowCapData[i];
@@ -1825,7 +1825,7 @@ function circleTexture() {
   return tex;
 }
 
-const SNOW_COUNT = 2200;
+const SNOW_COUNT = 9000;
 const snowGeo = new THREE.BufferGeometry();
 const snowPos = new Float32Array(SNOW_COUNT * 3);
 const snowVel = new Float32Array(SNOW_COUNT);
@@ -1834,12 +1834,12 @@ for (let i = 0; i < SNOW_COUNT; i++) {
   snowPos[i * 3] = (Math.random() - 0.5) * 56;
   snowPos[i * 3 + 1] = Math.random() * 26;
   snowPos[i * 3 + 2] = (Math.random() - 0.5) * 56;
-  snowVel[i] = 1.1 + Math.random() * 2.0;
+  snowVel[i] = 0.30 + Math.random() * 0.55;
   snowPhase[i] = Math.random() * Math.PI * 2;
 }
 snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
 const snowMat = new THREE.PointsMaterial({
-  size: 0.16, map: circleTexture(), transparent: true, opacity: 0,
+  size: 0.30, map: circleTexture(), transparent: true, opacity: 0,
   depthWrite: false, sizeAttenuation: true, color: 0xffffff, fog: false,
 });
 const snow = new THREE.Points(snowGeo, snowMat);
@@ -1862,26 +1862,26 @@ function rainTexture() {
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
-const RAIN_COUNT = 900;
+const RAIN_COUNT = 1400;
 const rainGeo = new THREE.BufferGeometry();
 const rainPos = new Float32Array(RAIN_COUNT * 3);
 const rainVel = new Float32Array(RAIN_COUNT);
 for (let i = 0; i < RAIN_COUNT; i++) {
-  rainPos[i * 3] = (Math.random() - 0.5) * 30;
-  rainPos[i * 3 + 1] = Math.random() * 18;
-  rainPos[i * 3 + 2] = -14 + Math.random() * 24;
+  rainPos[i * 3] = (Math.random() - 0.5) * 24;
+  rainPos[i * 3 + 1] = Math.random() * 14;
+  rainPos[i * 3 + 2] = -9 + Math.random() * 9;
   rainVel[i] = 10 + Math.random() * 8;
 }
 rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
 const rainMat = new THREE.PointsMaterial({
-  size: 0.22, map: rainTexture(), transparent: true, opacity: 0,
+  size: 0.46, map: rainTexture(), transparent: true, opacity: 0,
   depthWrite: false, sizeAttenuation: true, color: 0xd6e8f6, fog: false,
 });
 const rain = new THREE.Points(rainGeo, rainMat);
 rain.frustumCulled = false;
 scene.add(rain);
 // 雨的时间窗：扎根、破土、幼苗、夏天各来一阵
-const RAIN_WINDOWS = [[27, 37, 0.7], [49, 57, 0.5], [70, 76, 0.45], [96, 103, 0.55], [154, 161, 0.4]];
+const RAIN_WINDOWS = [[4, 15, 0.62], [40, 54, 0.55], [62, 72, 0.45], [128, 138, 0.5], [206, 216, 0.4]];
 function weatherAt(t) {
   let a = 0;
   for (const [s, e, amt] of RAIN_WINDOWS) {
@@ -1933,15 +1933,15 @@ const THETA_MIN = Math.PI / 2 - 0.62, THETA_MAX = Math.PI / 2 + 0.62;
 // 生长阶段的镜头脚本：种子微距 → 根系剖面 → 破土 → 幼苗 → 后拉看全树
 const CAM_KEYS = [
   [0, 0.10, 0.9],
-  [10, 0.08, 1.1],
-  [20, 0.00, 1.3],
-  [28, -0.55, 2.6],
-  [40, -0.65, 2.9],
-  [48, 0.00, 1.7],
-  [55, 0.25, 2.0],
-  [68, 0.90, 3.4],
-  [78, 1.80, 4.8],
-  [92, 3.00, 10.8],
+  [18, 0.08, 1.1],
+  [32, 0.00, 1.3],
+  [42, -0.55, 2.7],
+  [56, -0.70, 3.1],
+  [70, 0.00, 1.8],
+  [76, 0.35, 2.2],
+  [94, 1.20, 3.8],
+  [108, 2.20, 5.2],
+  [120, 3.00, 10.8],
 ];
 function cameraFrameAt(t) {
   if (t >= CAM_KEYS[CAM_KEYS.length - 1][0]) return null;
@@ -2014,20 +2014,20 @@ let currentSeasonLabel = '';
 let currentChapter = -1;
 
 const CHAPTERS = [
-  { start: 0, end: 12, title: '种子入土', text: '一颗小小的种子落进松软的泥土里。它安静地躺着，等待水分和温暖把它唤醒。' },
-  { start: 12, end: 24, title: '吸水膨胀', text: '下雨了，种子喝饱了水，身体慢慢胀大，坚硬的外壳从中间裂开一条缝。' },
-  { start: 24, end: 40, title: '向下扎根', text: '最先钻出来的不是叶子，而是根。主根向下探索，侧根向四周铺开，把泥土牢牢抓住。' },
-  { start: 40, end: 55, title: '破土发芽', text: '嫩芽顶着种壳钻出地面，两片子叶慢慢展开，第一次见到阳光。' },
-  { start: 55, end: 68, title: '幼苗初长', text: '小苗把根扎得更深，茎秆变粗，第一片真叶舒展开来，它开始自己制造养分。' },
-  { start: 68, end: 78, title: '小树成形', text: '风吹过，雨落下，小树在一次次摇晃中变得更结实，枝丫一层层向外伸展。' },
-  { start: 78, end: 92, title: '长成大树', text: '一年又一年，树干粗壮，树冠如伞，它终于长成了一棵大树。' },
-  { start: 92, end: 108, title: '第一年 · 夏', text: '夏天到了，叶子浓绿，阳光穿过树冠，树荫下凉快极了。' },
-  { start: 108, end: 124, title: '第一年 · 秋', text: '秋天，叶子变成红和金，一片片飘落，慢慢腐烂，变成泥土里的养分。' },
-  { start: 124, end: 140, title: '第一年 · 冬', text: '冬天，枝头落满白雪，树安静地睡着，根还在土里呼吸。' },
-  { start: 140, end: 156, title: '第二年 · 春', text: '第二年春天，树又醒来，新芽和花朵一起冒出来。' },
-  { start: 156, end: 172, title: '第二年 · 夏', text: '夏天，树荫像一把大伞，小鸟和昆虫都来这里休息。' },
-  { start: 172, end: 188, title: '第二年 · 秋', text: '第二年秋天，枝头结出果实，果实里有新的种子，生命就这样传下去。' },
-  { start: 188, end: 204, title: '第二年 · 冬', text: '冬天又来了，一年结束，新的轮回又要开始。' },
+  { start: 0, end: 16, title: '种子入土', text: '一颗小小的种子落进松软的泥土里。它安静地躺着，等待水分和温暖把它唤醒。' },
+  { start: 16, end: 32, title: '春雨滋润', text: '春雨落下来，种子喝饱了水，身体慢慢胀大，坚硬的外壳从中间裂开一条缝。' },
+  { start: 32, end: 56, title: '向下扎根', text: '最先钻出来的不是叶子，而是根。主根向下探索，侧根向四周铺开，把泥土牢牢抓住。' },
+  { start: 56, end: 76, title: '破土发芽', text: '嫩芽顶着种壳钻出地面，两片子叶慢慢展开，第一次见到阳光。' },
+  { start: 76, end: 94, title: '幼苗初长', text: '小苗把根扎得更深，茎秆变粗，第一片真叶舒展开来，它开始自己制造养分。' },
+  { start: 94, end: 108, title: '小树成形', text: '风吹过，雨落下，小树在一次次摇晃中变得更结实，枝丫一层层向外伸展。' },
+  { start: 108, end: 120, title: '长成大树', text: '一年又一年，树干粗壮，树冠如伞，它终于长成了一棵大树。' },
+  { start: 120, end: 140, title: '第一年 · 夏', text: '夏天到了，叶子浓绿，阳光穿过树冠，树荫下凉快极了。' },
+  { start: 140, end: 160, title: '第一年 · 秋', text: '秋天，叶子变成红和金，一片片飘落，慢慢腐烂，变成泥土里的养分。' },
+  { start: 160, end: 180, title: '第一年 · 冬', text: '冬天，枝头落满白雪，树安静地睡着，根还在土里呼吸。' },
+  { start: 180, end: 200, title: '第二年 · 春', text: '第二年春天，树又醒来，新芽和花朵一起冒出来。' },
+  { start: 200, end: 220, title: '第二年 · 夏', text: '夏天，树荫像一把大伞，小鸟和昆虫都来这里休息。' },
+  { start: 220, end: 240, title: '第二年 · 秋', text: '第二年秋天，枝头结出果实，果实里有新的种子，生命就这样传下去。' },
+  { start: 240, end: 260, title: '第二年 · 冬', text: '冬天又来了，一年结束，新的轮回又要开始。' },
 ];
 
 const T0 = (() => { const v = parseFloat(new URLSearchParams(location.search).get('t0')); return isNaN(v) ? 0 : v; })();
@@ -2366,13 +2366,13 @@ function animate() {
 
   // 种子与子叶：种子按“吸水膨胀 → 裂壳 → 种皮脱落”的真实过程单独控制，
   // 不再只跟着 g 缩小，这样 0–56 秒能完整看到种子变化。
-  const seedPlant = smoothstep(0.0, 2.5, t);      // 种子从上方落下、落进土里
-  const seedSwell = 1 + 0.14 * smoothstep(12, 26, t);
-  const seedSplit = smoothstep(26, 38, t);
-  const seedFade = 1 - smoothstep(46, 56, t);
-  tree.seedMesh.visible = t < 56 && seedFade > 0.01;
+  const seedPlant = smoothstep(0.0, 3.0, t);      // 种子从上方落下、落进土里
+  const seedSwell = 1 + 0.14 * smoothstep(16, 32, t);
+  const seedSplit = smoothstep(32, 48, t);
+  const seedFade = 1 - smoothstep(66, 80, t);
+  tree.seedMesh.visible = t < 80 && seedFade > 0.01;
   tree.seedMesh.position.y = 0.055 + 0.10 * (1 - seedPlant);
-  tree.seedMesh.scale.set(0.52 * seedSwell * seedFade, 0.42 * seedSwell * seedFade, 0.68 * seedSwell * seedFade);
+  tree.seedMesh.scale.set(0.35 * seedSwell * seedFade, 0.28 * seedSwell * seedFade, 0.46 * seedSwell * seedFade);
   tree.seedTop.position.set(0.018 * seedSplit, 0.055 * seedSplit, 0.006 * seedSplit);
   tree.seedTop.rotation.z = -0.62 * seedSplit;
   tree.seedTop.rotation.x = 0.22 * seedSplit;
@@ -2520,7 +2520,7 @@ function animate() {
   scene.__grass.material.opacity = grassK;
   scene.__grass.scale.set(1, 1, 1);
   // 雨：只在下雨窗口可见，落在树/土上时画面变暗
-  rainMat.opacity = rainA * 0.62;
+  rainMat.opacity = rainA * 0.82;
   rain.visible = rainA > 0.01;
   if (rain.visible) {
     const rp = rainGeo.attributes.position.array;
@@ -2530,8 +2530,8 @@ function animate() {
       rp[i3] += 1.2 * dt;
       if (rp[i3 + 1] < 0) {
         rp[i3 + 1] = 16 + Math.random() * 6;
-        rp[i3] = (Math.random() - 0.5) * 30;
-        rp[i3 + 2] = -14 + Math.random() * 24;
+        rp[i3] = (Math.random() - 0.5) * 24;
+        rp[i3 + 2] = -9 + Math.random() * 9;
       }
     }
     rainGeo.attributes.position.needsUpdate = true;
@@ -2540,7 +2540,7 @@ function animate() {
     const pos = snowGeo.attributes.position.array;
     for (let i = 0; i < SNOW_COUNT; i++) {
       const i3 = i * 3;
-      pos[i3 + 1] -= snowVel[i] * dt * 1.6;
+      pos[i3 + 1] -= snowVel[i] * dt * 0.9;
       pos[i3] += Math.sin(t * 0.9 + snowPhase[i]) * dt * 0.5;
       pos[i3 + 2] += Math.cos(t * 0.7 + snowPhase[i]) * dt * 0.4;
       if (pos[i3 + 1] < 0) {
@@ -2577,7 +2577,7 @@ function animate() {
     fitR = camFrame.viewH / (2 * Math.tan((camera.fov * Math.PI) / 360));
   } else {
     const topY = Math.max(0.9, crownTop + 0.52);
-    const BOTTOM_Y = -0.62 - 1.95 * smoothstep(0, 0.34, g);
+    const BOTTOM_Y = -0.62 - 3.6 * smoothstep(0, 0.34, g);   // 长大后框住更深的根系
     cam.target.y = (topY + BOTTOM_Y) / 2;
     fitR = ((topY - BOTTOM_Y) * 1.0) / (2 * Math.tan((camera.fov * Math.PI) / 360));
   }
