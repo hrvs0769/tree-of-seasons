@@ -2045,7 +2045,7 @@ let prevT = storyTime;
 let lastReal = performance.now();
 
 function fmtTime(s) {
-  s = Math.max(0, Math.floor(s));
+  s = Math.max(0, Math.round(s));
   return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
 }
 function chapterIndexAt(t) {
