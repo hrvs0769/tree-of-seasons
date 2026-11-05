@@ -68,3 +68,14 @@
 > 早期尝试过纯代码合成配乐（`tools/make-web-bgm.js`、`tools/make-bgm-sampled.py`），音质不理想已弃用，仅作存档，网页不加载。根目录的 `tree-of-seasons-bgm.wav` 是给导出视频短片用的另一首 58 秒配乐，网页同样不加载。
 
 换曲：把音频放进 `assets/`，改 `index.html` 里 `<audio id="bgm">` 的 `src`，同步更新 `assets/MUSIC-LICENSE.md`。播放同步由 `src/bgm.js` 跟随播放条自动完成，3D 代码不用改。
+
+## 开发文档
+
+- **主文档／索引**：[DEVELOPMENT.md](DEVELOPMENT.md) — 项目概况、目录说明、运行架构、文档索引、常见修改入口
+- [`docs/01-architecture.md`](docs/01-architecture.md) — 页面加载、运行时结构和每帧执行顺序
+- [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) — 时间轴、14 章章节表、生长曲线、镜头
+- [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) — 种子、枝条、根系、叶片、花果雪
+- [`docs/04-environment.md`](docs/04-environment.md) — 天空、光照、地面、草花、土壤、雨雪雾
+- [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) — 课堂布局、旁白、播放器、背景音乐
+- [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) — 构建、离线运行、GitHub Pages 部署
+- [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) — URL 调试、截图、章节核对、性能
