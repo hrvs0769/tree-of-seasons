@@ -26,9 +26,9 @@
 
   /* 左上角课堂旁白：大字号、深色底，投影上也能读清 */
   #narration {
-    position: fixed; left: max(3.6vw, 22px); top: max(4vh, 20px);
-    width: min(560px, calc(100vw - 44px));
-    padding: 18px 24px 17px;
+    position: fixed; left: max(3.6vw, 22px); bottom: max(10.5vh, 92px);
+    width: min(480px, calc(100vw - 44px));
+    padding: 15px 21px 14px;
     color: var(--ink);
     background: linear-gradient(135deg, rgba(10, 26, 20, .73), rgba(10, 26, 20, .56));
     border: 1px solid rgba(255, 255, 255, .14);
@@ -147,7 +147,7 @@
 
   @media (max-width: 700px) {
     #narration {
-      left: 12px; right: 12px; top: 12px; width: auto;
+      left: 12px; right: 12px; top: 12px; bottom: auto; width: auto;
       padding: 13px 16px 13px; border-radius: 4px 12px 12px 4px;
     }
     #chapterIndex { font-size: 9px; letter-spacing: .24em; }
