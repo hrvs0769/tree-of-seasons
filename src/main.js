@@ -1252,7 +1252,7 @@ function buildTree(seed) {
   const geos = [];
 
   const MAX_DEPTH = 4;
-  const DUR = [0.40, 0.18, 0.14, 0.10, 0.06];
+  const DUR = [0.24, 0.16, 0.12, 0.08, 0.05];
 
   // 沿折线扫出一个带锥度的圆管（可弯曲），索引按长度顺序排列，方便做生长动画
   function sweepGeometry(points, radii, radial) {
@@ -1541,7 +1541,7 @@ function buildTree(seed) {
     const segs = depth === 0 ? 16 : depth === 1 ? 9 : depth === 2 ? 6 : 4;
     const radial = depth === 0 ? 10 : depth === 1 ? 7 : depth === 2 ? 5 : 4;
     const { pts, radii } = rootPath(start, dir, len, r0, segs, depth === 0 ? 0.22 : 0.28);
-    const dur = [0.060, 0.040, 0.030, 0.020][Math.min(3, depth)];
+    const dur = [0.025, 0.020, 0.015, 0.010][Math.min(3, depth)];
     const g1 = Math.min(0.86, gStart + dur);
     addRoot(pts, radii, radial, gStart, g1, depth);
 
@@ -1581,7 +1581,7 @@ function buildTree(seed) {
     rootChain(
       new THREE.Vector3(Math.cos(a) * 0.07, -0.06, 0.02 + Math.sin(a) * 0.05),
       new THREE.Vector3(Math.cos(a) * 1.1, -0.55, Math.sin(a) * 0.5).normalize(),
-      randRange(rand, 1.2, 1.7), 0.075, 1, 0.13
+      randRange(rand, 1.2, 1.7), 0.075, 1, 0.045
     );
   }
 
@@ -1881,7 +1881,7 @@ const rain = new THREE.Points(rainGeo, rainMat);
 rain.frustumCulled = false;
 scene.add(rain);
 // 雨的时间窗：扎根、破土、幼苗、夏天各来一阵
-const RAIN_WINDOWS = [[4, 15, 0.62], [40, 54, 0.55], [62, 72, 0.45], [128, 138, 0.5], [206, 216, 0.4]];
+const RAIN_WINDOWS = [[15, 31, 0.62], [40, 54, 0.55], [62, 72, 0.45], [128, 138, 0.5], [206, 216, 0.4]];
 function weatherAt(t) {
   let a = 0;
   for (const [s, e, amt] of RAIN_WINDOWS) {
