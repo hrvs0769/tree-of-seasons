@@ -1868,7 +1868,7 @@ const rainPos = new Float32Array(RAIN_COUNT * 3);
 const rainVel = new Float32Array(RAIN_COUNT);
 for (let i = 0; i < RAIN_COUNT; i++) {
   rainPos[i * 3] = (Math.random() - 0.5) * 24;
-  rainPos[i * 3 + 1] = Math.random() * 14;
+  rainPos[i * 3 + 1] = Math.random() * 8;
   rainPos[i * 3 + 2] = -9 + Math.random() * 9;
   rainVel[i] = 10 + Math.random() * 8;
 }
@@ -2529,7 +2529,7 @@ function animate() {
       rp[i3 + 1] -= rainVel[i] * dt;
       rp[i3] += 1.2 * dt;
       if (rp[i3 + 1] < 0) {
-        rp[i3 + 1] = 16 + Math.random() * 6;
+        rp[i3 + 1] = 8 + Math.random() * 3;
         rp[i3] = (Math.random() - 0.5) * 24;
         rp[i3 + 2] = -9 + Math.random() * 9;
       }
