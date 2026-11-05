@@ -6,89 +6,102 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>一棵树的四季</title>
 <style>
-  :root { color-scheme: light; --gold: #e8c47a; --ink: #f7f0e3; }
+  :root {
+    color-scheme: light;
+    --gold: #e8c47a;
+    --ink: #f7f0e3;
+    --side: clamp(320px, 27vw, 400px);
+    --player-h: 76px;
+  }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0; height: 100%; overflow: hidden;
-    background: linear-gradient(#bfe7f8, #dff3ff);
+    background: #0d1b13;
     font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
     -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
   }
-  #app { position: fixed; inset: 0; }
+
+  /* 3D 画面只占右侧主舞台，左侧是独立的课堂讲解栏，任何文字都不压在树上 */
+  #app { position: fixed; left: var(--side); right: 0; top: 0; bottom: var(--player-h); }
   #app canvas { display: block; filter: saturate(1.06) contrast(1.035); }
 
-  body::before {
-    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 1;
-    background:
-      linear-gradient(rgba(10, 30, 42, .24), rgba(10, 30, 42, 0) 20%),
-      linear-gradient(to top, rgba(8, 18, 12, .58), rgba(8, 18, 12, 0) 32%);
-  }
-
-  /* 左上角课堂旁白：大字号、深色底，投影上也能读清 */
-  #narration {
-    position: fixed; left: max(3.6vw, 22px); bottom: max(10.5vh, 92px);
-    width: min(480px, calc(100vw - 44px));
-    padding: 15px 21px 14px;
+  #sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; width: var(--side);
+    padding: 26px 28px 18px;
+    display: flex; flex-direction: column; gap: 16px;
     color: var(--ink);
-    background: linear-gradient(135deg, rgba(10, 26, 20, .73), rgba(10, 26, 20, .56));
-    border: 1px solid rgba(255, 255, 255, .14);
-    border-left: 4px solid var(--gold);
-    border-radius: 4px 14px 14px 4px;
-    box-shadow: 0 14px 45px rgba(0, 0, 0, .20);
-    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-    pointer-events: none; z-index: 3;
+    background:
+      radial-gradient(120% 80% at 0% 0%, rgba(133, 172, 111, .12), transparent 55%),
+      linear-gradient(160deg, #0e2117 0%, #193022 48%, #102218 100%);
+    border-right: 1px solid rgba(255, 255, 255, .10);
+    z-index: 4; overflow: hidden;
   }
-  #chapterIndex {
-    font-size: 10px; letter-spacing: .32em; color: var(--gold); opacity: .9;
+  #sidebar::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background-image: radial-gradient(rgba(232, 196, 122, .08) .6px, transparent .7px);
+    background-size: 5px 5px; opacity: .22; mix-blend-mode: screen;
   }
-  #chapterTitle {
-    margin-top: 7px;
+  #brand {
+    position: relative; z-index: 1;
     font-family: "Songti SC", "STSong", "SimSun", serif;
-    font-size: clamp(24px, 3.1vmin, 34px); font-weight: 300; letter-spacing: .10em; line-height: 1.25;
-    text-shadow: 0 2px 18px rgba(0, 0, 0, .3);
+    font-size: clamp(23px, 2.2vw, 30px); font-weight: 300; letter-spacing: .10em; color: #f4e7cc;
   }
-  #chapterText {
-    margin-top: 9px;
-    font-size: clamp(14px, 1.72vmin, 19px);
-    line-height: 1.85; letter-spacing: .035em; color: rgba(247, 240, 227, .92);
-    text-shadow: 0 1px 3px rgba(0, 0, 0, .4);
-  }
-  #chapterHint {
-    margin-top: 9px; font-size: 10px; letter-spacing: .16em;
-    color: rgba(247, 240, 227, .42);
+  #brand span {
+    display: block; margin-top: 8px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size: 8px; letter-spacing: .32em; color: rgba(244, 231, 204, .42);
   }
 
-  /* 右上角季节徽标 */
-  #hud {
-    position: fixed; right: max(3.6vw, 22px); top: max(4vh, 20px);
-    text-align: right; pointer-events: none; color: var(--ink);
-    text-shadow: 0 2px 22px rgba(10, 28, 20, .55);
-    z-index: 3;
-  }
+  #hud { position: relative; z-index: 1; text-align: left; color: var(--ink); }
   #season {
     font-family: "Songti SC", "STSong", "SimSun", serif;
-    font-size: clamp(34px, 5.8vmin, 58px); font-weight: 300; letter-spacing: .12em; line-height: 1;
+    font-size: clamp(40px, 4.3vw, 58px); font-weight: 300; letter-spacing: .12em; line-height: 1;
+    color: #f2dfb8;
   }
   @keyframes seasonIn {
     from { opacity: 0; transform: translateY(8px) scale(.97); }
     to { opacity: 1; transform: none; }
   }
-  #sub { margin-top: .6em; font-size: 11px; letter-spacing: .34em; opacity: .8; font-weight: 300; }
-  #year { margin-top: .75em; font-size: 10px; letter-spacing: .26em; opacity: .52; font-weight: 300; }
+  #sub { margin-top: .55em; font-size: 11px; letter-spacing: .3em; opacity: .78; font-weight: 300; }
+  #year { margin-top: .7em; font-size: 10px; letter-spacing: .24em; opacity: .52; font-weight: 300; }
 
-  /* 底部播放器：暂停 / 进度条 / 跳转 */
+  #narration {
+    position: relative; z-index: 1;
+    padding-top: 18px; border-top: 1px solid rgba(232, 196, 122, .30);
+    color: var(--ink);
+  }
+  #chapterIndex { font-size: 10px; letter-spacing: .28em; color: var(--gold); opacity: .92; }
+  #chapterTitle {
+    margin-top: 8px;
+    font-family: "Songti SC", "STSong", "SimSun", serif;
+    font-size: clamp(27px, 2.8vw, 36px); font-weight: 300; letter-spacing: .10em; line-height: 1.3;
+    color: #fff7e8; text-shadow: 0 2px 20px rgba(0, 0, 0, .28);
+  }
+  #chapterText {
+    margin-top: 12px;
+    font-size: clamp(14px, 1.35vw, 17px);
+    line-height: 1.95; letter-spacing: .035em; color: rgba(247, 240, 227, .90);
+  }
+  #chapterHint {
+    margin-top: 13px; font-size: 9px; line-height: 1.8; letter-spacing: .10em;
+    color: rgba(247, 240, 227, .36);
+  }
+  #tips {
+    position: relative; z-index: 1; margin-top: auto;
+    font-size: 9px; letter-spacing: .10em; line-height: 1.9;
+    color: rgba(247, 240, 227, .38);
+  }
+
+  /* 控制条独占底部，不覆盖 3D 画面 */
   #player {
-    position: fixed; left: 50%; bottom: max(2.2vh, 14px); transform: translateX(-50%);
-    width: min(1040px, calc(100vw - 40px));
-    padding: 9px 14px 11px;
-    background: rgba(9, 22, 15, .76);
-    border: 1px solid rgba(255, 255, 255, .15);
-    border-radius: 16px;
-    box-shadow: 0 14px 40px rgba(0, 0, 0, .22);
-    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+    position: fixed; left: var(--side); right: 0; bottom: 0; height: var(--player-h);
+    padding: 10px 18px 12px;
+    display: flex; align-items: center;
+    background: linear-gradient(180deg, rgba(9, 22, 15, .92), rgba(7, 17, 12, .98));
+    border-top: 1px solid rgba(255, 255, 255, .13);
     color: var(--ink); z-index: 5;
   }
-  #player .row { display: flex; align-items: center; gap: 12px; }
+  #player .row { display: flex; align-items: center; gap: 12px; width: 100%; }
   #playBtn, #replayBtn, #replant {
     border: 0; cursor: pointer; font: inherit; white-space: nowrap;
     transition: transform .16s ease, background .16s ease;
@@ -117,26 +130,22 @@
     width: 12px; height: 12px; border-radius: 50%; background: #fff;
     border: 3px solid var(--gold); box-shadow: 0 1px 8px rgba(0,0,0,.25); cursor: grab;
   }
-  #marks { position: absolute; left: 0; right: 0; top: 2px; height: 9px; pointer-events: none; }
-  #marks span { position: absolute; top: 0; width: 2px; height: 7px; border-radius: 2px; background: rgba(255,255,255,.38); transform: translateX(-1px); }
+  #marks { position: absolute; left: 0; right: 0; top: 1px; height: 9px; pointer-events: none; }
+  #marks span { position: absolute; top: 0; width: 2px; height: 7px; border-radius: 2px; background: rgba(255,255,255,.36); transform: translateX(-1px); }
   #marks span.chapter-major { background: rgba(232,196,122,.86); height: 9px; }
   #replayBtn {
-    flex: none; padding: 7px 10px; border-radius: 9px; font-size: 11px;
+    flex: none; padding: 7px 10px; border-radius: 8px; font-size: 11px;
     color: rgba(247,240,227,.82); background: rgba(255,255,255,.10);
   }
   #replayBtn:hover, #replant:hover { background: rgba(255,255,255,.20); }
   #replant {
-    flex: none; padding: 8px 13px; border-radius: 9px; font-size: 11px;
+    flex: none; padding: 8px 13px; border-radius: 8px; font-size: 11px;
     color: #223a26; background: var(--gold);
   }
-  #tips {
-    position: fixed; left: 50%; bottom: max(10.5vh, 86px); transform: translateX(-50%);
-    font-size: 10px; letter-spacing: .16em; color: rgba(255,255,255,.78);
-    text-shadow: 0 1px 10px rgba(10,30,20,.6); white-space: nowrap;
-    pointer-events: none; z-index: 3;
-  }
+
   #vignette {
-    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    position: fixed; left: var(--side); top: 0; right: 0; bottom: var(--player-h);
+    pointer-events: none; z-index: 1;
     background: radial-gradient(120% 90% at 50% 42%, rgba(0,0,0,0) 45%, rgba(12,26,20,.25) 100%);
   }
   #loading {
@@ -145,51 +154,58 @@
     background: linear-gradient(#bfe7f8, #e6f6ff); z-index: 20;
   }
 
+  /* 手机竖屏：回到顶部旁白 + 底部播放条，3D 画面仍然完整可见 */
   @media (max-width: 700px) {
-    #narration {
+    :root { --side: 0px; --player-h: 112px; }
+    #app { left: 0; bottom: var(--player-h); }
+    #sidebar {
       left: 12px; right: 12px; top: 12px; bottom: auto; width: auto;
-      padding: 13px 16px 13px; border-radius: 4px 12px 12px 4px;
+      padding: 12px 15px 11px; gap: 0; border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px; background: linear-gradient(135deg, rgba(10,26,20,.82), rgba(10,26,20,.64));
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      box-shadow: 0 10px 32px rgba(0,0,0,.24);
     }
-    #chapterIndex { font-size: 9px; letter-spacing: .24em; }
-    #chapterTitle { font-size: 22px; margin-top: 5px; }
-    #chapterText { font-size: 14px; line-height: 1.75; margin-top: 6px; }
+    #brand, #hud, #tips { display: none; }
+    #narration { padding-top: 0; border-top: 0; }
+    #chapterIndex { font-size: 9px; letter-spacing: .22em; }
+    #chapterTitle { font-size: 21px; margin-top: 5px; }
+    #chapterText { font-size: 13px; line-height: 1.7; margin-top: 6px; }
     #chapterHint { display: none; }
-    #hud { display: none; }
-    #season { font-size: 30px; }
-    #sub { font-size: 9px; letter-spacing: .22em; }
-    #year { font-size: 9px; }
-    #player { width: calc(100vw - 22px); bottom: 8px; padding: 8px 10px 9px; border-radius: 14px; }
+    #player { left: 0; right: 0; height: var(--player-h); padding: 8px 11px 10px; }
     #player .row { gap: 8px; flex-wrap: wrap; }
     #playBtn { width: 36px; height: 36px; font-size: 14px; }
     #timecode { min-width: 86px; font-size: 10px; }
     #timelineWrap { order: 3; flex-basis: 100%; height: 24px; }
     #replayBtn, #replant { font-size: 10px; padding: 7px 9px; }
-    #tips { bottom: 122px; font-size: 9px; white-space: normal; width: 90vw; text-align: center; }
+    #vignette { left: 0; bottom: var(--player-h); }
   }
 </style>
 </head>
 <body>
   <div id="app"></div>
 
-  <div id="narration">
-    <div id="chapterIndex">第 1 章 / 共 14 章</div>
-    <div id="chapterTitle">种子入土</div>
-    <div id="chapterText">一颗小小的种子落进松软的泥土里，安静地躺着，等待水分和温暖把它唤醒。</div>
-    <div id="chapterHint">空格暂停 · ← → 前后 5 秒 · 拖动进度条跳到任意时刻</div>
-  </div>
-
-  <div id="hud">
-    <div id="season">春</div>
-    <div id="sub">万物发芽</div>
-    <div id="year">第 1 年</div>
-  </div>
+  <aside id="sidebar">
+    <div id="brand">一棵树的四季<span>THE FOUR SEASONS OF A TREE</span></div>
+    <div id="hud">
+      <div id="season">春</div>
+      <div id="sub">万物发芽</div>
+      <div id="year">第 1 年</div>
+    </div>
+    <div id="narration">
+      <div id="chapterIndex">第 1 章 / 共 14 章</div>
+      <div id="chapterTitle">种子入土</div>
+      <div id="chapterText">一颗小小的种子落进松软的泥土里。它安静地躺着，等待水分和温暖把它唤醒。</div>
+      <div id="chapterHint">空格暂停 · ← → 前后 5 秒 · 拖动进度条跳到任意时刻</div>
+    </div>
+    <div id="tips">拖动环顾 · 滚轮缩放 · 空格暂停 · ←/→ 前后 5 秒</div>
+  </aside>
 
   <div id="player">
     <div class="row">
       <button id="playBtn" aria-label="播放/暂停">⏸</button>
-      <div id="timecode">00:00 / 03:24</div>
+      <div id="timecode">00:00 / 03:23</div>
       <div id="timelineWrap">
-        <input id="timeline" type="range" min="0" max="204" step="0.1" value="0" aria-label="播放进度">
+        <input id="timeline" type="range" min="0" max="203.9" step="0.1" value="0" aria-label="播放进度">
         <div id="marks"></div>
       </div>
       <button id="replayBtn">↻ 重播</button>
@@ -197,7 +213,6 @@
     </div>
   </div>
 
-  <div id="tips">拖动环顾 · 滚轮缩放 · 空格暂停 · ←/→ 前后 5 秒</div>
   <div id="vignette"></div>
   <div id="loading">正在种树…</div>
 
