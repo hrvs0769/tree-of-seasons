@@ -2265,7 +2265,9 @@ function animate() {
   // 太阳位置：黄金时刻的低角度逆光，太阳落在画面内、树后偏右
   // 侧逆光：太阳放在左后方，既保留轮廓光，又不会把树的正脸压成黑块
   const sunElev = 0.16 + 0.10 * (0.5 + 0.5 * Math.cos((p - 0.25) * Math.PI * 2));
-  const sunAz = -2.02 + Math.sin(t * 0.03) * 0.12;
+  // 太阳跟随相机方位角偏左 0.28 弧度：始终留在右侧 3D 舞台的安全区内，
+  // 不会被左侧讲解栏裁掉，也不会因为镜头自动摆动而跑出画面。
+  const sunAz = cam.theta - Math.PI - 0.28 + Math.sin(t * 0.03) * 0.04;
   const sunDir = _sunDir.set(Math.cos(sunAz) * Math.cos(sunElev), Math.sin(sunElev), Math.sin(sunAz) * Math.cos(sunElev)).normalize();
   sun.position.copy(sunDir).multiplyScalar(34);
   sunSprite.position.copy(sunDir).multiplyScalar(150);
