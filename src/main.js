@@ -114,7 +114,14 @@ function samplePalette(p, out) {
 const canvasHost = document.getElementById('app');
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
-renderer.setSize(window.innerWidth, window.innerHeight);
+function appViewportSize() {
+  return {
+    w: Math.max(1, canvasHost.clientWidth || window.innerWidth),
+    h: Math.max(1, canvasHost.clientHeight || window.innerHeight),
+  };
+}
+const vp0 = appViewportSize();
+renderer.setSize(vp0.w, vp0.h);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -124,7 +131,7 @@ canvasHost.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0xcfe9f5, 34, 165);
 
-const camera = new THREE.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.1, 600);
+const camera = new THREE.PerspectiveCamera(38, vp0.w / vp0.h, 0.1, 600);
 
 /* ---------------- 天空 ---------------- */
 // 程序化大气天空：天顶渐变 + 太阳光晕 + 缓慢流动的云层（全部在 shader 里，无需贴图）
@@ -2558,8 +2565,8 @@ function animate() {
     if (cam.theta < THETA_MIN) { cam.theta = THETA_MIN; cam.dir = 1; }
   }
   // 竖屏（手机）时视野变窄，需要把镜头拉远，否则树会被裁掉
-  const aspectNow = window.innerWidth / window.innerHeight;
-  const aspectFix = aspectNow < 1.15 ? Math.min(2.8, Math.pow(1.15 / aspectNow, 0.9)) : 1;
+  const aspectNow = Math.max(0.01, camera.aspect);
+  const aspectFix = aspectNow < 1.45 ? Math.min(2.8, Math.pow(1.45 / aspectNow, 0.82)) : 1;
   // 生长阶段走镜头脚本（种子微距、根系剖面、破土、幼苗、后拉），长成后自动框住全树
   const camFrame = cameraFrameAt(t);
   let fitR;
@@ -2610,9 +2617,10 @@ function animate() {
 }
 
 window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
+  const vp = appViewportSize();
+  camera.aspect = vp.w / vp.h;
   camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setSize(vp.w, vp.h);
 });
 
 document.getElementById('loading').style.display = 'none';
