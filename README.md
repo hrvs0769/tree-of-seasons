@@ -55,3 +55,16 @@
 - 调试：URL 加 `?debug` 看时间轴日志，`?t0=52` 直接从第 52 秒开始
 - 定帧：`?t0=34&freeze` 把时间钉死在第 34 秒不放，画面完全静止 —— 截图对比用
 - 视觉迭代：`./tools/shoot.sh rN` 一轮出 7 张（桌面 7 个时间点 + 手机 1 张）拼图 `shots/rN/sheet.png`，评审记录见 `ITERATIONS.md`
+
+## 背景音乐
+
+网页配乐使用 Yoiyami 的《The Budding of Consciousness》，**CC0 1.0 公有领域**（可商用、可修改、可再分发、无需署名）。极简氛围钢琴，不抢课堂旁白。完整授权与溯源见 `assets/MUSIC-LICENSE.md`。
+
+- `assets/tree-of-seasons-bgm-v3.mp3` — 网页成品（260 秒 / 约 119 kbps / 3.7 MB）：原曲 3:44 做 3 秒交叉淡化铺满 4:20，2 秒淡入、4 秒淡出，整体压低 4 dB
+- `src/bgm.js` — 播放控制：跟随播放 / 暂停 / 进度跳转 / 重播，截图与导出视频模式自动静音。独立普通脚本，不参与打包，`app.js` 不用改
+- 底部播放条的「♫ 音乐」开关或 `M` 键开关，旁边滑块调音量（默认 85%）；选择会记在本机
+- 浏览器禁止无交互自动出声：若打开页面没声音，点一下「♫ 开启音乐」即可
+
+> 早期尝试过纯代码合成配乐（`tools/make-web-bgm.js`、`tools/make-bgm-sampled.py`），音质不理想已弃用，仅作存档，网页不加载。根目录的 `tree-of-seasons-bgm.wav` 是给导出视频短片用的另一首 58 秒配乐，网页同样不加载。
+
+换曲：把音频放进 `assets/`，改 `index.html` 里 `<audio id="bgm">` 的 `src`，同步更新 `assets/MUSIC-LICENSE.md`。播放同步由 `src/bgm.js` 跟随播放条自动完成，3D 代码不用改。
