@@ -2,7 +2,7 @@
 
 > 本文解决：v3 界面用哪套设计 token、由哪些组件构成、动效时长与 easing 如何统一、pointer/keyboard/touch 如何映射、无障碍做到了什么程度，以及 `docs/10` 的 P0/P1/P2 清单逐条整改到什么状态。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)；组件与事件细节见 [`05-ui-and-audio.md`](05-ui-and-audio.md)；整改前的问题清单见 [`10-round3-ui-plan.md`](10-round3-ui-plan.md)。
-> 最后更新：2026-11-07 · 对应代码：`6e5f29f`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-07 · 对应代码：`17c3454`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
 
 ## 1. 设计语言
 
@@ -260,16 +260,35 @@
 - **状态语义**：`aria-pressed` 与开关一致；`playBtn.dataset.playing` 与音频播放一致；音乐按钮三种状态宽度差 ≤1px。
 - **截图**：见 §8；桌面 1280×800 / 1440×900，移动 390×844 / 768×1024，`shots/round3/` 下另有 `a11y-*` 系列（含 `a11y-reduced-motion-1280x800.png`）与 `audit-*` 基线系列。
 
+### 7.6 第三轮 a11y 复审（v3 最终版，`shots/round3/a11y-baseline.md`）
+
+在 46 条基线之外，a11y 专项复审又发现 1 个 P0、2 个 P1、7 个 P2，已在本轮一并修复：
+
+| 编号 | 等级 | 问题 | 状态 |
+|---|---|---|---|
+| A-P0-1 | P0 | 开场页无 dialog 语义 / 背景未 inert，Tab 前 11 个焦点落在覆盖层之下 | **已修复**：`#startScreen role=dialog aria-modal aria-labelledby`；启动时 `#app/#sidebar/#player/#vignette/#classroom*` inert；焦点进 `#startClassBtn`；Tab 只在开场页循环；关闭后解除 inert |
+| A-P1-1 | P1 | `#classProgress` 方向键被全局处理器重复执行（100→110s）；音量 range 方向键误改剧情 | **已修复**：`#classProgress` keydown `stopPropagation`；全局 keydown 对 `input[type=range]`（除 `#timeline`）直接 return |
+| A-P1-2 | P1 | 桌面/平板多个按钮 30–42px，低于 44×44 | **已修复**：课堂顶栏/底栏、桌面播放器全部 44px；`#classProgress` 44px 命中区；`#findNext` / `.pause-btn` / 弹层关闭 / 退出确认按钮 44px |
+| A-P2-1 | P2 | `#classExitBtn` 11.5px 文字对比度 4.39:1 | **已修复**：改用 `--ink-2`（5.3:1） |
+| A-P2-2 | P2 | 季节转盘活动标签 9px 低对比度 | **已修复**：标签文字改 `--ink`、季节色移到圆点 |
+| A-P2-3 | P2 | 滑块未填充轨道 1.39:1 | **已修复**：新增 `--track #8C8A83`（paper 3.09:1 / surface 3.31:1） |
+| A-P2-4 | P2 | 当前章节无 `aria-current` | **已修复**：`aria-current="step"` |
+| A-P2-5 | P2 | 点认卡不聚焦、锁屏无 role | **已修复**：`#partCard tabindex=-1` + focus；`#lockOverlay role=dialog aria-label` |
+| A-P2-6 | P2 | 弹层打开时 `M` 仍切换音乐 | **已修复**：`bgm.js` 检测 `.modal.show` 后忽略 M |
+| A-P2-7 | P2 | 768/390 播放器 `.row` 108px > `--player-h:104px`（底部溢 2px） | **已修复**：移动端 `--player-h:110px` |
+
+复审后的最终结论见 `shots/round3/a11y-baseline.md`（本机审计产物，不入库）；v3 无未处理的 P0/P1。
+
 ## 8. 截图索引（`shots/round3/`）
 
 > 全部为本机视觉迭代产物，`shots/` 被 `.gitignore` 忽略，不进仓库、不部署；需要时用 `node tools/ui-shot.js <url> <out.png> [w] [h] '[actions-json]' [waitMs]` 复现（独立 Playwright 截图器，见 `tools/ui-shot.js`）。
 
 | 文件 | 看什么 |
 |---|---|
-| `shots/round3/v12-start.png` | 开场页：左右分栏、大标题、右下「年轮四季」SVG 插画、纸色/墨色/森林绿 |
-| `shots/round3/v12-normal.png` | 自由观看：编辑式讲解栏 + 浮动圆角 3D 画框 + 底部播放条 |
-| `shots/round3/v12-class.png` | 桌面课堂：浅色顶栏 8 按钮、细环季节转盘、白色字幕带与底栏细进度条 |
-| `shots/round3/v12-mobile-class.png` | 390×844 课堂：顶栏两行 44px 按钮、字幕与控制条、音量/进度可达 |
+| `shots/round3/v24-start.png` | 开场页：左右分栏、大标题、右下「年轮四季」SVG 插画、纸色/墨色/森林绿 |
+| `shots/round3/v26-normal.png` | 自由观看：编辑式讲解栏 + 浮动圆角 3D 画框 + 底部播放条 |
+| `shots/round3/v26-class.png` | 桌面课堂：浅色顶栏 8 按钮（分组分隔）、细环季节转盘、白色字幕带与底栏细进度条 |
+| `shots/round3/v25-mobile-class.png` | 390×844 课堂：顶栏两行 4+4 的 44px 按钮、字幕与控制条、音量/进度可达 |
 | `shots/round3/v14-quartet.png` | 四季合影弹层：`object-fit:contain` 完整四图、dialog 语义 |
 | `shots/round3/v8-chapters.png` | 章节弹层：14 卡、当前章高亮并滚到视口中央、抽象编号缩略图 |
 | `shots/round3/v8-teacher.png` | 教师提示弹层：「可以问 / 可以动」、文本可选中 |

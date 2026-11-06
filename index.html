@@ -26,6 +26,7 @@
     --ink-3: #6A706A;
     --line: rgba(20, 24, 26, .09);
     --line-2: rgba(20, 24, 26, .16);
+    --track: #8C8A83;
     --accent: #246B4E;
     --accent-2: #1B5540;
     --accent-soft: #E3EEE7;
@@ -183,7 +184,7 @@
     display: flex; flex-direction: column; gap: 2px; flex: none;
   }
   #sidebarTools button {
-    display: flex; align-items: center; gap: 10px; width: 100%; height: 37px; padding: 0 10px;
+    display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 10px;
     border: 0; border-radius: 9px; background: transparent; color: var(--ink-2);
     font-size: 12.5px; font-weight: 500; text-align: left; cursor: pointer;
     transition: background .18s var(--ease), color .18s var(--ease);
@@ -204,7 +205,7 @@
   }
   #player .row { display: flex; align-items: center; gap: 8px; width: 100%; }
   #playBtn {
-    flex: none; width: 42px; height: 42px; border-radius: 50%; padding: 0; border: 0; cursor: pointer;
+    flex: none; width: 44px; height: 44px; border-radius: 50%; padding: 0; border: 0; cursor: pointer;
     display: grid; place-items: center; background: var(--ink); color: #FDFCF9;
     box-shadow: 0 2px 10px rgba(18, 26, 21, .18);
     transition: transform .2s var(--ease-out), background .2s, box-shadow .2s;
@@ -219,15 +220,15 @@
     flex: none; min-width: 92px; font-size: 11px; font-weight: 500; letter-spacing: .01em;
     color: var(--ink-2); font-variant-numeric: tabular-nums;
   }
-  #timelineWrap { position: relative; flex: 1; min-width: 60px; height: 36px; display: flex; align-items: center; }
+  #timelineWrap { position: relative; flex: 1; min-width: 60px; height: 44px; display: flex; align-items: center; }
   #timeline {
-    appearance: none; -webkit-appearance: none; width: 100%; height: 36px; margin: 0;
+    appearance: none; -webkit-appearance: none; width: 100%; height: 44px; margin: 0;
     background: transparent; cursor: pointer; outline-offset: 4px;
   }
   #timeline::-webkit-slider-runnable-track {
     height: 4px; border-radius: 999px;
     background: linear-gradient(90deg, var(--ink) 0%, var(--ink) var(--progress, 0%),
-                var(--line-2) var(--progress, 0%), var(--line-2) 100%);
+                var(--track) var(--progress, 0%), var(--track) 100%);
   }
   #timeline::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5px;
@@ -238,13 +239,13 @@
   #timeline:hover::-webkit-slider-thumb, #timeline:active::-webkit-slider-thumb {
     transform: scale(1.18); box-shadow: 0 2px 8px rgba(18, 26, 21, .24);
   }
-  #timeline::-moz-range-track { height: 4px; border-radius: 999px; background: var(--line-2); }
+  #timeline::-moz-range-track { height: 4px; border-radius: 999px; background: var(--track); }
   #timeline::-moz-range-progress { height: 4px; border-radius: 999px; background: var(--ink); }
   #timeline::-moz-range-thumb {
     width: 11px; height: 11px; border-radius: 50%; background: var(--surface);
     border: 2px solid var(--ink); box-shadow: 0 1px 4px rgba(18, 26, 21, .2);
   }
-  #marks { position: absolute; left: 0; right: 0; top: 25px; height: 4px; pointer-events: none; }
+  #marks { position: absolute; left: 0; right: 0; top: 30px; height: 4px; pointer-events: none; }
   #marks span { position: absolute; top: 0; width: 1px; height: 3px; border-radius: 1px; background: var(--line-2); transform: translateX(-.5px); }
   #marks span.chapter-major { background: var(--ink-3); height: 4px; }
 
@@ -259,7 +260,7 @@
   #scrubTip.show { opacity: 1; }
 
   .icon-btn {
-    flex: none; width: 34px; height: 34px; padding: 0; border-radius: 9px; border: 0;
+    flex: none; width: 44px; height: 44px; padding: 0; border-radius: 10px; border: 0;
     display: grid; place-items: center; background: transparent; color: var(--ink-2);
     cursor: pointer; transition: background .18s var(--ease), color .18s var(--ease), transform .18s var(--ease);
   }
@@ -267,7 +268,7 @@
   .icon-btn .icon { width: 16px; height: 16px; }
 
   .text-btn {
-    flex: none; height: 34px; padding: 0 11px; border-radius: 9px; border: 0;
+    flex: none; height: 44px; padding: 0 12px; border-radius: 10px; border: 0;
     display: inline-flex; align-items: center; gap: 7px;
     background: transparent; color: var(--ink-2); font-size: 11.5px; font-weight: 500;
     cursor: pointer; white-space: nowrap;
@@ -284,14 +285,16 @@
 
   #volumeWrap { flex: none; display: flex; align-items: center; gap: 4px; color: var(--ink-3); }
   #volumeWrap .icon { width: 15px; height: 15px; }
-  #volume { appearance: none; -webkit-appearance: none; width: 58px; height: 3px; margin: 0; border-radius: 99px; background: var(--line-2); cursor: pointer; }
+  #volume { appearance: none; -webkit-appearance: none; width: 58px; height: 44px; margin: 0; background: transparent; cursor: pointer; }
+  #volume::-webkit-slider-runnable-track { height: 3px; border-radius: 99px; background: var(--track); }
   #volume::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%;
+    -webkit-appearance: none; width: 10px; height: 10px; margin-top: -3.5px; border-radius: 50%;
     background: var(--ink); border: 0; box-shadow: 0 1px 3px rgba(18, 26, 21, .25);
   }
+  #volume::-moz-range-track { height: 3px; border-radius: 99px; background: var(--track); }
   #volume::-moz-range-thumb { width: 10px; height: 10px; border-radius: 50%; background: var(--ink); border: 0; }
   #replant {
-    flex: none; height: 34px; padding: 0 13px; border-radius: 9px; border: 0;
+    flex: none; height: 44px; padding: 0 15px; border-radius: 10px; border: 0;
     background: var(--accent-soft); color: var(--accent-2); font-size: 11.5px; font-weight: 600;
     cursor: pointer; white-space: nowrap;
     transition: background .18s var(--ease), transform .18s var(--ease);
@@ -419,7 +422,7 @@
     padding: 3px; border-radius: 11px; background: rgba(20, 24, 26, .045);
   }
   .class-top-actions button {
-    height: 30px; padding: 0 10px; border-radius: 8px; border: 0;
+    height: 44px; min-width: 44px; padding: 0 11px; border-radius: 9px; border: 0;
     background: transparent; color: var(--ink-2);
     font-size: 11.5px; font-weight: 550; letter-spacing: .01em; cursor: pointer; white-space: nowrap;
     transition: background .18s var(--ease), color .18s var(--ease), box-shadow .18s var(--ease);
@@ -432,7 +435,7 @@
     content: ""; position: absolute; left: -6px; top: 7px; bottom: 7px; width: 1px;
     background: var(--line-2);
   }
-  .class-top-actions button[title*="退出"] { color: var(--ink-3); }
+  .class-top-actions button[title*="退出"] { color: var(--ink-2); }
   .class-top-actions button[title*="退出"]:hover { background: rgba(169, 81, 60, .08); color: var(--danger); }
 
   /* ---------------- 季节转盘 ---------------- */
@@ -450,12 +453,16 @@
   }
   .wheel-label { position: absolute; display: flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 600; letter-spacing: .02em; color: var(--ink-3); transition: color .4s; }
   .wheel-label::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: .9; }
+  .wheel-label.ws-spring::before { background: var(--spring); }
+  .wheel-label.ws-summer::before { background: var(--summer); }
+  .wheel-label.ws-autumn::before { background: var(--autumn); }
+  .wheel-label.ws-winter::before { background: var(--winter); }
   .wheel-label.ws-spring { top: 9%; right: 10%; }
   .wheel-label.ws-summer { bottom: 9%; right: 10%; }
   .wheel-label.ws-autumn { bottom: 9%; left: 10%; }
   .wheel-label.ws-winter { top: 9%; left: 10%; }
   body[data-season="春"] .ws-spring, body[data-season="夏"] .ws-summer,
-  body[data-season="秋"] .ws-autumn, body[data-season="冬"] .ws-winter { color: var(--season); }
+  body[data-season="秋"] .ws-autumn, body[data-season="冬"] .ws-winter { color: var(--ink); font-weight: 700; }
   #wheelNeedle {
     position: absolute; left: 50%; top: 50%; width: 1.5px; height: 43px;
     background: var(--ink); transform-origin: 50% 100%;
@@ -498,14 +505,15 @@
     background: var(--surface); border-top: 1px solid var(--line);
   }
   #classProgressRow {
-    position: absolute; left: 20px; right: 20px; top: 0; height: 18px;
+    position: absolute; left: 20px; right: 20px; top: 0; height: 18px; z-index: 1;
     display: flex; align-items: center; gap: 10px;
   }
+  #classroomBar .class-main-controls, #classroomBar .class-bar-side { position: relative; z-index: 2; }
   #classTimecode { flex: none; font-size: 10px; font-weight: 500; letter-spacing: .02em; color: var(--ink-3); font-variant-numeric: tabular-nums; }
-  #classProgress { position: relative; flex: 1; height: 18px; cursor: pointer; }
+  #classProgress { position: relative; flex: 1; height: 44px; margin-top: -13px; cursor: pointer; }
   #classProgress::before {
     content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 3px; margin-top: -1.5px;
-    border-radius: 99px; background: var(--line-2);
+    border-radius: 99px; background: var(--track);
   }
   #classProgress i {
     position: absolute; left: 0; top: 50%; height: 3px; margin-top: -1.5px; width: 0;
@@ -520,8 +528,10 @@
   #classVolumeWrap { display: flex; align-items: center; gap: 4px; color: var(--ink-3); }
   @media (max-width: 980px) { #classVolumeWrap { display: none; } }
   #classVolumeWrap .icon { width: 14px; height: 14px; }
-  #classVolume { appearance: none; -webkit-appearance: none; width: 56px; height: 3px; border-radius: 99px; background: var(--line-2); cursor: pointer; }
-  #classVolume::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 9px; border-radius: 50%; background: var(--ink); border: 0; }
+  #classVolume { appearance: none; -webkit-appearance: none; width: 56px; height: 44px; margin: 0; background: transparent; cursor: pointer; }
+  #classVolume::-webkit-slider-runnable-track { height: 3px; border-radius: 99px; background: var(--track); }
+  #classVolume::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 9px; margin-top: -3px; border-radius: 50%; background: var(--ink); border: 0; }
+  #classVolume::-moz-range-track { height: 3px; border-radius: 99px; background: var(--track); }
   #classVolume::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); border: 0; }
   body.classroom-mode #classroomBar { display: flex; animation: chromeUp .45s var(--ease-out) .1s both; }
   .class-bar-side { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 10px; }
@@ -545,7 +555,7 @@
   #classPlayBtn .icon { width: 20px; height: 20px; }
   #classPlayBtn .i-play { margin-left: 2px; }
   .class-small-btn {
-    height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line);
+    height: 44px; min-width: 44px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line);
     background: transparent; color: var(--ink-2); font-size: 11px; font-weight: 500;
     cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
     transition: background .18s var(--ease), color .18s var(--ease), border-color .18s var(--ease);
@@ -577,7 +587,7 @@
   .modal-kicker { font-size: 10px; font-weight: 550; letter-spacing: .12em; color: var(--accent); text-transform: uppercase; }
   .modal-head h2 { margin: 6px 0 0; font-size: clamp(22px, 2.4vw, 30px); font-weight: 640; letter-spacing: -.02em; color: var(--ink); }
   .modal-close {
-    flex: none; width: 40px; height: 40px; border-radius: 10px; border: 0;
+    flex: none; width: 44px; height: 44px; border-radius: 10px; border: 0;
     background: var(--surface-2); color: var(--ink-2); font-size: 20px; line-height: 1;
     cursor: pointer; display: grid; place-items: center;
     transition: background .18s var(--ease), color .18s;
@@ -671,8 +681,8 @@
   }
   #findProgress { flex: none; font-size: 10px; font-weight: 500; letter-spacing: .02em; color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
   #findNext {
-    flex: none; height: 28px; padding: 0 11px; border-radius: 7px; border: 0;
-    background: var(--accent-soft); color: var(--accent-2); font-size: 11px; font-weight: 600; cursor: pointer;
+    flex: none; height: 44px; padding: 0 13px; border-radius: 9px; border: 0;
+    background: var(--accent-soft); color: var(--accent-2); font-size: 11.5px; font-weight: 600; cursor: pointer;
   }
   #findNext:hover { background: #D6E7DC; }
   #findClose { flex: none; width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-3); font-size: 20px; cursor: pointer; line-height: 1; display: grid; place-items: center; }
@@ -694,8 +704,8 @@
   .pause-text { display: flex; align-items: center; gap: 6px; }
   .pause-text::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
   .pause-btn {
-    flex: none; height: 30px; padding: 0 13px; border-radius: 8px; border: 0;
-    background: var(--ink); color: #FDFCF9; font-size: 11.5px; font-weight: 600; cursor: pointer;
+    flex: none; height: 44px; padding: 0 15px; border-radius: 9px; border: 0;
+    background: var(--ink); color: #FDFCF9; font-size: 12px; font-weight: 600; cursor: pointer;
     transition: background .18s;
   }
   .pause-btn:hover { background: #232B29; }
@@ -750,8 +760,8 @@
     #chapterGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
   @media (max-width: 980px) {
-    :root { --side: 0px; --gutter: 0px; --player-h: 104px; --stage-radius: 0px; --class-top: 68px; }
-    .class-top-actions button { height: 38px; padding: 0 8px; font-size: 10.5px; }
+    :root { --side: 0px; --gutter: 0px; --player-h: 110px; --stage-radius: 0px; --class-top: 72px; }
+    .class-top-actions button { height: 44px; padding: 0 8px; font-size: 10.5px; }
     #app { left: 0; right: 0; top: 0; bottom: var(--player-h); }
     #vignette { left: 0; top: 0; bottom: var(--player-h); border-radius: 0; }
     #sidebar {
@@ -934,7 +944,7 @@
   <div id="tips">拖动环顾 · 滚轮缩放 · 双击复位<br>空格暂停 · ← → 快进 · F 全屏 · M 音乐 · ? 快捷键</div>
 </aside>
 
-<div id="player">
+<div id="player" role="region" aria-label="播放控制">
   <div class="row">
     <button id="playBtn" data-playing="1" aria-label="暂停">
       <svg class="icon i-play" aria-hidden="true"><use href="#i-play"/></svg>
@@ -963,11 +973,11 @@
 </div>
 
 <!-- 开场页 -->
-<div id="startScreen">
+<div id="startScreen" role="dialog" aria-modal="true" aria-labelledby="startTitle" tabindex="-1">
   <div class="start-shell">
     <div class="start-copy">
       <div class="start-eyebrow">自然观察课 · 幼儿园课堂版</div>
-      <h1><span>一棵树的</span><span>四季</span></h1>
+      <h1 id="startTitle"><span>一棵树的</span><span>四季</span></h1>
       <p class="start-sub">从一颗种子，到一棵大树。看春天发芽、夏天成荫、秋天落叶、冬天沉睡，还有小鸟、蜜蜂和蝴蝶来做客。</p>
       <div class="start-actions">
         <button id="startClassBtn" class="btn-primary">开始上课<svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
@@ -1028,7 +1038,7 @@
     <span id="classChapterTitle">种子入土</span>
     <span id="classSeason">春 · 第 1 年</span>
   </div>
-  <div class="class-top-actions">
+  <div class="class-top-actions" role="toolbar" aria-label="课堂工具">
     <button id="classChapterBtn" title="选择章节（C）">章节</button>
     <button id="classTeacherBtn" title="教师提示（T）">教师提示</button>
     <button id="classFindBtn" title="找一找小游戏">找一找</button>
@@ -1164,14 +1174,14 @@
     </div>
     <p style="margin:0 0 18px;font-size:14px;line-height:1.75;color:var(--ink-2);">当前进度会保留，下次进入课堂模式可以继续；开场页也可以重新开始。</p>
     <div style="display:flex;justify-content:flex-end;gap:8px;">
-      <button id="exitCancelBtn" class="btn-secondary" style="height:40px;padding:0 16px;font-size:13px;">取消</button>
-      <button id="exitConfirmBtn" class="btn-primary" style="height:40px;padding:0 18px;font-size:13px;background:var(--danger);box-shadow:none;">退出课堂</button>
+      <button id="exitCancelBtn" class="btn-secondary" style="height:44px;padding:0 18px;font-size:13px;">取消</button>
+      <button id="exitConfirmBtn" class="btn-primary" style="height:44px;padding:0 20px;font-size:13px;background:var(--danger);box-shadow:none;">退出课堂</button>
     </div>
   </div>
 </div>
 
 <!-- 点认卡片 -->
-<div id="partCard" role="dialog" aria-modal="false" aria-labelledby="partName">
+<div id="partCard" role="dialog" aria-modal="false" aria-labelledby="partName" tabindex="-1">
   <button id="partClose" aria-label="关闭">×</button>
   <div id="partGlyph">根</div>
   <div>
@@ -1196,7 +1206,7 @@
 <div id="classToast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- 屏幕锁定 -->
-<div id="lockOverlay">
+<div id="lockOverlay" role="dialog" aria-modal="true" aria-label="屏幕已锁定" tabindex="-1">
   <div class="lock-inner">
     <div class="lock-icon"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg></div>
     <div class="lock-title">屏幕已锁定</div>

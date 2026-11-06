@@ -35,7 +35,12 @@
   var volume = saved && typeof saved.volume === 'number' ? saved.volume : 0.85;
   volume = Math.max(0, Math.min(1, volume));
   var ducked = false;                       // 故事姐姐朗读时自动压低背景音乐
-  function applyVolume() { audio.volume = volume * (ducked ? 0.18 : 1); }
+  function applyVolume() {
+    audio.volume = volume * (ducked ? 0.18 : 1);
+    var pctText = Math.round(volume * 100) + '%';
+    if (volumeEl) volumeEl.setAttribute('aria-valuetext', pctText);
+    if (classVolumeEl) classVolumeEl.setAttribute('aria-valuetext', pctText);
+  }
   applyVolume();
   audio.loop = false;                       // 故事播完就停，不循环
   if (volumeEl) volumeEl.value = String(Math.round(volume * 100));
@@ -134,7 +139,11 @@
   if (volumeEl) volumeEl.addEventListener('input', onVolumeInput);
   if (classVolumeEl) classVolumeEl.addEventListener('input', onVolumeInput);
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleMusic(); return; }
+    if (e.key === 'm' || e.key === 'M') {
+      // 弹层打开时 M 被挂起，避免在章节弹层里误开/关音乐
+      if (document.querySelector('.modal.show')) return;
+      e.preventDefault(); toggleMusic(); return;
+    }
     // 空格 / ←→ / Home / End / R 都会改变时间轴，等 app.js 处理完再对齐
     setTimeout(syncPlayState, 0);
   });

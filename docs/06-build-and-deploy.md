@@ -2,7 +2,7 @@
 
 > 本文解决：怎么重新打包、哪些文件是生成物、怎么发布到 GitHub Pages、怎么更新缓存，以及部署时别漏哪些资源。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-07 · 对应代码：`6e5f29f`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-07 · 对应代码：`17c3454`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
 
 ## 1. 本地运行
 
@@ -41,6 +41,7 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 > **第二轮优化后的硬提醒**：`src/main.js` 本轮改动很大（约 4.4k 行，新增确定性随机、`rootAge`、6 层土壤与水层、5 类生物 InstancedMesh、结尾 HUD 等）。**任何一次改完 `src/main.js` 都必须重新执行上面的 esbuild 命令生成 `app.js`**，否则：
 > - 本地 `index.html` 与 GitHub Pages 看到的仍是旧 build；
 > - `./tools/shoot.sh` / `./tools/visual-audit.sh` 虽然会自己打包，但手动用 Chrome 截图、课堂演示、线上部署不会；
+- `./tools/ui-shot.js`（第三轮新增）是独立 Playwright 的 UI 定点截图器，需要本机已安装 `playwright-core` 与 Chromium，不属于运行时依赖；
 > - 定帧截图会出现「代码改了但画面没变」的假象，浪费一轮审查。
 >
 > 验证方式：`?dbg` 打开控制台看 `window.__renderer.info.render.calls`（本轮基线 466）；或比对 `app.js` 的修改时间是否晚于 `src/main.js`。`index.html` 的季节转盘色环（`conic-gradient(from 0deg, …)`）也在本轮改过，同步 `/tmp/tree-of-seasons-deploy` 时不要漏掉 `index.html`。
@@ -130,7 +131,7 @@ JSON
 
 ## 5. 缓存
 
-- 浏览器/平台可能缓存 `app.js`、`index.html`。
+- 浏览器/平台可能缓存 `app.js`、`index.html`。第三轮起 `index.html` 对 `app.js` / `src/bgm.js` 加了 `?v=round3` 版本号；发布新版本时同步递增该参数（如 `?v=round4`）即可强制刷新构建产物。
 - 更新后让用户访问带版本查询参数的 URL，例如：
   `https://hrvs0769.github.io/tree-of-seasons/?v=7`
 - 本地调试同样可在 URL 加 `?v=时间戳`。

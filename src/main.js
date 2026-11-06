@@ -3044,8 +3044,18 @@ function syncPlayer() {
     setPlayUI(classPlayBtn, playing);
   }
   if (classProgressEl) {
-    if (pct !== _syncCache.cpct) { classProgressEl.style.setProperty('--cp', pct); classProgressEl.firstElementChild.style.width = pct; _syncCache.cpct = pct; }
-    classProgressEl.setAttribute('aria-valuenow', String(Math.round(storyTime)));
+    if (pct !== _syncCache.cpct) {
+      classProgressEl.style.setProperty('--cp', pct);
+      classProgressEl.firstElementChild.style.width = pct;
+      classProgressEl.setAttribute('aria-valuetext', fmtTime(storyTime) + ' / ' + fmtTime(STORY_END));
+      _syncCache.cpct = pct;
+    }
+    const nowSec = Math.round(storyTime);
+    if (nowSec !== _syncCache.caria) { classProgressEl.setAttribute('aria-valuenow', String(nowSec)); _syncCache.caria = nowSec; }
+  }
+  if (timelineEl) {
+    const tSec = Math.round(storyTime);
+    if (tSec !== _syncCache.tts) { timelineEl.setAttribute('aria-valuetext', fmtTime(storyTime) + ' / ' + fmtTime(STORY_END)); _syncCache.tts = tSec; }
   }
   const idx = chapterIndexAt(storyTime);
   if (idx !== _syncCache.chapter) {
@@ -3217,15 +3227,35 @@ function closeAllModals() {
 }
 function hasOpenModal() { return !!document.querySelector('.modal.show'); }
 
-/* Tab 在弹层内循环；ESC 由全局键盘处理 */
-document.addEventListener('keydown', (e) => {
-  if (e.key !== 'Tab' || !hasOpenModal()) return;
-  const modal = document.querySelector('.modal.show');
-  const list = focusableIn(modal);
+/* 开场页也是一层模态：背景 inert、焦点从「开始上课」开始，Tab 不跑到背后的舞台 */
+function setStartScreenA11y(open) {
+  if (!startScreenEl) return;
+  startScreenEl.setAttribute('aria-hidden', open ? 'false' : 'true');
+  setBackgroundInert(open);
+  if (open) {
+    requestAnimationFrame(() => { if (startClassBtn) startClassBtn.focus({ preventScroll: true }); });
+  } else {
+    // 不把焦点留在已经隐藏的开场按钮上；回到 body，Tab 会自然从页面首个控件开始
+    document.body.tabIndex = -1;
+    try { document.body.focus({ preventScroll: true }); } catch (e) {}
+  }
+}
+function trapTab(e, container) {
+  const list = focusableIn(container);
   if (!list.length) return;
   const first = list[0], last = list[list.length - 1];
-  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  if (e.shiftKey && (document.activeElement === first || !container.contains(document.activeElement))) {
+    e.preventDefault(); last.focus();
+  } else if (!e.shiftKey && (document.activeElement === last || !container.contains(document.activeElement))) {
+    e.preventDefault(); first.focus();
+  }
+}
+
+/* Tab 在弹层内循环；ESC 由全局键盘处理 */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab') return;
+  if (hasOpenModal()) { trapTab(e, document.querySelector('.modal.show')); return; }
+  if (startScreenVisible) trapTab(e, startScreenEl);
 });
 
 function seasonForTime(t) {
@@ -3238,7 +3268,7 @@ function buildChapterGrid() {
   chapterGridEl.innerHTML = CHAPTERS.map((c, i) => {
     const season = seasonForTime((c.start + Math.min(c.end, STORY_END)) / 2);
     const num = String(i + 1).padStart(2, '0');
-    return '<button class="chapter-item' + (i === current ? ' current' : '') + '" data-index="' + i + '">' +
+    return '<button class="chapter-item' + (i === current ? ' current' : '') + '"' + (i === current ? ' aria-current="step"' : '') + ' data-index="' + i + '">' +
       '<div class="chapter-thumb" data-season="' + season + '" data-num="' + num + '"></div>' +
       '<div class="chapter-num">第 ' + (i + 1) + ' 章</div>' +
       '<div class="chapter-name">' + c.title + '</div>' +
@@ -3359,6 +3389,7 @@ function lockScreen() {
   hidePartCard();
   stopFindGame();
   lockOverlayEl.classList.add('show');
+  requestAnimationFrame(() => { try { lockOverlayEl.focus({ preventScroll: true }); } catch (e) {} });
   updateClassroomButtons();
 }
 function unlockScreen() {
@@ -3418,6 +3449,7 @@ function enterClassroomMode(opts = {}) {
   classroomMode = true;
   startScreenVisible = false;
   startScreenEl.classList.add('hidden');
+  setStartScreenA11y(false);
   document.body.classList.add('classroom-mode');
   document.body.classList.remove('idle');
   refreshViewport();
@@ -3465,6 +3497,7 @@ function exitClassroomMode() {
   }
   startScreenVisible = true;
   startScreenEl.classList.remove('hidden');
+  setStartScreenA11y(true);
   // 保留当前进度：再次进入课堂或自由观看时可以接着看
   playing = false;
   if (freeViewBtn) freeViewBtn.textContent = storyTime > 1 ? '继续观看' : '自由观看';
@@ -3635,6 +3668,7 @@ function showPartCard(part, clientX, clientY) {
   partCardEl.style.top = '';
   partCardEl.style.bottom = '';
   partCardEl.classList.add('show');
+  requestAnimationFrame(() => { try { partCardEl.focus({ preventScroll: true }); } catch (e) {} });
   if (Number.isFinite(clientX) && Number.isFinite(clientY) && window.innerWidth > 700) {
     const rect = partCardEl.getBoundingClientRect();
     const gap = 14, pad = 12;
@@ -3813,6 +3847,9 @@ function hidePausePrompt() {
   if (pausePromptEl) pausePromptEl.classList.remove('show');
 }
 
+/* 启动时若开场页可见，把它当模态层处理 */
+if (START_SCREEN) setStartScreenA11y(true);
+
 /* ---- 事件绑定 ---- */
 playBtn.addEventListener('click', togglePlay);
 replayBtn.addEventListener('click', () => {
@@ -3877,6 +3914,7 @@ if (classProgressEl) {
   classProgressEl.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
+      e.stopPropagation();
       setStoryTime(storyTime + (e.key === 'ArrowLeft' ? -5 : 5), !playing);
     }
   });
@@ -3892,6 +3930,7 @@ startClassBtn.addEventListener('click', () => enterClassroomMode({ reset: true, 
 freeViewBtn.addEventListener('click', () => {
   startScreenVisible = false;
   startScreenEl.classList.add('hidden');
+  setStartScreenA11y(false);
   hidePausePrompt();
   playing = true;
   syncPlayer();
@@ -3962,6 +4001,10 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); closeAllModals(); }
     return;
   }
+  // 开场页可见时，键盘只在开场页内循环
+  if (startScreenVisible) return;
+  // 音量滑块的方向键交给原生 range；时间轴保留 5 秒快进
+  if (e.target && e.target.matches && e.target.matches('input[type="range"]') && e.target !== timelineEl) return;
   // 焦点在按钮/输入控件上时，空格交给控件本身，不触发全局播放
   if (e.code === 'Space' && e.target && e.target.closest && e.target.closest('button, a, input, textarea, select, [contenteditable="true"]')) return;
   if (e.code === 'Space') { e.preventDefault(); togglePlay(); }

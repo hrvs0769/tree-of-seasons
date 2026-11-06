@@ -3,7 +3,7 @@
 > 本文解决：新版界面（v3 现代设计系统）由哪些 DOM 与组件组成、每个交互背后是哪个事件与函数、快捷键/课堂流程怎么走，以及背景音乐 `src/bgm.js` 如何与画面时间同步。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
 > 设计 token、组件清单、动效规范、交互映射与验收结果见 [`11-round3-ui-system.md`](11-round3-ui-system.md)；整改前的问题清单见 [`10-round3-ui-plan.md`](10-round3-ui-plan.md)。
-> 最后更新：2026-11-07 · 对应代码：`6e5f29f`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-07 · 对应代码：`17c3454`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
 
 > **本轮变更摘要**：第三轮彻底重做了界面语言与交互层。去掉宋体、金棕、深绿渐变、点状纹理、装饰光晕、胶囊按钮与 emoji 图标；改为暖纸色 + 墨色 + 单一森林绿 + 全站无衬线 + 1px 细线 + 统一圆角与轻投影。3D 舞台变成浮动圆角画框，课堂模式改为浅色顶栏 / 白色字幕带 / 白色控制条。播放器、镜头、弹层、点认卡、找一找、自动暂停、快捷键面板全部补齐状态语义与键盘可达性。**3D 场景、14 章文案、章节时序、BGM 音频文件均未改动。**
 
@@ -234,6 +234,7 @@
 
 ## 18. 状态、可访问性与对比度
 
+- **开场页也是模态层**：`#startScreen` 有 `role="dialog" aria-modal="true" aria-labelledby="startTitle"`；启动时对 `#app/#sidebar/#player/#vignette` 设 `inert`，焦点进入 `#startClassBtn`，Tab 只在开场页内循环；开始上课 / 自由观看 / 退出课堂后解除 `inert`，焦点回到 `body`。开场页可见期间全局快捷键全部挂起。
 - `button:focus-visible, input:focus-visible, [tabindex]:focus-visible` 统一 2px accent 描边 + offset；`button:active { transform: scale(.97) !important }` 显式覆盖 hover；`button:disabled { opacity:.38; cursor:not-allowed }`；`button.busy` 带旋转圆点 + `aria-busy`。
 - `meta viewport` 只有 `width=device-width, initial-scale=1, viewport-fit=cover`，**去掉了 `maximum-scale=1 / user-scalable=no`**，移动端允许双指缩放页面；画布手势靠 `touch-action:none` 控制。
 - `--ink-3` 提到 `#6A706A`（WCAG AA 小字对比度）；`:root color-scheme: light` 与浅色主题一致。
