@@ -27,6 +27,13 @@ function mulberry32(a) {
   };
 }
 
+/* 确定性随机：所有程序化贴图 / 粒子 / 树形共用一条固定种子的 PRNG。
+   这样 ?t0=N&freeze 每次加载都是同一棵树、同一片雨，截图 A/B 对比才有效；
+   「再种一棵」仍然会沿同一条流继续取到新的种子。 */
+const APP_SEED = 0x5EED2024;
+const __appRng = mulberry32(APP_SEED);
+Math.random = () => __appRng();
+
 /* ---------------- 时间参数 ---------------- */
 const DEBUG = /debug/.test(location.search);
 const SEASON_SECONDS = 20;        // 每个季节多少秒（一年 = 80 秒，给雪景和细节留出时间）
@@ -93,7 +100,7 @@ function samplePalette(p, out) {
   const idx = ((p % 1) + 1) % 1 * SEASONS.length;
   const i0 = Math.floor(idx) % SEASONS.length;
   const i1 = (i0 + 1) % SEASONS.length;
-  const f = smoothstep(0.55, 0.95, idx - Math.floor(idx));  // 季节内保持，季末快速过渡
+  const f = smoothstep(0.86, 1.0, idx - Math.floor(idx));  // 本季保持 17s，最后 3s 才过渡，季末配色与 HUD 对齐
   const a = SEASONS[i0], b = SEASONS[i1];
   out.skyTop.lerpColors(palA.setHex(a.skyTop), palB.setHex(b.skyTop), f);
   out.horizon.lerpColors(palA.setHex(a.horizon), palB.setHex(b.horizon), f);
@@ -129,7 +136,7 @@ renderer.toneMappingExposure = 1.12;
 canvasHost.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xcfe9f5, 34, 165);
+scene.fog = new THREE.Fog(0xcfe9f5, 34, 205);
 
 const camera = new THREE.PerspectiveCamera(38, vp0.w / vp0.h, 0.1, 600);
 
@@ -205,16 +212,18 @@ const sky = new THREE.Mesh(
         // 云层：把方向投到高空平面上，叠两层不同速度的 fbm
         if (dir.y > 0.008) {
           vec2 uv = dir.xz / (dir.y + 0.16);
-          float n1 = fbm(uv * 1.25 + vec2(time * 0.007, time * 0.0022));
-          float n2 = fbm(uv * 3.10 + vec2(time * 0.012, -time * 0.004));
-          float n = n1 * 0.68 + n2 * 0.32;
-          float lo = 0.84 - cloudCover * 0.07;
-          float cover = smoothstep(lo, lo + 0.07, n);
-          cover *= smoothstep(0.30, 0.62, dir.y);
+          // 三层不同尺度的 fbm，流速足够在 260s 内漂过几格；阈值按 fbm 的实际分布设定
+          float n1 = fbm(uv * 1.25 + vec2(time * 0.016, time * 0.005));
+          float n2 = fbm(uv * 3.10 + vec2(time * 0.026, -time * 0.009));
+          float n3 = fbm(uv * 1.90 + vec2(time * 0.020, -time * 0.006));
+          float n = n1 * 0.56 + n2 * 0.24 + n3 * 0.20;
+          float lo = 0.40 - cloudCover * 0.14;
+          float cover = smoothstep(lo, lo + 0.16, n);
+          cover *= smoothstep(0.07, 0.36, dir.y);
           // 云底：迎光面暖白、背光面灰蓝
           float lit = pow(max(dot(dir, sunDir), 0.0), 2.0);
-          vec3 cloudCol = mix(vec3(0.52, 0.58, 0.66), vec3(1.06, 1.02, 0.95), lit * 0.9 + cloudWarm * 0.3);
-          col = mix(col, cloudCol, cover * 0.20);
+          vec3 cloudCol = mix(vec3(0.60, 0.66, 0.74), vec3(1.08, 1.04, 0.97), lit * 0.9 + cloudWarm * 0.3);
+          col = mix(col, cloudCol, cover * 0.42);
         }
         gl_FragColor = vec4(col, 1.0);
       }
@@ -231,7 +240,8 @@ function radialTexture(inner, outer) {
   const ctx = c.getContext('2d');
   const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
   g.addColorStop(0, inner);
-  g.addColorStop(0.45, outer);
+  g.addColorStop(0.38, outer);
+  g.addColorStop(0.72, 'rgba(255,246,220,0.16)');
   g.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, s, s);
@@ -242,9 +252,9 @@ function radialTexture(inner, outer) {
 const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
   map: radialTexture('rgba(255,255,255,1)', 'rgba(255,236,180,0.55)'),
   blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true, fog: false,
-  transparent: true, opacity: 0.9,
+  transparent: true, opacity: 0.78,
 }));
-sunSprite.scale.setScalar(9);
+sunSprite.scale.setScalar(6.5);
 scene.add(sunSprite);
 
 /* 太阳光芒：程序化生成放射状光束贴图，叠在太阳后面，逆光时更有“神光” */
@@ -254,23 +264,31 @@ function sunRaysTexture() {
   const ctx = c.getContext('2d');
   ctx.clearRect(0, 0, s, s);
   const cx = s / 2, cy = s / 2;
-  for (let i = 0; i < 46; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const w = 0.004 + Math.random() * 0.018;
-    const len = s * (0.25 + Math.random() * 0.45);
-    const g = ctx.createLinearGradient(cx, cy, cx + Math.cos(a) * len, cy + Math.sin(a) * len);
-    g.addColorStop(0, `rgba(255,241,205,${0.05 + Math.random() * 0.09})`);
-    g.addColorStop(1, 'rgba(255,241,205,0)');
-    ctx.strokeStyle = g;
-    ctx.lineWidth = s * w;
+  // 锥形渐变的短光束，长短/角度都抖动；不再是 46 条笔直硬边的「贴纸放射线」
+  for (let i = 0; i < 28; i++) {
+    const a = (i / 28) * Math.PI * 2 + (Math.random() - 0.5) * 0.22;
+    const len = s * (0.18 + Math.random() * 0.42);
+    const w = 0.006 + Math.random() * 0.020;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(a);
+    const g = ctx.createLinearGradient(0, 0, len, 0);
+    g.addColorStop(0, `rgba(255,241,205,${0.10 + Math.random() * 0.10})`);
+    g.addColorStop(0.34, `rgba(255,238,196,${0.025 + Math.random() * 0.04})`);
+    g.addColorStop(1, 'rgba(255,238,196,0)');
+    ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len);
-    ctx.stroke();
+    ctx.moveTo(0, -s * w * 0.5);
+    ctx.lineTo(len, -s * w * 2.1);
+    ctx.lineTo(len, s * w * 2.1);
+    ctx.lineTo(0, s * w * 0.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
   }
   const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, s * 0.5);
-  g2.addColorStop(0, 'rgba(255,245,215,0.55)');
-  g2.addColorStop(0.18, 'rgba(255,228,170,0.16)');
+  g2.addColorStop(0, 'rgba(255,245,215,0.42)');
+  g2.addColorStop(0.26, 'rgba(255,228,170,0.12)');
   g2.addColorStop(1, 'rgba(255,228,170,0)');
   ctx.fillStyle = g2;
   ctx.fillRect(0, 0, s, s);
@@ -280,9 +298,9 @@ function sunRaysTexture() {
 }
 const sunRays = new THREE.Sprite(new THREE.SpriteMaterial({
   map: sunRaysTexture(), blending: THREE.AdditiveBlending, depthWrite: false, depthTest: true,
-  fog: false, transparent: true, opacity: 0.55,
+  fog: false, transparent: true, opacity: 0.32,
 }));
-sunRays.scale.setScalar(72);
+sunRays.scale.setScalar(52);
 scene.add(sunRays);
 
 /* ---------------- 光照 ---------------- */
@@ -296,9 +314,9 @@ scene.add(ambient);
 const sun = new THREE.DirectionalLight(0xffffff, 2.4);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -13; sun.shadow.camera.right = 13;
-sun.shadow.camera.top = 15; sun.shadow.camera.bottom = -13;
-sun.shadow.camera.near = 1; sun.shadow.camera.far = 90;
+sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
+sun.shadow.camera.top = 18; sun.shadow.camera.bottom = -16;
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 110;
 sun.shadow.bias = -0.0006;
 sun.shadow.normalBias = 0.06;
 scene.add(sun);
@@ -445,176 +463,233 @@ function seedTexture() {
 
 /* ---------------- 土壤剖面（把草地切开一半，露出地下） ---------------- */
 const ISLAND_R = 25;
-const SOIL_DEPTH = 9.0;
+const SOIL_DEPTH = 12.0;   // 剖面加深：根系要一路扎到 -9.6 的含水层
+const FACE_H_EXTRA = 2.5;
+const WATER_TOP = -9.6;    // 潜水面（与 boundary idx4 的 -9.57 对齐）
+const ROOT_FLOOR = -10.0; // 根尖入水 0.4
 
 function soilTexture() {
-  const w = 1024, h = 512, c = document.createElement('canvas');
+  // 画布加高到 768px：剖面加深到 14.5 单位后仍保持足够细节密度。
+  // repeat 改成 1×1（不再平铺 2.5 次），消除层界噪声在画面中间出现的纵向接缝。
+  const w = 2048, h = 768, c = document.createElement('canvas');
   c.width = w; c.height = h;
   const ctx = c.getContext('2d');
   const rnd = mulberry32(20240117);
 
-  // 先铺满底色，避免层与层的接缝处露出未绘制的像素
-  ctx.fillStyle = 'rgb(58,42,30)';
+  ctx.fillStyle = 'rgb(86,64,42)';
   ctx.fillRect(0, 0, w, h);
 
-  // ---- 四层土壤：用多频噪声做起伏层界，避免“四条平行色带” ----
+  // ---- 六层土壤：表土 / 心土 / 底土 / 毛管湿润带 / 含水饱和带 / 母质 ----
+  // 层界用四个八度噪声做起伏，且下层起伏更大，避免「几条平行色带」。
   const boundary = (x, idx) => {
-    const baseY = [0, 0.10, 0.42, 0.70, 1][idx] * h;
-    const n1 = fbm(x * 0.00135 + idx * 23.7, idx * 5.3) - 0.5;
-    const n2 = fbm(x * 0.0052 + idx * 11.1, idx * 8.9) - 0.5;
-    const n3 = fbm(x * 0.016 + idx * 37.1, idx * 2.7) - 0.5;
-    return baseY + n1 * 58 + n2 * 20 + n3 * 6;
+    const baseY = [0, 0.10, 0.42, 0.54, 0.66, 0.84, 1][idx] * h;
+    const amp = idx <= 1 ? 0.55 : idx === 2 ? 0.95 : 1.25;
+    const n1 = (fbm(x * 0.00110 + idx * 23.7, idx * 5.3) - 0.5) * 95 * amp;
+    const n2 = (fbm(x * 0.00420 + idx * 11.1, idx * 8.9) - 0.5) * 70 * amp;
+    const n3 = (fbm(x * 0.01200 + idx * 37.1, idx * 2.7) - 0.5) * 26 * amp;
+    const n4 = (fbm(x * 0.04200 + idx * 7.7, idx * 13.1) - 0.5) * 7 * amp;
+    return baseY + n1 + n2 + n3 + n4;
   };
   const horizons = [
-    { top: -4, bottom: 1, col: 'rgb(58,40,26)' },
-    { top: 1, bottom: 2, col: 'rgb(92,66,42)' },
-    { top: 2, bottom: 3, col: 'rgb(112,88,56)' },
-    { top: 3, bottom: 4, col: 'rgb(104,86,62)' },
+    { top: -4, bottom: 1, col: 'rgb(96,70,44)' },   // 表土（提亮，微距下不再是一块黑）
+    { top: 1, bottom: 2, col: 'rgb(112,84,54)' },  // 心土
+    { top: 2, bottom: 3, col: 'rgb(126,100,66)' }, // 底土
+    { top: 3, bottom: 4, col: 'rgb(92,84,64)' },   // 毛管湿润带
+    { top: 4, bottom: 5, col: 'rgb(48,64,68)' },   // 含水饱和带（冷灰蓝）
+    { top: 5, bottom: 6, col: 'rgb(26,42,52)' },   // 母质 / 基岩
   ];
   for (const hz of horizons) {
     ctx.fillStyle = hz.col;
     ctx.beginPath();
-    const topBase = hz.top === -4 ? -4 : hz.top;
-    if (topBase === -4) {
-      ctx.moveTo(0, -4);
-    } else {
-      ctx.moveTo(0, boundary(0, topBase));
-    }
-    for (let x = 0; x <= w; x += 16) {
-      ctx.lineTo(x, topBase === -4 ? -4 : boundary(x, topBase));
-    }
-    const bottomIndex = hz.bottom;
-    for (let x = w; x >= 0; x -= 16) {
-      ctx.lineTo(x, bottomIndex >= 4 ? h : boundary(x, bottomIndex));
-    }
+    const ti = hz.top;
+    ctx.moveTo(0, ti === -4 ? -4 : boundary(0, ti));
+    for (let x = 0; x <= w; x += 12) ctx.lineTo(x, ti === -4 ? -4 : boundary(x, ti));
+    for (let x = w; x >= 0; x -= 12) ctx.lineTo(x, hz.bottom >= 6 ? h : boundary(x, hz.bottom));
     ctx.closePath();
     ctx.fill();
   }
 
-  // ---- 透镜体 / 侵蚀袋：让层与层之间不是一条干净的分割线 ----
-  for (let i = 0; i < 34; i++) {
+  // ---- 层内低频色斑：让每一层内部也有明暗与色相变化 ----
+  for (let i = 0; i < 240; i++) {
+    const x = rnd() * w, y = rnd() * h;
+    const rr = 50 + rnd() * 190;
+    const warm = fbm(x * 0.0016, y * 0.0016) > 0.48;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rr);
+    g.addColorStop(0, warm ? 'rgba(158,130,92,0.10)' : 'rgba(28,22,16,0.10)');
+    g.addColorStop(1, 'rgba(40,28,16,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.283); ctx.fill();
+  }
+
+  // ---- 透镜体 / 侵蚀袋：层与层之间不是一条干净的分割线 ----
+  for (let i = 0; i < 64; i++) {
     const x = rnd() * w;
-    const layer = 1 + Math.floor(rnd() * 3);
-    const base = boundary(x, layer);
-    const y = base + (rnd() - 0.5) * 28;
-    const rx = 22 + rnd() * 100;
-    const ry = 4 + rnd() * 18;
-    const warm = rnd() > 0.5;
-    ctx.fillStyle = warm ? 'rgba(142,108,68,0.16)' : 'rgba(43,29,18,0.18)';
+    const layer = 1 + Math.floor(rnd() * 5);
+    const y = boundary(x, layer) + (rnd() - 0.5) * 34;
+    const rx = 36 + rnd() * 150;
+    const ry = 6 + rnd() * 24;
+    ctx.fillStyle = rnd() > 0.5 ? 'rgba(150,116,72,0.20)' : 'rgba(36,26,16,0.22)';
     ctx.beginPath();
-    ctx.ellipse(x, y, rx, ry, (rnd() - 0.5) * 0.14, 0, 6.283);
+    ctx.ellipse(x, y, rx, ry, (rnd() - 0.5) * 0.22, 0, 6.283);
     ctx.fill();
   }
 
-  // ---- 层界：做旧、断续的深色线，不再是规则正弦 ----
-  for (const yb of [1, 2, 3]) {
-    ctx.strokeStyle = 'rgba(12,7,4,0.42)';
-    ctx.lineWidth = 3;
+  // ---- 层界：做旧、断续的深色线，并加局部塌落断层 ----
+  for (const yb of [1, 2, 3, 4, 5]) {
+    ctx.strokeStyle = yb >= 4 ? 'rgba(16,30,36,0.20)' : 'rgba(16,10,5,0.20)';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    let started = false;
     for (let x = 0; x <= w; x += 8) {
       const yy = boundary(x, yb);
-      if (!started) { ctx.moveTo(x, yy); started = true; } else ctx.lineTo(x, yy);
+      if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
     }
     ctx.stroke();
-    // 局部断层：让某些位置看起来有土块塌落/侵蚀
-    for (let k = 0; k < 7; k++) {
+    for (let k = 0; k < 8; k++) {
       const x0 = rnd() * w;
-      const y0 = boundary(x0, yb) + (rnd() - 0.5) * 7;
-      ctx.strokeStyle = `rgba(12,7,4,${0.12 + rnd() * 0.20})`;
+      const y0 = boundary(x0, yb) + (rnd() - 0.5) * 10;
+      ctx.strokeStyle = `rgba(16,10,5,${0.10 + rnd() * 0.18})`;
       ctx.lineWidth = 2 + rnd() * 3;
       ctx.beginPath();
       ctx.moveTo(x0, y0);
-      ctx.quadraticCurveTo(x0 + 8 + rnd() * 28, y0 + (rnd() - 0.5) * 20, x0 + 30 + rnd() * 70, y0 + (rnd() - 0.5) * 24);
+      ctx.quadraticCurveTo(x0 + 10 + rnd() * 30, y0 + (rnd() - 0.5) * 24, x0 + 34 + rnd() * 80, y0 + (rnd() - 0.5) * 28);
       ctx.stroke();
     }
   }
 
-  // ---- 土块结构：不规则的团粒，靠明暗两层叠加做出体积 ----
-  for (let i = 0; i < 9600; i++) {
+  // ---- 生物扰动 / 根孔通道：锥形暗痕跨层切断层界 ----
+  for (let i = 0; i < 20; i++) {
+    const x = rnd() * w;
+    const y0 = h * (0.04 + rnd() * 0.72);
+    const len = 50 + rnd() * 130;
+    const wd = 1 + rnd() * 3;
+    const g = ctx.createLinearGradient(x, y0, x + (rnd() - 0.5) * 30, y0 + len);
+    g.addColorStop(0, 'rgba(20,14,8,0.13)');
+    g.addColorStop(1, 'rgba(20,14,8,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(x - wd, y0); ctx.lineTo(x + wd, y0);
+    ctx.lineTo(x + (rnd() - 0.5) * 18 + wd * 0.3, y0 + len);
+    ctx.lineTo(x + (rnd() - 0.5) * 18 - wd * 0.3, y0 + len);
+    ctx.closePath(); ctx.fill();
+  }
+
+  // ---- 土块团粒：不规则团粒，靠明暗两层叠出体积 ----
+  for (let i = 0; i < 13000; i++) {
     const x = rnd() * w, y = rnd() * h;
-    const rr = 1.1 + rnd() * 3.9;
+    const rr = 1.2 + rnd() * 4.6;
     const light = rnd() > 0.5;
     ctx.fillStyle = light
-      ? `rgba(150,124,90,${0.03 + rnd() * 0.075})`
-      : `rgba(26,16,9,${0.04 + rnd() * 0.10})`;
+      ? `rgba(178,150,110,${0.05 + rnd() * 0.11})`
+      : `rgba(28,18,10,${0.05 + rnd() * 0.13})`;
     ctx.beginPath();
     ctx.ellipse(x, y, rr, rr * (0.55 + rnd() * 0.7), rnd() * 3.14, 0, 6.283);
     ctx.fill();
-    // 每颗团粒的下缘压一道暗边，读起来才有厚度
-    ctx.fillStyle = 'rgba(18,11,6,0.07)';
-    ctx.beginPath();
-    ctx.ellipse(x + rr * 0.15, y + rr * 0.45, rr * 0.72, rr * 0.28, 0, 0, 6.283);
-    ctx.fill();
   }
 
-  // ---- 竖向的干裂缝（下面的心土更明显） ----
-  for (let i = 0; i < 46; i++) {
+  // ---- 近景土粒（第一章微距会放大到整屏，必须清晰可见） ----
+  for (let i = 0; i < 420; i++) {
     const x = rnd() * w;
-    const y0 = h * (0.14 + rnd() * 0.75);
+    const y = rnd() * h * 0.13;
+    const rr = 1.4 + rnd() * 5.2;
+    const tone = 0.55 + rnd() * 0.45;
+    ctx.fillStyle = `rgba(${(168 * tone) | 0},${(136 * tone) | 0},${(96 * tone) | 0},${0.34 + rnd() * 0.32})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rr, rr * (0.6 + rnd() * 0.5), rnd() * 3.14, 0, 6.283);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(22,14,7,0.34)';
+    ctx.beginPath();
+    ctx.ellipse(x + rr * 0.16, y + rr * 0.44, rr * 0.78, rr * 0.26, 0, 0, 6.283);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(236,212,168,0.26)';
+    ctx.beginPath();
+    ctx.ellipse(x - rr * 0.30, y - rr * 0.34, rr * 0.46, rr * 0.20, 0, 0, 6.283);
+    ctx.fill();
+  }
+  // 孔隙：暗洞 + 一圈亮边，微距下能读出「土是松的」
+  for (let i = 0; i < 180; i++) {
+    const x = rnd() * w, y = rnd() * h * 0.20;
+    const rr = 1.0 + rnd() * 2.6;
+    ctx.fillStyle = 'rgba(14,9,5,0.55)';
+    ctx.beginPath(); ctx.ellipse(x, y, rr, rr * 0.8, rnd() * 3.14, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = 'rgba(196,166,122,0.28)';
+    ctx.lineWidth = 0.8;
+    ctx.beginPath(); ctx.ellipse(x, y - 0.5, rr * 1.2, rr * 0.9, 0, 0, 6.283); ctx.stroke();
+  }
+
+  // ---- 竖向干裂缝 ----
+  for (let i = 0; i < 58; i++) {
+    const x = rnd() * w;
+    const y0 = h * (0.12 + rnd() * 0.78);
     const len = h * (0.03 + rnd() * 0.16);
-    ctx.strokeStyle = `rgba(20,13,7,${0.12 + rnd() * 0.2})`;
-    ctx.lineWidth = 0.8 + rnd() * 1.8;
+    ctx.strokeStyle = `rgba(22,15,8,${0.10 + rnd() * 0.14})`;
+    ctx.lineWidth = 0.8 + rnd() * 1.6;
     ctx.beginPath();
     ctx.moveTo(x, y0);
     ctx.bezierCurveTo(x + (rnd() - 0.5) * 14, y0 + len * 0.4, x + (rnd() - 0.5) * 18, y0 + len * 0.7, x + (rnd() - 0.5) * 22, y0 + len);
     ctx.stroke();
   }
 
-  // ---- 有机质斑块 / 铁锈斑 ----
-  for (let i = 0; i < 70; i++) {
-    const x = rnd() * w, y = rnd() * h;
-    const rr = 30 + rnd() * 110;
-    const g = ctx.createRadialGradient(x, y, 0, x, y, rr);
-    const warm = rnd() > 0.5;
-    g.addColorStop(0, warm ? 'rgba(126,84,44,0.13)' : 'rgba(36,24,14,0.13)');
-    g.addColorStop(1, 'rgba(40,28,16,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.283); ctx.fill();
-  }
-
-  // ---- 石子：本体 + 受光面 + 落影 ----
-  for (let i = 0; i < 620; i++) {
-    const x = rnd() * w, y = h * 0.1 + rnd() * h * 0.9;
-    const rr = 1.0 + Math.pow(rnd(), 2.6) * 2.3;
+  // ---- 石子：本体 + 受光面 + 落影；深部偏青灰 ----
+  for (let i = 0; i < 820; i++) {
+    const x = rnd() * w, y = h * 0.08 + rnd() * h * 0.92;
+    const rr = 1.0 + Math.pow(rnd(), 2.6) * 2.8;
     const tone = 0.55 + rnd() * 0.4;
-    ctx.fillStyle = `rgba(${(128 * tone) | 0},${(116 * tone) | 0},${(98 * tone) | 0},0.72)`;
+    const wet = y > h * 0.66;
+    ctx.fillStyle = wet
+      ? `rgba(${(108 * tone) | 0},${(124 * tone) | 0},${(124 * tone) | 0},0.72)`
+      : `rgba(${(136 * tone) | 0},${(122 * tone) | 0},${(102 * tone) | 0},0.72)`;
     ctx.beginPath();
     ctx.ellipse(x, y, rr, rr * (0.62 + rnd() * 0.4), rnd() * 3.14, 0, 6.283);
     ctx.fill();
-    ctx.fillStyle = 'rgba(255,248,228,0.16)';
-    ctx.beginPath();
-    ctx.ellipse(x - rr * 0.3, y - rr * 0.34, rr * 0.5, rr * 0.3, 0, 0, 6.283);
-    ctx.fill();
+    ctx.fillStyle = 'rgba(255,248,228,0.18)';
+    ctx.beginPath(); ctx.ellipse(x - rr * 0.3, y - rr * 0.34, rr * 0.5, rr * 0.3, 0, 0, 6.283); ctx.fill();
     ctx.fillStyle = 'rgba(16,10,5,0.20)';
-    ctx.beginPath();
-    ctx.ellipse(x + rr * 0.18, y + rr * 0.5, rr * 0.8, rr * 0.28, 0, 0, 6.283);
-    ctx.fill();
+    ctx.beginPath(); ctx.ellipse(x + rr * 0.18, y + rr * 0.5, rr * 0.8, rr * 0.28, 0, 0, 6.283); ctx.fill();
   }
 
-  // ---- 细砂颗粒 ----
-  for (let i = 0; i < 26000; i++) {
+  // ---- 细砂 ----
+  for (let i = 0; i < 30000; i++) {
     const x = rnd() * w, y = rnd() * h;
-    ctx.fillStyle = rnd() > 0.5
-      ? `rgba(20,13,7,${0.06 + rnd() * 0.12})`
-      : `rgba(178,150,110,${0.03 + rnd() * 0.07})`;
+    ctx.fillStyle = rnd() > 0.5 ? `rgba(24,16,9,${0.06 + rnd() * 0.12})` : `rgba(196,168,126,${0.03 + rnd() * 0.07})`;
     ctx.fillRect(x, y, 1 + rnd() * 2, 1 + rnd() * 2);
   }
 
-  // ---- 表土最上面一层：更黑更细的腐殖质，厚度有变化 ----
-  const top = ctx.createLinearGradient(0, 0, 0, h * 0.10);
-  top.addColorStop(0, 'rgba(18,12,7,0.58)');
-  top.addColorStop(0.55, 'rgba(30,20,12,0.22)');
-  top.addColorStop(1, 'rgba(30,20,12,0)');
+  // ---- 含水带细节：潜育斑 + 竖向渗流纹（冷色，不靠灯光） ----
+  for (let i = 0; i < 150; i++) {
+    const x = rnd() * w, y = h * (0.66 + rnd() * 0.34);
+    const rr = 24 + rnd() * 90;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rr);
+    g.addColorStop(0, `rgba(112,164,176,${0.05 + rnd() * 0.09})`);
+    g.addColorStop(1, 'rgba(112,164,176,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.283); ctx.fill();
+  }
+  for (let i = 0; i < 54; i++) {
+    const x = rnd() * w, y0 = h * (0.63 + rnd() * 0.12);
+    const len = 40 + rnd() * 150;
+    const g = ctx.createLinearGradient(x, y0, x, y0 + len);
+    g.addColorStop(0, 'rgba(164,206,216,0.10)');
+    g.addColorStop(1, 'rgba(164,206,216,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y0, 1 + rnd() * 3, len);
+  }
+
+  // ---- 表土：薄薄一层腐殖质（比旧版轻得多）+ 一条亮的地表结皮 ----
+  const top = ctx.createLinearGradient(0, 0, 0, h * 0.055);
+  top.addColorStop(0, 'rgba(36,25,15,0.30)');
+  top.addColorStop(0.5, 'rgba(52,37,22,0.11)');
+  top.addColorStop(1, 'rgba(52,37,22,0)');
   ctx.fillStyle = top;
-  ctx.fillRect(0, 0, w, h * 0.10);
-  for (let i = 0; i < 160; i++) {
-    const x = rnd() * w;
-    const y = rnd() * h * 0.07;
-    ctx.fillStyle = `rgba(190,160,116,${0.02 + rnd() * 0.05})`;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 1 + rnd() * 4, 1 + rnd() * 2, rnd() * 3.14, 0, 6.283);
-    ctx.fill();
+  ctx.fillRect(0, 0, w, h * 0.055);
+  ctx.strokeStyle = 'rgba(214,184,138,0.30)';
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  for (let x = 0; x <= w; x += 6) ctx.lineTo(x, 2 + (fbm(x * 0.012, 1.7) - 0.5) * 5);
+  ctx.stroke();
+  for (let i = 0; i < 220; i++) {
+    const x = rnd() * w, y = rnd() * h * 0.06;
+    ctx.fillStyle = `rgba(216,188,142,${0.04 + rnd() * 0.07})`;
+    ctx.beginPath(); ctx.ellipse(x, y, 1 + rnd() * 4, 1 + rnd() * 2, rnd() * 3.14, 0, 6.283); ctx.fill();
   }
 
   const tex = new THREE.CanvasTexture(c);
@@ -622,15 +697,15 @@ function soilTexture() {
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
   tex.flipY = true;       // 画布第一行对应 UV 顶部，表土在最上面
-  tex.repeat.set(2.5, 1);
+  tex.repeat.set(1, 1);   // 整幅铺满断面，避免非周期噪声在画面中间出现接缝
   tex.anisotropy = 8;
   return tex;
 }
 
 const SOIL_TEX = soilTexture();
 const soilFaceMat = new THREE.MeshStandardMaterial({
-  map: SOIL_TEX, bumpMap: SOIL_TEX, bumpScale: 0.18, roughness: 1, metalness: 0,
-  color: 0xffffff, emissive: 0x2a1a0e, emissiveIntensity: 0.25,
+  map: SOIL_TEX, bumpMap: SOIL_TEX, bumpScale: 0.14, roughness: 1, metalness: 0,
+  color: 0xffffff, emissive: 0x2b241a, emissiveIntensity: 0.22, fog: false,
 });
 const soilWallMat = new THREE.MeshStandardMaterial({ color: 0x3d2a1c, roughness: 1, metalness: 0, flatShading: true });
 
@@ -675,7 +750,8 @@ const ground = new THREE.Mesh(buildGroundGeometry(GROUND_R, 40, 72), groundMat);
 ground.receiveShadow = true;
 scene.add(ground);
 
-// 树根的接触阴影：让树"踩"在地上，而不是浮在表面
+// 树根的接触阴影：随树一起长大；种子期只是一小片柔影，不再是 7×7 的大黑斑
+let contactAO = null;
 (() => {
   const size = 256, c = document.createElement('canvas');
   c.width = c.height = size;
@@ -694,6 +770,7 @@ scene.add(ground);
   );
   ao.rotation.x = -Math.PI / 2;
   ao.position.y = 0.02;
+  contactAO = ao;
   scene.add(ao);
 })();
 
@@ -707,7 +784,7 @@ soilWall.receiveShadow = true;
 scene.add(soilWall);
 
 // 剖切面（正对镜头的土壤断面）：一整面到底，不再分成「表土 + 深土」两块拼
-const FACE_H = SOIL_DEPTH + 2.5;
+const FACE_H = SOIL_DEPTH + FACE_H_EXTRA;
 const soilFace = new THREE.Mesh(new THREE.PlaneGeometry(ISLAND_R * 2.8, FACE_H), soilFaceMat);
 soilFace.position.set(0, -FACE_H / 2, 0);
 soilFace.receiveShadow = false;   // 断面是垂直面，树冠投影落在上面会变成一块脏斑；用内置 AO 已足够
@@ -716,7 +793,7 @@ scene.add(soilFace);
 // 断面里半埋的小石子：只露一小截，近景时有真实的高光和投影（合批成 1 个 draw call）
 (() => {
   const rand = mulberry32(4242);
-  const COUNT = 70;
+  const COUNT = 120;
   const mat = new THREE.MeshStandardMaterial({ roughness: 0.88, metalness: 0, flatShading: true });
   const mesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), mat, COUNT);
   mesh.receiveShadow = false;
@@ -724,13 +801,13 @@ scene.add(soilFace);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
   const col = new THREE.Color();
   for (let i = 0; i < COUNT; i++) {
-    const r = 0.035 + Math.pow(rand(), 2) * 0.075;
-    p.set(randRange(rand, -11, 11), randRange(rand, -6.5, -0.25), randRange(rand, -0.035, 0.01));
+    const r = 0.018 + Math.pow(rand(), 2) * 0.042;
+    p.set(randRange(rand, -13, 13), randRange(rand, -12.5, -0.70), randRange(rand, -0.035, 0.01));
     q.setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3));
     s.set(r * (1.1 + rand() * 0.5), r * (0.8 + rand() * 0.4), r * 0.42);
     m.compose(p, q, s);
     mesh.setMatrixAt(i, m);
-    col.setHex(rand() > 0.45 ? 0x9c8f7c : 0x6d6153);
+    col.setHex(rand() > 0.45 ? 0x4d4234 : 0x342c22);
     mesh.setColorAt(i, col);
   }
   mesh.instanceMatrix.needsUpdate = true;
@@ -741,7 +818,7 @@ scene.add(soilFace);
 /* 断面里的 3D 土团粒：近景有真正的颗粒起伏，而不是一张平贴图 */
 (() => {
   const rand = mulberry32(9091);
-  const COUNT = 420;
+  const COUNT = 680;
   const geo = new THREE.IcosahedronGeometry(1, 0);
   const mat = new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0, flatShading: true, vertexColors: false });
   const mesh = new THREE.InstancedMesh(geo, mat, COUNT);
@@ -750,13 +827,13 @@ scene.add(soilFace);
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
   const col = new THREE.Color();
   for (let i = 0; i < COUNT; i++) {
-    p.set(randRange(rand, -13, 13), randRange(rand, -7.4, -0.25), randRange(rand, 0.005, 0.055));
+    p.set(randRange(rand, -13, 13), randRange(rand, -13.5, -0.25), randRange(rand, 0.005, 0.055));
     q.setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3));
-    const r = 0.025 + Math.pow(rand(), 2.2) * 0.10;
+    const r = 0.018 + Math.pow(rand(), 2.2) * 0.070;
     s.set(r * randRange(rand, 0.9, 1.6), r * randRange(rand, 0.4, 0.8), r * 0.45);
     m.compose(p, q, s);
     mesh.setMatrixAt(i, m);
-    const v = 0.45 + rand() * 0.5;
+    const v = 0.34 + rand() * 0.42;
     col.setRGB(0.42 * v, 0.32 * v, 0.21 * v);
     mesh.setColorAt(i, col);
   }
@@ -774,8 +851,8 @@ const turfGeo = (() => {
   for (let i = 0; i <= seg; i++) {
     const x = -TURF_W / 2 + (i / seg) * TURF_W;
     const n = fbm(x * 0.33 + 7.1, 3.7) - 0.5;
-    const top = -0.015 + n * 0.11;
-    const bot = -0.10 + n * 0.03;
+    const top = -0.015 + n * 0.34;
+    const bot = -0.10 + n * 0.12;
     pos.push(x, top, 0.05, x, bot, 0.05);
     col.push(c1.r, c1.g, c1.b, c2.r, c2.g, c2.b);
     if (i < seg) {
@@ -803,28 +880,33 @@ scene.add(turf);
 
   // 左右两端压暗（越靠画面外侧越黑，像被土层挡住光）
   const side = ctx.createLinearGradient(0, 0, w, 0);
-  side.addColorStop(0.0, 'rgba(8,5,3,0.38)');
-  side.addColorStop(0.14, 'rgba(8,5,3,0.17)');
-  side.addColorStop(0.34, 'rgba(8,5,3,0.03)');
-  side.addColorStop(0.66, 'rgba(8,5,3,0.03)');
-  side.addColorStop(0.86, 'rgba(8,5,3,0.17)');
-  side.addColorStop(1.0, 'rgba(8,5,3,0.38)');
+  side.addColorStop(0.0, 'rgba(8,5,3,0.30)');
+  side.addColorStop(0.14, 'rgba(8,5,3,0.13)');
+  side.addColorStop(0.34, 'rgba(8,5,3,0.02)');
+  side.addColorStop(0.66, 'rgba(8,5,3,0.02)');
+  side.addColorStop(0.86, 'rgba(8,5,3,0.13)');
+  side.addColorStop(1.0, 'rgba(8,5,3,0.30)');
   ctx.fillStyle = side;
   ctx.fillRect(0, 0, w, h);
 
-  // 顶部（紧贴草皮）一条深色遮挡带
-  const topBand = ctx.createLinearGradient(0, 0, 0, h * 0.22);
-  topBand.addColorStop(0, 'rgba(6,4,2,0.22)');
+  // 顶部只留很轻的一层遮挡（旧版 0.22×3 单位是第一章「黑带」的元凶之一）
+  const topBand = ctx.createLinearGradient(0, 0, 0, h * 0.10);
+  topBand.addColorStop(0, 'rgba(6,4,2,0.10)');
   topBand.addColorStop(1, 'rgba(6,4,2,0)');
   ctx.fillStyle = topBand;
-  ctx.fillRect(0, 0, w, h * 0.22);
+  ctx.fillRect(0, 0, w, h * 0.10);
 
-  // 越深越暗，强化"越往下越看不见"的深度感
-  const deep = ctx.createLinearGradient(0, h * 0.35, 0, h);
-  deep.addColorStop(0, 'rgba(6,4,2,0)');
-  deep.addColorStop(1, 'rgba(4,3,2,0.12)');
+  // 只在剖面最底部收暗，吃掉硬边；含水层(-9.6)以上保持明亮
+  const deep = ctx.createLinearGradient(0, h * 0.80, 0, h);
+  deep.addColorStop(0, 'rgba(4,3,2,0)');
+  deep.addColorStop(1, 'rgba(4,3,2,0.55)');
   ctx.fillStyle = deep;
-  ctx.fillRect(0, h * 0.35, w, h * 0.65);
+  ctx.fillRect(0, h * 0.80, w, h * 0.20);
+  const edge = ctx.createLinearGradient(0, h * 0.94, 0, h);
+  edge.addColorStop(0, 'rgba(4,3,2,0)');
+  edge.addColorStop(1, 'rgba(4,3,2,0.92)');
+  ctx.fillStyle = edge;
+  ctx.fillRect(0, h * 0.94, w, h * 0.06);
 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
@@ -834,6 +916,443 @@ scene.add(turf);
   );
   shade.position.set(0, -(SOIL_DEPTH + 5) / 2 - 0.02, 0.028);
   scene.add(shade);
+})();
+
+/* ---------------- 地下水层：水面反光 / 渗流波纹 / 气泡 / 根尖吸水光点 ----------------
+   全部模块级建一次（换树不重建），z 位于 AO 贴片(0.028)之前、根系(0.05~0.62)之后。
+   一律用不受灯光影响的加色材质，冷灰蓝的含水层才不会被暖色补光洗掉。 */
+let waterSheenMat = null;
+const waterGroup = new THREE.Group();
+scene.add(waterGroup);
+
+const waterGlowMat = new THREE.MeshBasicMaterial({
+  color: 0xa8d8e8, transparent: true, opacity: 0, blending: THREE.AdditiveBlending,
+  depthWrite: false, fog: false, side: THREE.DoubleSide,
+});
+const waterGlow = new THREE.Mesh(new THREE.PlaneGeometry(ISLAND_R * 2.8, 0.22), waterGlowMat);
+waterGlow.position.set(0, WATER_TOP, 0.030);
+waterGroup.add(waterGlow);
+
+const waterEdgeMat = new THREE.MeshBasicMaterial({
+  color: 0xdff4ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending,
+  depthWrite: false, fog: false,
+});
+const waterEdge = new THREE.Mesh(new THREE.PlaneGeometry(ISLAND_R * 2.8, 0.024), waterEdgeMat);
+waterEdge.position.set(0, WATER_TOP + 0.11, 0.031);
+waterGroup.add(waterEdge);
+
+(() => {
+  const c = document.createElement('canvas');
+  c.width = 4; c.height = 128;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 128);
+  g.addColorStop(0, 'rgba(150,206,222,0.55)');
+  g.addColorStop(0.35, 'rgba(96,158,180,0.22)');
+  g.addColorStop(1, 'rgba(60,110,140,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 4, 128);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  waterSheenMat = new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending,
+    depthWrite: false, fog: false,
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(ISLAND_R * 2.8, 2.6), waterSheenMat);
+  m.position.set(0, WATER_TOP - 1.15, 0.0305);
+  waterGroup.add(m);
+})();
+
+const waterRippleUniforms = { uTime: { value: 0 }, uOpacity: { value: 0 } };
+const waterRippleMat = new THREE.ShaderMaterial({
+  uniforms: waterRippleUniforms, transparent: true, depthWrite: false, fog: false,
+  blending: THREE.AdditiveBlending,
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `
+    uniform float uTime; uniform float uOpacity; varying vec2 vUv;
+    void main() {
+      float y = vUv.y;
+      float w1 = sin(y * 46.0 - uTime * 1.4 + sin(vUv.x * 22.0 + uTime * 0.35) * 1.6);
+      float w2 = sin(y * 87.0 - uTime * 2.1 + vUv.x * 13.0);
+      float band = smoothstep(0.55, 0.98, w1) * 0.55 + smoothstep(0.75, 1.0, w2) * 0.25;
+      float fade = smoothstep(0.0, 0.15, y) * (1.0 - smoothstep(0.55, 1.0, y));
+      gl_FragColor = vec4(0.62, 0.86, 0.96, band * fade * uOpacity);
+    }`,
+});
+const waterRipples = new THREE.Mesh(new THREE.PlaneGeometry(ISLAND_R * 2.8, 2.4), waterRippleMat);
+waterRipples.position.set(0, WATER_TOP - 1.15, 0.032);
+waterGroup.add(waterRipples);
+
+const WATER_BUBBLES = 150;
+const bubbleBase = new Float32Array(WATER_BUBBLES * 4);
+{
+  const rnd = mulberry32(0x5ea1);
+  for (let i = 0; i < WATER_BUBBLES; i++) {
+    bubbleBase[i * 4] = (rnd() - 0.5) * 26;
+    bubbleBase[i * 4 + 1] = rnd();
+    bubbleBase[i * 4 + 2] = 0.10 + rnd() * 0.28;
+    bubbleBase[i * 4 + 3] = rnd() * 6.283;
+  }
+}
+const bubbleGeo = new THREE.BufferGeometry();
+const bubblePos = new Float32Array(WATER_BUBBLES * 3);
+bubbleGeo.setAttribute('position', new THREE.BufferAttribute(bubblePos, 3));
+const bubbleMat = new THREE.PointsMaterial({
+  size: 0.055, map: circleTexture(), color: 0xc6ecfa, transparent: true, opacity: 0,
+  depthWrite: false, sizeAttenuation: true, blending: THREE.AdditiveBlending, fog: false,
+});
+const waterBubbles = new THREE.Points(bubbleGeo, bubbleMat);
+waterBubbles.frustumCulled = false;
+waterGroup.add(waterBubbles);
+
+const TIP_GLOW = 72;
+const tipGeo = new THREE.BufferGeometry();
+{
+  const rnd = mulberry32(0x71f0);
+  const pos = new Float32Array(TIP_GLOW * 3);
+  for (let i = 0; i < TIP_GLOW; i++) {
+    pos[i * 3] = (rnd() - 0.5) * 17;
+    pos[i * 3 + 1] = WATER_TOP + 0.18 + rnd() * 0.75;
+    pos[i * 3 + 2] = 0.30 + rnd() * 0.28;
+  }
+  tipGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+}
+const tipMat = new THREE.PointsMaterial({
+  size: 0.075, map: circleTexture(), color: 0xd8f2ff, transparent: true, opacity: 0,
+  depthWrite: false, sizeAttenuation: true, blending: THREE.AdditiveBlending, fog: false,
+});
+const tipGlow = new THREE.Points(tipGeo, tipMat);
+tipGlow.frustumCulled = false;
+waterGroup.add(tipGlow);
+for (const o of waterGroup.children) o.raycast = () => {};
+
+/* ---------------- 天空与树上的生机：飞鸟群 / 栖息鸟 / 蝴蝶 / 蜜蜂 / 瓢虫 ----------------
+   全部是 t 的闭式函数（不用 dt 积分、不用每帧 Math.random 定位），
+   所以 ?t0=N&freeze、拖动进度条、四季合影都能得到完全一致的画面。 */
+function birdTexture() {
+  const w = 128, h = 64, c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.strokeStyle = '#3b4854';
+  ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(9, 30);
+  ctx.quadraticCurveTo(36, 8, 64, 34);
+  ctx.quadraticCurveTo(92, 8, 119, 30);
+  ctx.stroke();
+  ctx.fillStyle = '#33404b';
+  ctx.beginPath(); ctx.ellipse(64, 35, 7, 4, 0, 0, 6.283); ctx.fill();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function perchBirdTexture() {
+  const w = 128, h = 96, c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#40566a';
+  ctx.beginPath(); ctx.ellipse(60, 58, 30, 19, -0.16, 0, 6.283); ctx.fill();       // 身体
+  ctx.beginPath(); ctx.arc(88, 40, 12, 0, 6.283); ctx.fill();                      // 头
+  ctx.fillStyle = '#e0a445';
+  ctx.beginPath(); ctx.moveTo(99, 38); ctx.lineTo(118, 42); ctx.lineTo(99, 47); ctx.closePath(); ctx.fill(); // 喙
+  ctx.fillStyle = '#6e8599';
+  ctx.beginPath(); ctx.ellipse(54, 55, 22, 10, -0.20, 0, 6.283); ctx.fill();       // 翅
+  ctx.fillStyle = '#33485c';
+  ctx.beginPath(); ctx.moveTo(36, 52); ctx.lineTo(8, 42); ctx.lineTo(12, 70); ctx.closePath(); ctx.fill(); // 尾
+  ctx.fillStyle = '#f7fbff';
+  ctx.beginPath(); ctx.arc(91, 37, 2.6, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#101820';
+  ctx.beginPath(); ctx.arc(92, 37, 1.3, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = '#3a3026'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(54, 75); ctx.lineTo(52, 88); ctx.moveTo(68, 75); ctx.lineTo(70, 88); ctx.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function butterflyTexture() {
+  const w = 128, h = 96, c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  const wing = (cx, cy, rx, ry, col) => {
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(255,250,225,0.85)';
+    ctx.beginPath(); ctx.arc(cx + rx * 0.35, cy - ry * 0.25, rx * 0.16, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = 'rgba(74,42,20,0.65)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 6.283); ctx.stroke();
+  };
+  wing(40, 34, 26, 21, '#ef9a3c'); wing(88, 34, 26, 21, '#ef9a3c');
+  wing(45, 66, 20, 16, '#f4c05a'); wing(83, 66, 20, 16, '#f4c05a');
+  ctx.fillStyle = '#4b3524';
+  ctx.beginPath(); ctx.ellipse(64, 48, 4, 26, 0, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = '#4b3524'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(62, 24); ctx.quadraticCurveTo(54, 10, 48, 12);
+  ctx.moveTo(66, 24); ctx.quadraticCurveTo(74, 10, 80, 12); ctx.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function beeTexture() {
+  const w = 96, h = 64, c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = 'rgba(226,244,255,0.75)';
+  ctx.beginPath(); ctx.ellipse(40, 22, 18, 9, -0.5, 0, 6.283); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(58, 22, 18, 9, 0.5, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#e8b62c';
+  ctx.beginPath(); ctx.ellipse(48, 38, 24, 13, 0, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#38291a';
+  for (const x of [36, 46, 56]) { ctx.beginPath(); ctx.ellipse(x, 38, 3.4, 12, 0, 0, 6.283); ctx.fill(); }
+  ctx.beginPath(); ctx.arc(70, 34, 7, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = '#38291a'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(72, 28); ctx.quadraticCurveTo(80, 18, 84, 20); ctx.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+function ladybugTexture() {
+  const w = 64, h = 64, c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#20201e';
+  ctx.beginPath(); ctx.arc(32, 30, 10, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#d8382e';
+  ctx.beginPath(); ctx.ellipse(32, 38, 20, 18, 0, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#20201e';
+  ctx.beginPath(); ctx.moveTo(32, 21); ctx.lineTo(32, 56); ctx.lineWidth = 2.5; ctx.stroke();
+  for (const [x, y] of [[20, 32], [44, 32], [22, 45], [42, 45], [32, 49]]) {
+    ctx.beginPath(); ctx.arc(x, y, 3.2, 0, 6.283); ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+const creatureGroup = new THREE.Group();
+scene.add(creatureGroup);
+function makeCreature(tex, count, size, opacity = 1) {
+  const mat = new THREE.MeshBasicMaterial({
+    map: tex, transparent: true, opacity, depthWrite: false, fog: false,
+    side: THREE.DoubleSide, alphaTest: 0.02,
+  });
+  const mesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(size, size * 0.62), mat, count);
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  mesh.frustumCulled = false;
+  mesh.raycast = () => {};
+  for (let i = 0; i < count; i++) mesh.setMatrixAt(i, new THREE.Matrix4().makeScale(0.0001, 0.0001, 0.0001));
+  creatureGroup.add(mesh);
+  return mesh;
+}
+const BIRD_TEX = birdTexture();
+const PERCH_TEX = perchBirdTexture();
+const skyBirds = makeCreature(BIRD_TEX, 14, 1.0);
+const perchBirds = makeCreature(PERCH_TEX, 5, 0.88);
+const butterflies = makeCreature(butterflyTexture(), 7, 0.70);
+const bees = makeCreature(beeTexture(), 5, 0.46);
+const ladybugs = makeCreature(ladybugTexture(), 5, 0.45);
+const creatureRng = mulberry32(0xB17D);
+const creatureJitter = [];
+for (let i = 0; i < 40; i++) creatureJitter.push(creatureRng() * 2 - 1);
+const creaturePhase = [];
+for (let i = 0; i < 40; i++) creaturePhase.push(creatureRng() * Math.PI * 2);
+
+// 「偶尔飞过」：三个窗口各飞一群；雨天与隆冬不出鸟
+const BIRD_WINDOWS = [[46, 84], [128, 158], [196, 232]];
+function birdFlightAt(t) {
+  let best = { u: 0, env: 0, idx: -1 };
+  for (let i = 0; i < BIRD_WINDOWS.length; i++) {
+    const [s0, e0] = BIRD_WINDOWS[i];
+    if (t < s0 || t > e0) continue;
+    const u = (t - s0) / (e0 - s0);
+    const env = smoothstep(0, 0.12, u) * (1 - smoothstep(0.88, 1, u));
+    if (env > best.env) best = { u, env, idx: i };
+  }
+  return best;
+}
+
+/* 树荫 + 光斑：夏天树冠在地面投下的软暗斑，直接兑现「树荫下凉快极了」 */
+function dappleTexture() {
+  const s = 256, c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(s / 2, s / 2, s * 0.05, s / 2, s / 2, s * 0.5);
+  g.addColorStop(0, 'rgba(18,30,14,0.62)');
+  g.addColorStop(0.55, 'rgba(20,32,16,0.34)');
+  g.addColorStop(1, 'rgba(20,32,16,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+  const rnd = mulberry32(0xd4bb1e);
+  for (let i = 0; i < 90; i++) {
+    const x = rnd() * s, y = rnd() * s;
+    const r = 2 + rnd() * 9;
+    const d = Math.hypot(x - s / 2, y - s / 2) / (s * 0.5);
+    if (d > 0.95) continue;
+    const gl = ctx.createRadialGradient(x, y, 0, x, y, r);
+    gl.addColorStop(0, `rgba(255,244,198,${0.05 + rnd() * 0.13})`);
+    gl.addColorStop(1, 'rgba(255,244,198,0)');
+    ctx.fillStyle = gl;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 6.283); ctx.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const treeShadeMat = new THREE.MeshBasicMaterial({
+  map: dappleTexture(), transparent: true, opacity: 0, depthWrite: false, fog: false,
+});
+const treeShade = new THREE.Mesh(new THREE.PlaneGeometry(15, 8), treeShadeMat);
+treeShade.rotation.x = -Math.PI / 2;
+treeShade.position.set(0, 0.028, -4.0);
+treeShade.raycast = () => {};
+scene.add(treeShade);
+
+/* 云影：和天空的云同一个方向缓慢飘过地面，天地不再脱节 */
+function cloudShadowTex() {
+  const s = 128, c = document.createElement('canvas');
+  c.width = c.height = s;
+  const ctx = c.getContext('2d');
+  const g = ctx.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0, 'rgba(20,28,34,0.55)');
+  g.addColorStop(1, 'rgba(20,28,34,0)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, s, s);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+const cloudShadowMats = [];
+const cloudShadowMeshes = [];
+for (let i = 0; i < 3; i++) {
+  const mat = new THREE.MeshBasicMaterial({
+    map: cloudShadowTex(), transparent: true, opacity: 0, depthWrite: false, fog: false,
+  });
+  cloudShadowMats.push(mat);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry([16, 22, 28][i], [9, 12, 15][i]), mat);
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(0, 0.035 + i * 0.001, -12 - i * 5);
+  m.raycast = () => {};
+  scene.add(m);
+  cloudShadowMeshes.push(m);
+}
+
+/* 飞絮：春末飘起来的蒲公英种子，比粉色花瓣更贴合物候 */
+const FLUFF_COUNT = 36;
+const fluffGeo = new THREE.BufferGeometry();
+const fluffBase = new Float32Array(FLUFF_COUNT * 4);
+{
+  const rnd = mulberry32(0xf1ff);
+  for (let i = 0; i < FLUFF_COUNT; i++) {
+    fluffBase[i * 4] = (rnd() - 0.5) * 22;
+    fluffBase[i * 4 + 1] = rnd();
+    fluffBase[i * 4 + 2] = -2 - rnd() * 12;
+    fluffBase[i * 4 + 3] = rnd() * 6.283;
+  }
+}
+const fluffPos = new Float32Array(FLUFF_COUNT * 3);
+fluffGeo.setAttribute('position', new THREE.BufferAttribute(fluffPos, 3));
+const fluffMat = new THREE.PointsMaterial({
+  size: 0.075, map: circleTexture(), color: 0xfffaf0, transparent: true, opacity: 0,
+  depthWrite: false, sizeAttenuation: true, fog: false,
+});
+const fluff = new THREE.Points(fluffGeo, fluffMat);
+fluff.frustumCulled = false;
+fluff.raycast = () => {};
+scene.add(fluff);
+
+/* 结尾「新的轮回」：土面冒出一株小新芽 + 一圈柔光 */
+const epilogueGroup = new THREE.Group();
+{
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x6fa83c, roughness: 0.9 });
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.026, 0.62, 6), stemMat);
+  stem.position.y = 0.31;
+  epilogueGroup.add(stem);
+  const leafMat2 = new THREE.MeshStandardMaterial({ color: 0x9ed45a, roughness: 0.85, side: THREE.DoubleSide });
+  for (const sgn of [-1, 1]) {
+    const l = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 6), leafMat2);
+    l.scale.set(1.5, 0.32, 0.85);
+    l.position.set(sgn * 0.15, 0.60, 0);
+    l.rotation.z = sgn * 0.55;
+    epilogueGroup.add(l);
+  }
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: radialTexture('rgba(210,255,180,0.55)', 'rgba(180,240,150,0.18)'),
+    blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.7, fog: false,
+  }));
+  halo.scale.setScalar(1.5);
+  halo.position.y = 0.45;
+  epilogueGroup.add(halo);
+}
+epilogueGroup.position.set(1.6, 0.01, -0.6);
+epilogueGroup.visible = false;
+scene.add(epilogueGroup);
+
+/* 落果里的新种子：第 13 章熟果落地后，几粒种子滚到土面 */
+const SEED_DROP = 26;
+const seedDropGeo = new THREE.BufferGeometry();
+const seedDropBase = new Float32Array(SEED_DROP * 4);
+{
+  const rnd = mulberry32(0x5eed);
+  for (let i = 0; i < SEED_DROP; i++) {
+    seedDropBase[i * 4] = (rnd() - 0.5) * 6;
+    seedDropBase[i * 4 + 1] = rnd();
+    seedDropBase[i * 4 + 2] = -0.4 - rnd() * 2.4;
+    seedDropBase[i * 4 + 3] = rnd() * 6.283;
+  }
+}
+const seedDropPos = new Float32Array(SEED_DROP * 3);
+seedDropGeo.setAttribute('position', new THREE.BufferAttribute(seedDropPos, 3));
+const seedDropMat = new THREE.PointsMaterial({
+  size: 0.075, map: circleTexture(), color: 0xc79a5c, transparent: true, opacity: 0,
+  depthWrite: false, sizeAttenuation: true, fog: false,
+});
+const seedDrop = new THREE.Points(seedDropGeo, seedDropMat);
+seedDrop.frustumCulled = false;
+seedDrop.raycast = () => {};
+scene.add(seedDrop);
+
+let birdWorldPoints = [];
+let insectWorldPoints = [];
+
+/* 表土近景细节：草根细丝 + 半埋土粒，第一章微距镜头里能看清「种子落在松土里」 */
+(() => {
+  const rnd = mulberry32(0x5eed01);
+  const seg = [];
+  for (let i = 0; i < 130; i++) {
+    const nearCenter = i < 70;
+    const x = nearCenter ? (rnd() - 0.5) * 3.0 : (rnd() - 0.5) * 26;
+    const z = 0.055 + rnd() * 0.05;
+    const len = 0.10 + rnd() * 0.34;
+    const bend = (rnd() - 0.5) * 0.10;
+    seg.push(x, -0.02, z, x + bend, -0.02 - len, z + (rnd() - 0.5) * 0.02);
+    if (rnd() > 0.55) {
+      const mid = len * (0.4 + rnd() * 0.3);
+      seg.push(x + bend * 0.5, -0.02 - mid, z, x + bend * 0.5 + (rnd() - 0.5) * 0.10, -0.02 - mid - 0.06, z);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(seg, 3));
+  const roots = new THREE.LineSegments(g, new THREE.LineBasicMaterial({
+    color: 0x8a7450, transparent: true, opacity: 0.34, depthWrite: false, fog: false,
+  }));
+  roots.raycast = () => {};
+  scene.add(roots);
+
+  const COUNT = 105;
+  const crumbMat = new THREE.MeshStandardMaterial({ color: 0x6d5438, roughness: 1, flatShading: true });
+  const crumbs = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), crumbMat, COUNT);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), pv = new THREE.Vector3();
+  const col = new THREE.Color();
+  for (let i = 0; i < COUNT; i++) {
+    const nearCenter = i < 85;
+    pv.set(nearCenter ? (rnd() - 0.5) * 2.4 : (rnd() - 0.5) * 24, -0.02 - rnd() * 0.30, 0.055 + rnd() * 0.045);
+    const r = 0.005 + Math.pow(rnd(), 2) * 0.020;
+    q.setFromEuler(new THREE.Euler(rnd() * 3, rnd() * 3, rnd() * 3));
+    sc.set(r * 1.4, r * 0.8, r * 0.5);
+    m.compose(pv, q, sc);
+    crumbs.setMatrixAt(i, m);
+    col.setHex(rnd() > 0.5 ? 0x8a6c47 : 0x5a422c);
+    crumbs.setColorAt(i, col);
+  }
+  crumbs.instanceMatrix.needsUpdate = true;
+  if (crumbs.instanceColor) crumbs.instanceColor.needsUpdate = true;
+  crumbs.raycast = () => {};
+  scene.add(crumbs);
 })();
 
 /* 远景山脊：多层渐变山体 + 雪线 + 空气透视
@@ -1347,6 +1866,9 @@ let tree = null;   // 当前这棵树的所有数据
 function buildTree(seed) {
   const rand = mulberry32(seed);
   const group = new THREE.Group();
+  // 根系单独放一层：树冠随风摆时，深根不能跟着转到 soilFace 后面被遮住
+  const rootSub = new THREE.Group();
+  group.add(rootSub);
   const branches = [];
   const leafSites = [];
   const geos = [];
@@ -1605,7 +2127,7 @@ function buildTree(seed) {
   });
 
   // 一条根的骨架：从 start 出发，越走越细、越走越向下垂，并被夹在剖面里
-  function rootPath(start, dir, len, r0, segs, wander) {
+  function rootPath(start, dir, len, r0, segs, wander, isTap = false) {
     const pts = [start.clone()];
     const radii = [r0];
     const d = dir.clone().normalize();
@@ -1617,15 +2139,15 @@ function buildTree(seed) {
       // 低频正弦 + 随机游走：根不是折线，也不是一根直线
       d.x += randRange(rand, -wander, wander) + Math.sin(i * 0.72 + waveA) * wander * 0.62;
       d.z += randRange(rand, -wander * 0.55, wander * 0.55) + Math.cos(i * 0.55 + waveB) * wander * 0.38;
-      d.y -= 0.015 + 0.075 * t;            // 末梢明显往下垂
+      d.y -= isTap ? (0.006 + 0.020 * t) : (0.015 + 0.075 * t);  // 主根保持陡直向下，侧根才明显下垂
       d.normalize();
       const p = pts[i - 1].clone().addScaledVector(d, step);
-      // 夹在土壤剖面可见的薄层里
-      p.y = Math.max(-5.8, p.y);
-      if (p.x > 8.0) p.x = 8.0; else if (p.x < -8.0) p.x = -8.0;
-      p.z = Math.min(0.26, Math.max(0.035, p.z));   // 根系保持在切面前薄层里，始终可见
+      p.y = Math.max(ROOT_FLOOR, p.y);       // 根尖最远抵达含水层
+      if (p.x > 11.0) p.x = 11.0; else if (p.x < -11.0) p.x = -11.0;
+      // 放宽 z：根系有前后层次，不再是一张 0.2 厚的纸片
+      p.z = Math.min(0.62, Math.max(0.05, p.z));
       pts.push(p);
-      radii.push(Math.max(0.0035, r0 * (1 - 0.88 * Math.pow(t, 0.8))));
+      radii.push(Math.max(0.0028, r0 * (1 - (isTap ? 0.72 : 0.88) * Math.pow(t, 0.8))));
     }
     return { pts, radii };
   }
@@ -1638,7 +2160,7 @@ function buildTree(seed) {
     mesh.receiveShadow = false;
     mesh.castShadow = false;
     mesh.frustumCulled = false;
-    group.add(mesh);
+    rootSub.add(mesh);
     const b = {
       mesh, pts, radii, rings: pts.length, radial,
       basePos: Float32Array.from(geo.attributes.position.array), lastK: -1,
@@ -1648,16 +2170,16 @@ function buildTree(seed) {
   }
 
   function rootChain(start, dir, len, r0, depth, gStart) {
-    const segs = depth === 0 ? 16 : depth === 1 ? 9 : depth === 2 ? 6 : 4;
-    const radial = depth === 0 ? 10 : depth === 1 ? 7 : depth === 2 ? 5 : 4;
-    const { pts, radii } = rootPath(start, dir, len, r0, segs, depth === 0 ? 0.22 : 0.28);
+    const segs = depth === 0 ? 24 : depth === 1 ? 12 : depth === 2 ? 7 : 5;
+    const radial = depth === 0 ? 12 : depth === 1 ? 8 : depth === 2 ? 6 : 4;
+    const { pts, radii } = rootPath(start, dir, len, r0, segs, depth === 0 ? 0.20 : 0.28, depth === 0);
     const dur = [0.025, 0.020, 0.015, 0.010][Math.min(3, depth)];
     const g1 = Math.min(0.86, gStart + dur);
     addRoot(pts, radii, radial, gStart, g1, depth);
 
     if (depth >= 3) return;
     // 侧根：沿主根不同高度发出，方向、粗细、长度都不一样
-    const n = depth === 0 ? 12 : depth === 1 ? 3 : 2;
+    const n = depth === 0 ? 14 : depth === 1 ? 3 : 1;
     for (let k = 0; k < n; k++) {
       const t = depth === 0 ? randRange(rand, 0.06, 0.94) : randRange(rand, 0.18, 0.92);
       const i0 = Math.min(segs, Math.max(1, Math.round(t * segs)));
@@ -1672,9 +2194,9 @@ function buildTree(seed) {
       ).normalize();
       rootChain(
         p, nd,
-        len * randRange(rand, 0.3, 0.55),
+        len * randRange(rand, 0.42, 0.62),
         Math.max(0.010, localR * randRange(rand, 0.56, 0.80)),
-        depth + 1, g1 + 0.012 * k
+        depth + 1, Math.max(0.006, g1 - 0.015 + 0.010 * k)
       );
     }
   }
@@ -1682,24 +2204,43 @@ function buildTree(seed) {
   // 主根从种子正下方钻下去
   rootChain(
     new THREE.Vector3(0, -0.05, 0.06),
-    new THREE.Vector3(randRange(rand, -0.12, 0.12), -1, randRange(rand, -0.06, 0.14)),
-    randRange(rand, 2.8, 3.4), 0.11, 0, 0.012
+    new THREE.Vector3(randRange(rand, -0.10, 0.10), -1, randRange(rand, -0.06, 0.14)),
+    randRange(rand, 4.7, 5.5), 0.165, 0, 0.022
   );
   // 根颈四周的板根：贴着地面向外铺，让树"抓"住土
-  for (let i = 0; i < 6; i++) {
-    const a = (i / 6) * Math.PI * 2 + randRange(rand, -0.5, 0.5);
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2 + randRange(rand, -0.5, 0.5);
     rootChain(
       new THREE.Vector3(Math.cos(a) * 0.07, -0.06, 0.02 + Math.sin(a) * 0.05),
       new THREE.Vector3(Math.cos(a) * 1.1, -0.55, Math.sin(a) * 0.5).normalize(),
-      randRange(rand, 1.2, 1.7), 0.075, 1, 0.045
+      randRange(rand, 1.9, 2.6), 0.10, 1, 0.030
     );
+  }
+
+  /* 第 2 年深扎续根：g0 落在 rootAge>1 的区间，只在长成大树后才继续往含水层钻。
+     这样「随时间推移根系越来越深、最后达到水层」才真正成立，而不是 t=120 就静止。 */
+  {
+    const dr = mulberry32(Math.floor(rand() * 1e9) ^ 0x5eed2024);
+    for (let i = 0; i < 7; i++) {
+      const start = new THREE.Vector3(randRange(dr, -1.7, 1.7), -3.1 - dr() * 1.5, 0.10 + dr() * 0.26);
+      const dir = new THREE.Vector3(randRange(dr, -0.24, 0.24), -1, randRange(dr, -0.10, 0.16)).normalize();
+      const { pts, radii } = rootPath(start, dir, randRange(dr, 4.4, 6.2), randRange(dr, 0.055, 0.095), 18, 0.16, true);
+      addRoot(pts, radii, 8, 1.00 + i * 0.012, 1.20 + i * 0.012, 1);
+    }
+    // 贴近潜水面的吸水须根：横向铺开成扇，根尖正好扎进含水层
+    for (let i = 0; i < 8; i++) {
+      const start = new THREE.Vector3(randRange(dr, -2.8, 2.8), -7.4 - dr() * 1.1, 0.12 + dr() * 0.30);
+      const dir = new THREE.Vector3(randRange(dr, -0.85, 0.85), -1, randRange(dr, -0.10, 0.16)).normalize();
+      const { pts, radii } = rootPath(start, dir, randRange(dr, 2.0, 3.0), randRange(dr, 0.020, 0.038), 10, 0.24, false);
+      addRoot(pts, radii, 5, 1.08 + i * 0.012, 1.26 + i * 0.012, 2);
+    }
   }
 
   // 树干入土处的“根盘”：用一条凹曲线旋成，比直筒更像个活物
   const flareProfile = [];
   for (let i = 0; i <= 8; i++) {
     const t = i / 8;                                  // 0 = 土面，1 = 更深处
-    flareProfile.push(new THREE.Vector2(0.10 + 0.125 * Math.pow(1 - t, 1.15), -0.75 * t));
+    flareProfile.push(new THREE.Vector2(0.13 + 0.20 * Math.pow(1 - t, 1.15), -1.05 * t));
   }
   const flareGeo = new THREE.LatheGeometry(flareProfile, 16);
   geos.push(flareGeo);
@@ -1714,10 +2255,12 @@ function buildTree(seed) {
   flare.scale.setScalar(0.001);
   flare.castShadow = true;
   flare.receiveShadow = true;
-  group.add(flare);
+  rootSub.add(flare);
 
-  /* 细根毛：沿根系采样一圈极细的分叉，近景让根部不再像光滑管子 */
+  /* 细根毛：沿根系采样密集的细丝，近景让根部不再像光滑管子。
+     线段按「所属根的成熟时刻」排序，animate 里用 setDrawRange 逐段显现（1 个 draw call）。 */
   const rootHairPos = [];
+  const rootHairReveal = [];
   const rootHairRand = mulberry32(Math.floor(rand() * 1e9) ^ 0x51ed270b);
   for (const r of roots) {
     for (let i = 2; i < r.pts.length - 1; i += 2) {
@@ -1726,22 +2269,34 @@ function buildTree(seed) {
       const side = new THREE.Vector3().crossVectors(tangent, UP);
       if (side.lengthSq() < 1e-5) side.set(1, 0, 0);
       side.normalize();
-      for (let k = 0; k < 2; k++) {
+      const hairs = r.g0 >= 1 ? 5 : 3;
+      for (let k = 0; k < hairs; k++) {
         const dir = side.clone().applyAxisAngle(tangent, rootHairRand() * Math.PI * 2);
-        const len = 0.010 + rootHairRand() * 0.028;
+        const len = 0.018 + rootHairRand() * 0.048;
         const q = p0.clone().addScaledVector(dir, len);
         rootHairPos.push(p0.x, p0.y, p0.z, q.x, q.y, q.z);
+        rootHairReveal.push(r.g1);
       }
     }
   }
+  const hairOrder = rootHairReveal.map((_, i) => i).sort((a, b) => rootHairReveal[a] - rootHairReveal[b]);
+  const hairSorted = new Float32Array(rootHairPos.length);
+  for (let i = 0; i < hairOrder.length; i++) {
+    const o = hairOrder[i];
+    for (let k = 0; k < 6; k++) hairSorted[i * 6 + k] = rootHairPos[o * 6 + k];
+  }
+  const hairThresholds = hairOrder.map((i) => rootHairReveal[i]);
   const rootHairGeo = new THREE.BufferGeometry();
-  rootHairGeo.setAttribute('position', new THREE.Float32BufferAttribute(rootHairPos, 3));
+  rootHairGeo.setAttribute('position', new THREE.BufferAttribute(hairSorted, 3));
+  rootHairGeo.setDrawRange(0, 0);
   const rootHairMat = new THREE.LineBasicMaterial({
-    color: 0x896b4b, transparent: true, opacity: 0.30, depthWrite: false,
+    color: 0x9b7f5c, transparent: true, opacity: 0.42, depthWrite: false, fog: false,
   });
   const rootHairs = new THREE.LineSegments(rootHairGeo, rootHairMat);
   rootHairs.userData.part = 'root';
-  group.add(rootHairs);
+  // 默认 Line.threshold=1 会让几千段细丝形成覆盖半个剖面的隐形拾取圈
+  rootHairs.raycast = () => {};
+  rootSub.add(rootHairs);
   geos.push(rootHairGeo);
 
   /* 叶子实例化网格 */
@@ -1810,14 +2365,14 @@ function buildTree(seed) {
     const pos = src.pos.clone();
     pos.y -= 0.05 + rand() * 0.07;
     pos.x += randRange(rand, -0.05, 0.05);
-    pos.z += randRange(rand, -0.05, 0.05);
+    pos.z += 0.30 + rand() * 0.20;   // 挂在树冠朝镜头这一侧
     const cc = new THREE.Color();
     const pick = rand();
     if (pick < 0.62) cc.setHex(0xc0322a);          // 红苹果
     else if (pick < 0.86) cc.setHex(0xd8552c);     // 偏橙
     else cc.setHex(0xe0b23a);                      // 黄果
     fruitData.push({
-      pos, size: randRange(rand, 0.085, 0.135),
+      pos, size: randRange(rand, 0.13, 0.20), ripe: cc.clone(),
       quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3)),
       phase: rand() * Math.PI * 2, stag: rand(),
     });
@@ -1828,11 +2383,11 @@ function buildTree(seed) {
   if (stems.instanceColor) stems.instanceColor.needsUpdate = true;
 
   /* ---------------- 春花 ---------------- */
-  const BLOSSOM_COUNT = Math.min(2400, Math.floor(leafData.length * 0.11));
+  const BLOSSOM_COUNT = Math.min(1800, Math.floor(leafData.length * 0.085));
   const blossomGeo = new THREE.PlaneGeometry(1, 1);
-  const blossomMat = new THREE.MeshStandardMaterial({
-    map: FLOWER_TEX, alphaTest: 0.30, side: THREE.DoubleSide, roughness: 0.9, metalness: 0,
-    transparent: true, opacity: 0,
+  const blossomMat = new THREE.MeshBasicMaterial({
+    map: FLOWER_TEX, alphaTest: 0.30, side: THREE.DoubleSide,
+    transparent: true, opacity: 0, depthWrite: false,
   });
   const blossoms = new THREE.InstancedMesh(blossomGeo, blossomMat, BLOSSOM_COUNT);
   blossoms.userData.part = 'flower';
@@ -1844,10 +2399,12 @@ function buildTree(seed) {
   for (let i = 0; i < BLOSSOM_COUNT; i++) {
     const src = leafData[Math.floor(rand() * leafData.length)];
     const pos = src.pos.clone();
+    pos.z += 0.34 + rand() * 0.22;   // 推到叶片前面，否则整树花都被叶冠挡住
+    pos.y += rand() * 0.06;
     const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 3, rand() * 3, rand() * 3));
-    const size = randRange(rand, 0.045, 0.09);
+    const size = randRange(rand, 0.20, 0.31);
     blossomData.push({ pos, quat, size });
-    if (rand() < 0.7) blossomCol.setHex(0xfff6f8); else blossomCol.setHex(0xffd9e6);
+    if (rand() < 0.45) blossomCol.setHex(0xffe7f0); else blossomCol.setHex(0xff9ec6);
     blossoms.setColorAt(i, blossomCol);
     blossoms.setMatrixAt(i, new THREE.Matrix4().compose(pos, quat, new THREE.Vector3(size, size, size)));
   }
@@ -1858,13 +2415,13 @@ function buildTree(seed) {
   const snowPts = [];
   for (const b of branches) {
     if (b.depth < 1) continue;
-    const n = b.depth >= 3 ? 2 : 1;
+    const n = b.depth >= 3 ? 3 : 2;
     for (let k = 0; k < n; k++) {
       const idx = Math.floor(randRange(rand, 0.25, 0.96) * (b.pts.length - 1));
       const p = b.pts[idx].clone();
       const r = b.radii ? b.radii[idx] : 0.02;
       p.y += r * 1.05 + 0.008;
-      snowPts.push({ pos: p, s: 0.038 + r * 1.8 });
+      snowPts.push({ pos: p, s: 0.085 + r * 2.6 });
     }
   }
   const snowCapGeo = new THREE.SphereGeometry(1, 6, 4);
@@ -1876,7 +2433,7 @@ function buildTree(seed) {
   group.add(snowCaps);
   const snowCapData = snowPts.map((d) => ({
     pos: d.pos, quat: new THREE.Quaternion().setFromEuler(new THREE.Euler(rand() * 0.4, rand() * 3, rand() * 0.4)),
-    sx: d.s * randRange(rand, 0.65, 0.95), sy: d.s * 0.48, sz: d.s * randRange(rand, 0.65, 0.95),
+    sx: d.s * randRange(rand, 0.75, 1.15), sy: d.s * 0.62, sz: d.s * randRange(rand, 0.75, 1.15),
   }));
   for (let i = 0; i < snowCapData.length; i++) {
     const d = snowCapData[i];
@@ -1924,7 +2481,7 @@ function buildTree(seed) {
   }
 
   const result = {
-    group, branches, leaves, leafData, roots, flare, flareMat, rootMats: [rootMatA, rootMatB], rootHairMat, seedMesh, seedTop, seedBottom, seedCrack, seedMat, cotyledons, cotyledonMat, geos,
+    group, rootSub, branches, leaves, leafData, roots, flare, flareMat, rootMats: [rootMatA, rootMatB], rootHairMat, rootHairs, hairThresholds, seedMesh, seedTop, seedBottom, seedCrack, seedMat, cotyledons, cotyledonMat, geos,
     fruits, stems, fruitData, fruitGeo, fruitMat, stemGeo, stemMat,
     blossoms, blossomMat, blossomGeo, blossomData, snowCaps, snowCapGeo, snowCapMat, snowCapData,
     radius: 0,
@@ -1943,9 +2500,11 @@ function disposeTree(t) {
   treeRoot.remove(t.group);
   for (const g of t.geos) g.dispose();
   t.leaves.dispose();
+  if (t.fruits) t.fruits.dispose();
+  if (t.stems) t.stems.dispose();
   t.seedMesh.traverse((o) => {
     if (o.geometry) o.geometry.dispose();
-    if (o.material) o.material.dispose();
+    if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
   });
   t.cotyledonMat.dispose();
   for (const m of t.rootMats) m.dispose();
@@ -1980,13 +2539,13 @@ const snowPhase = new Float32Array(SNOW_COUNT);
 for (let i = 0; i < SNOW_COUNT; i++) {
   snowPos[i * 3] = (Math.random() - 0.5) * 56;
   snowPos[i * 3 + 1] = Math.random() * 26;
-  snowPos[i * 3 + 2] = (Math.random() - 0.5) * 56;
+  snowPos[i * 3 + 2] = -24 + Math.random() * 28;   // 深景镜头拉远后，雪不能跑到相机前面变成大白斑
   snowVel[i] = 0.30 + Math.random() * 0.55;
   snowPhase[i] = Math.random() * Math.PI * 2;
 }
 snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
 const snowMat = new THREE.PointsMaterial({
-  size: 0.30, map: circleTexture(), transparent: true, opacity: 0,
+  size: 0.22, map: circleTexture(), transparent: true, opacity: 0,
   depthWrite: false, sizeAttenuation: true, color: 0xffffff, fog: false,
 });
 const snow = new THREE.Points(snowGeo, snowMat);
@@ -2027,8 +2586,9 @@ const rainMat = new THREE.PointsMaterial({
 const rain = new THREE.Points(rainGeo, rainMat);
 rain.frustumCulled = false;
 scene.add(rain);
-// 雨的时间窗：扎根、破土、幼苗、夏天各来一阵
-const RAIN_WINDOWS = [[16, 31, 0.62], [40, 54, 0.55], [62, 72, 0.45], [128, 138, 0.5], [206, 216, 0.4]];
+// 雨的时间窗：春雨滋润(16-31)、向下扎根(40-54)、破土(62-72)、小树成形(96-106)。
+// 两个夏雨窗已移除：第 8/12 章讲「阳光穿过树冠 / 小鸟昆虫来休息」，下雨会与文案冲突。
+const RAIN_WINDOWS = [[16, 31, 0.62], [40, 54, 0.55], [62, 72, 0.45], [96, 106, 0.42]];
 function weatherAt(t) {
   let a = 0;
   for (const [s, e, amt] of RAIN_WINDOWS) {
@@ -2075,7 +2635,7 @@ function spawnFallingLeaf(color) {
 
 /* ---------------- 镜头控制 ---------------- */
 const cam = { theta: 1.46, phi: 1.46, radius: 12.5, dir: 1, target: new THREE.Vector3(0, 3.3, 0) };
-const THETA_MIN = Math.PI / 2 - 0.62, THETA_MAX = Math.PI / 2 + 0.62;
+const THETA_MIN = Math.PI / 2 - 0.36, THETA_MAX = Math.PI / 2 + 0.36;
 
 // 生长阶段的镜头脚本：种子微距 → 根系剖面 → 破土 → 幼苗 → 后拉看全树
 const CAM_KEYS = [
@@ -2239,6 +2799,7 @@ let idleTimer = 0;
 let lockPressTimer = 0;
 let quartetBusy = false;
 let quartetAutoDone = false;
+let quartetShooting = false;   // 四季合影期间关掉深根取景，保证四张照片构图一致
 
 
 const CHAPTERS = [
@@ -2289,7 +2850,7 @@ const CHAPTER_PARTS = [
   ['leaf', 'branch', 'trunk', 'root'],
   ['branch', 'trunk', 'snow'],
   ['flower', 'leaf', 'branch', 'trunk'],
-  ['leaf', 'branch', 'trunk', 'root'],
+  ['leaf', 'branch', 'trunk', 'root', 'bird', 'insect'],
   ['fruit', 'leaf', 'branch', 'trunk'],
   ['snow', 'branch', 'trunk'],
 ];
@@ -2304,9 +2865,11 @@ const PART_INFO = {
   flower: { name: '花', pinyin: 'huā', desc: '花开的时候，蜜蜂和小鸟都来了。' },
   fruit: { name: '果', pinyin: 'guǒ', desc: '果实里有新的种子，生命就这样传下去。' },
   snow: { name: '雪', pinyin: 'xuě', desc: '雪花落在树枝上，大树在冬天安静地休息。' },
+  bird: { name: '小鸟', pinyin: 'xiǎo niǎo', desc: '夏天，小鸟飞到树荫里歇一歇，有的停在枝头唱歌。' },
+  insect: { name: '昆虫', pinyin: 'kūn chóng', desc: '蝴蝶、蜜蜂和瓢虫也喜欢这棵大树，围着花朵飞来飞去。' },
 };
 
-const SUBTITLE_KEYWORDS = /(种子|泥土|水分|温暖|春雨|外壳|侧根|主根|根|嫩芽|种壳|子叶|真叶|阳光|养分|枝丫|树干|树冠|叶子|树荫|落叶|白雪|新芽|花朵|果实|小鸟|昆虫|轮回)/g;
+const SUBTITLE_KEYWORDS = /(种子|泥土|水分|温暖|春雨|外壳|侧根|主根|根|嫩芽|种壳|子叶|真叶|阳光|养分|枝丫|树干|树冠|叶子|树荫|落叶|白雪|新芽|花朵|果实|小鸟|昆虫|蜜蜂|蝴蝶|瓢虫|轮回)/g;
 
 function subtitleHTML(text) {
   return text.replace(SUBTITLE_KEYWORDS, '<em>$1</em>');
@@ -2437,6 +3000,7 @@ function disposeEnvironment() {
     if (!mesh) continue;
     scene.remove(mesh);
     if (mesh.material) mesh.material.dispose();
+    if (mesh.dispose) mesh.dispose();
     // CROSS_GEO / LEAF_GEO 是共享几何，不能在这里 dispose
   }
   scene.__grass = null; scene.__flowers = null; scene.__groundLeaves = null;
@@ -2458,7 +3022,8 @@ function plant(seed) {
   fallLeaves.instanceMatrix.needsUpdate = true;
 }
 
-let seedCounter = Math.floor(Math.random() * 100000);
+let seedCounter = (FREEZE_T !== null || VIDEO || STAGE_PARAM || CLASSROOM_PARAM || T0_QUERY !== null)
+  ? 20240601 : Math.floor(Math.random() * 100000);
 plant(seedCounter);
 
 /* ---------------- 课堂模式：UI、章节、朗读、互动 ---------------- */
@@ -2727,15 +3292,20 @@ function partFromObject(obj) {
 }
 function partVisibleAt(part, t) {
   // 透明但仍在场景里的实例（春花、果实、积雪）不能参与拾取，否则夏天会点到“雪”。
+  // 先问真实显隐，再叠加章节时间白名单，避免「老师说有、孩子点不中」。
+  if (!tree || !partHasVisibleState(part)) return false;
+  const p = ((storySeason(t) % 1) + 1) % 1;
   if (part === 'seed') return t < 80;
-  if (part === 'cotyledon') return t >= 54 && t <= 82;
+  if (part === 'cotyledon') return t >= 60 && t <= 100;
   if (part === 'root') return t >= 30;
-  if (part === 'trunk') return t >= 52;
+  if (part === 'trunk') return t >= 56;
   if (part === 'branch') return t >= 90;
-  if (part === 'leaf') return t >= 54;
-  if (part === 'flower') return t >= 178 && t <= 206;
-  if (part === 'fruit') return t >= 216 && t <= 252;
-  if (part === 'snow') return (t >= 156 && t <= 184) || t >= 236;
+  if (part === 'leaf') return t >= 74 && p < 0.70;   // 秋末/冬季叶已落光
+  if (part === 'flower') return t >= 180 && t <= 206;
+  if (part === 'fruit') return t >= 220 && t <= 242;
+  if (part === 'snow') return (t >= 160 && t <= 180) || (t >= 240 && t <= 260);
+  if (part === 'bird') return t >= 198 && t <= 220;
+  if (part === 'insect') return t >= 198 && t <= 220;
   return true;
 }
 function partHasVisibleState(part) {
@@ -2745,15 +3315,20 @@ function partHasVisibleState(part) {
   if (part === 'root') return tree.roots.some((r) => r.mesh.visible);
   if (part === 'trunk') return !!(tree.branches[0] && tree.branches[0].mesh.visible && g > 0.11);
   if (part === 'branch') return tree.branches.some((b, i) => i > 0 && b.mesh.visible) && g > 0.24;
-  if (part === 'leaf') return g > 0.13;
+  if (part === 'leaf') {
+    const p = ((storySeason(storyTime) % 1) + 1) % 1;
+    return g > 0.13 && (p < 0.05 || p < 0.70);
+  }
   if (part === 'cotyledon') return tree.cotyledons.some((m) => m.visible && m.scale.x > 0.04);
   if (part === 'flower') return !!(tree.blossoms && tree.blossoms.visible && tree.blossomMat.opacity > 0.05);
   if (part === 'fruit') {
     const p = ((storySeason(storyTime) % 1) + 1) % 1;
-    const grow = storyYear(storyTime) >= 2 ? smoothstep(0.40, 0.52, p) : 0;
-    return grow > 0.02 && p < 0.82;
+    const grow = storyYear(storyTime) >= 2 ? smoothstep(0.50, 0.58, p) : 0;
+    return grow > 0.02 && p < 0.80;
   }
   if (part === 'snow') return !!(tree.snowCaps && tree.snowCaps.visible && tree.snowCapMat.opacity > 0.05);
+  if (part === 'bird') return perchBirds.visible && birdWorldPoints.length >= 2;
+  if (part === 'insect') return butterflies.visible && insectWorldPoints.length >= 2;
   return false;
 }
 function partWorldPoints(part) {
@@ -2769,9 +3344,14 @@ function partWorldPoints(part) {
   if (part === 'seed') {
     if (tree.seedMesh) addWorld(tree.seedMesh.getWorldPosition(new THREE.Vector3()));
   } else if (part === 'root') {
+    const rootParent = tree.rootSub || tree.group;
     for (const r of tree.roots) {
       if (!r.mesh.visible) continue;
-      for (let i = 0; i < r.pts.length; i += 2) addLocal(r.pts[i]);
+      for (let i = 0; i < r.pts.length; i += 3) {
+        const p = r.pts[i].clone();
+        rootParent.localToWorld(p);
+        pts.push(p);
+      }
     }
   } else if (part === 'trunk') {
     const b = tree.branches[0];
@@ -2797,6 +3377,10 @@ function partWorldPoints(part) {
     if (tree.fruitData) for (let i = 0; i < tree.fruitData.length; i += 2) addLocal(tree.fruitData[i].pos);
   } else if (part === 'snow') {
     if (tree.snowCapData) for (const d of tree.snowCapData) addLocal(d.pos);
+  } else if (part === 'bird') {
+    for (const v of birdWorldPoints) addWorld(v);
+  } else if (part === 'insect') {
+    for (const v of insectWorldPoints) addWorld(v);
   }
   return pts;
 }
@@ -2873,7 +3457,7 @@ function prepareFindBag() {
   const available = findablePartsAt(storyTime);
   if (!available.length) return false;
   const chapter = chapterIndexAt(storyTime);
-  const order = ['seed', 'root', 'trunk', 'branch', 'leaf', 'cotyledon', 'flower', 'fruit', 'snow'];
+  const order = ['seed', 'root', 'trunk', 'branch', 'leaf', 'cotyledon', 'flower', 'fruit', 'snow', 'bird', 'insect'];
   const key = chapter + '|' + available.join(',');
   if (key !== findBagKey) {
     const bag = order.filter((p) => available.includes(p));
@@ -2960,6 +3544,7 @@ function snapshotCanvas() {
 async function captureQuartet() {
   if (quartetBusy) return;
   quartetBusy = true;
+  quartetShooting = true;
   const old = { t: storyTime, prevT, playing, theta: cam.theta, radius: cam.radius, phi: cam.phi };
   const frames = [];
   try {
@@ -2979,6 +3564,7 @@ async function captureQuartet() {
     openModal(quartetOverlayEl);
   } finally {
     freezeOverride = null;
+    quartetShooting = false;
     storyTime = old.t; prevT = old.prevT; playing = old.playing;
     cam.theta = old.theta; cam.radius = old.radius; cam.phi = old.phi;
     syncPlayer(); updateChapterUI(storyTime);
@@ -3117,6 +3703,7 @@ const _leafP = new THREE.Vector3();
 const _sunDir = new THREE.Vector3();
 const _sunNdc = new THREE.Vector3();
 const _sunUv = new THREE.Vector2(0.5, 0.8);
+let lastStaticRenderKey = '';
 const _camDir = new THREE.Vector3();
 
 // 枝条的生长：前 i0 环照常显示，i0 之后的环全部塌到「前端点」，形成一根越伸越长的锥尖
@@ -3188,7 +3775,8 @@ function animate() {
   }
   // 定帧模式（?t0=N&freeze）：时间钉死在 N 秒；视频模式由外部喂时间
   const t = VIDEO ? videoT : (freezeOverride !== null ? freezeOverride : (FREEZE_T !== null ? FREEZE_T : storyTime));
-  const dt = VIDEO ? 1 / 60 : Math.min(0.05, Math.max(0.0001, t - prevT));
+  // 定帧 / 暂停 / 四季合影时 dt=0：粒子彻底静止，画面可逐像素复现
+  const dt = VIDEO ? 1 / 60 : ((playing && FREEZE_T === null && freezeOverride === null) ? Math.min(0.05, Math.max(0.0001, t - prevT)) : 0);
   prevT = t;
   updateChapterUI(t);
   syncPlayer();
@@ -3198,6 +3786,8 @@ function animate() {
   const p = ((pRaw % 1) + 1) % 1;                    // 0..1 一年
   const yearIndex = storyYear(t);
   const g = growthAt(t);                             // 种子→大树的非线性生长进度
+  // 根不受 g 在 120s 饱和的限制：第 2 年继续向含水层深扎
+  const rootAge = g + 0.30 * smoothstep(120, 235, t);
 
   const pal = samplePalette(p, palette);
   const rainA = weatherAt(t);
@@ -3228,7 +3818,9 @@ function animate() {
   sunRays.position.copy(sunDir).multiplyScalar(148);
   sunSprite.material.color.copy(pal.sun);
   sunRays.material.color.copy(pal.sun);
-  sunRays.material.opacity = 0.42 * (0.65 + 0.35 * (1 - smoothstep(0.6, 0.9, p))) * (1 - 0.6 * rainA);
+  sunRays.material.opacity = 0.30 * (0.55 + 0.45 * (1 - smoothstep(0.6, 0.9, p))) * (1 - 0.6 * rainA) * (0.75 + 0.9 * pal.bloom);
+  // 四季曝光差异（原为死参数）：幅度压得很小，避免破坏逆光层次
+  renderer.toneMappingExposure = 1.12 + (pal.exposure - 0.94) * 0.32;
   skyUniforms.sunDir.value.copy(sunDir);
 
   groundMat.color.copy(pal.ground).multiplyScalar(1 - 0.16 * rainA);
@@ -3254,15 +3846,16 @@ function animate() {
   scene.__flowers.visible = flowerF > 0.02;
   scene.__flowers.material.opacity = flowerF;
   // 秋叶毯：铺开后在秋末—冬天慢慢变暗、下沉、腐烂进土里（不是收回去）
-  const groundLeafShow = smoothstep(0.52, 0.68, p);
-  const groundLeafDecay = smoothstep(0.70, 0.94, p);
-  scene.__groundLeaves.visible = p > 0.50 && p < 0.96;
+  const groundLeafShow = smoothstep(0.58, 0.70, p);
+  const groundLeafDecay = smoothstep(0.66, 0.92, p);
+  const carpetFade = smoothstep(0.58, 0.66, p) * (1 - smoothstep(0.92, 0.99, p));
+  scene.__groundLeaves.visible = carpetFade > 0.002;
   if (scene.__groundLeaves.visible) {
-    scene.__groundLeaves.material.opacity = 1.0 - 0.62 * groundLeafDecay;
+    scene.__groundLeaves.material.opacity = carpetFade * (1.0 - 0.62 * groundLeafDecay);
     const info = scene.__groundLeaves.userData.leafInfo;
     for (let i = 0; i < info.length; i++) {
       const d = info[i];
-      const grow = 0.18 + 0.82 * groundLeafShow;
+      const grow = 0.001 + 0.999 * groundLeafShow;   // 从 0 连续长大，不再一帧 pop 1600 片
       const size = d.size * grow * (1 - 0.85 * groundLeafDecay);
       _p.set(d.pos.x, d.pos.y - groundLeafDecay * (0.015 + d.size * 0.35), d.pos.z);
       _s.set(size, size, size);
@@ -3301,6 +3894,15 @@ function animate() {
   // 树干/枝条的粗细不只跟"自己长到哪"有关，还跟整棵树的年龄有关：
   // 否则小苗一冒头就是一根成年粗腿，像根胡萝卜。树长成（g→1）时才到最终粗细。
   const fat = 0.18 + 0.82 * smoothstep(0.20, 0.92, g);
+  // 微距镜头里土壤占满画面：补光随取景高度平滑增强，近景土壁才有可辨的层理
+  const closeFrame = cameraFrameAt(t);
+  const closeBoost = closeFrame ? (1 - smoothstep(1.0, 4.2, closeFrame.viewH)) : 0;
+  frontFill.intensity = 2.35 + 0.55 * closeBoost;
+  fillUnder.intensity = 1.25 + 0.85 * closeBoost;
+  if (contactAO) {
+    contactAO.scale.setScalar(0.30 + 1.85 * smoothstep(0.02, 0.95, g));
+    contactAO.material.opacity = 0.40 + 0.48 * fat;
+  }
   let crownTop = 0;
   for (const b of tree.branches) {
     const k = smoothstep(b.g0, b.g1, g);
@@ -3312,10 +3914,24 @@ function animate() {
   }
 
   /* —— 根系生长（先长根，后长苗）：和枝条同一套「抽条」逻辑 —— */
+  const rootFat = 0.22 + 0.78 * smoothstep(0.03, 1.05, rootAge);
+  const rootOld = smoothstep(0.06, 0.85, rootAge);
+  tree.rootMats[0].color.setHex(0xb59a72).lerp(tmpB.setHex(0x6f5138), rootOld);
+  tree.rootMats[1].color.setHex(0xc6b08a).lerp(tmpB.setHex(0x8d6c4d), rootOld);
   for (const r of tree.roots) {
-    const k = smoothstep(r.g0, r.g1, g);
+    const k = smoothstep(r.g0, r.g1, rootAge);
     r.mesh.visible = k > 0.001;
-    if (r.mesh.visible) growBranch(r, k);
+    if (r.mesh.visible) growBranch(r, k, rootFat);
+  }
+  // 根毛按成熟时刻逐段显现：早期不是「满屏悬浮细线」
+  if (tree.hairThresholds && tree.rootHairs) {
+    let lo = 0, hi = tree.hairThresholds.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (tree.hairThresholds[mid] <= rootAge) lo = mid + 1; else hi = mid;
+    }
+    tree.rootHairs.geometry.setDrawRange(0, lo * 2);
+    tree.rootHairs.visible = lo > 0;
   }
   // 根盘跟着树干一起长粗
   {
@@ -3327,12 +3943,13 @@ function animate() {
 
   // 种子与子叶：种子按“吸水膨胀 → 裂壳 → 种皮脱落”的真实过程单独控制，
   // 不再只跟着 g 缩小，这样 0–56 秒能完整看到种子变化。
-  const seedPlant = smoothstep(0.0, 3.0, t);      // 种子从上方落下、落进土里
+  const seedPlant = smoothstep(0.0, 3.0, t);      // 种子从上方落下、半埋进松软的表土
   const seedSwell = 1 + 0.14 * smoothstep(16, 32, t);
-  const seedSplit = smoothstep(32, 48, t);
+  const seedSplit = smoothstep(18, 30, t);        // 第 2 章「外壳裂开一条缝」当章就能看到
   const seedFade = 1 - smoothstep(66, 80, t);
+  const seedLift = smoothstep(56, 68, t) * (1 - smoothstep(70, 80, t));  // 嫩芽顶着种壳钻出地面
   tree.seedMesh.visible = t < 80 && seedFade > 0.01;
-  tree.seedMesh.position.y = 0.055 + 0.10 * (1 - seedPlant);
+  tree.seedMesh.position.y = -0.035 + 0.10 * (1 - seedPlant) + 0.24 * seedLift;
   tree.seedMesh.scale.set(0.35 * seedSwell * seedFade, 0.28 * seedSwell * seedFade, 0.46 * seedSwell * seedFade);
   tree.seedTop.position.set(0.018 * seedSplit, 0.055 * seedSplit, 0.006 * seedSplit);
   tree.seedTop.rotation.z = -0.62 * seedSplit;
@@ -3340,19 +3957,23 @@ function animate() {
   tree.seedBottom.position.y = -0.008 * seedSplit;
   tree.seedCrack.visible = seedSplit > 0.01 && seedFade > 0.02;
   tree.seedCrack.material.transparent = true;
-  tree.seedCrack.material.opacity = (1 - seedFade) * Math.min(1, seedSplit * 2.2);
+  tree.seedCrack.material.opacity = Math.min(1, seedSplit * 2.2) * seedFade * 0.92;
   tree.seedCrack.scale.setScalar(1 + 0.12 * seedSplit);
 
   // 子叶挂点必须用“当前主干顶端”，不能用成年主干长度
   const trunkB = tree.branches[0];
   const trunkK = trunkB ? smoothstep(trunkB.g0, trunkB.g1, g) : 0;
   const trunkTop = trunkB ? trunkB.start.y + trunkB.len * trunkK : 0.2;
-  const coty = smoothstep(0.09, 0.145, g) * (1 - smoothstep(0.34, 0.50, g));
-  for (const m of tree.cotyledons) {
+  const coty = smoothstep(0.09, 0.145, g) * (1 - smoothstep(0.28, 0.42, g));
+  for (let i = 0; i < tree.cotyledons.length; i++) {
+    const m = tree.cotyledons[i];
     m.scale.setScalar(Math.max(0.001, 0.12 * coty));
-    m.position.y = Math.max(0.08, trunkTop * 0.94);
+    // 子叶长在近地面的胚轴节点，不随主干被抬到 3 米高的树梢
+    m.position.y = 0.12 + 0.25 * smoothstep(0.06, 0.16, g);
+    m.rotation.z = (i === 0 ? 1 : -1) * (0.95 - 0.45 * coty);   // 慢慢展开
     m.visible = coty > 0.01;
   }
+  void trunkTop;
   tree.cotyledonMat.color.setHex(0x9fd35e);
 
   /* —— 叶子的数量与颜色 —— */
@@ -3402,24 +4023,26 @@ function animate() {
   if (leaves.instanceColor) leaves.instanceColor.needsUpdate = true;
 
   /* —— 春花与枝头积雪 —— */
-  const blossomK = smoothstep(0.02, 0.07, p) * (1 - smoothstep(0.22, 0.30, p)) * smoothstep(0.70, 0.90, g);
+  // 花只在第 2 年春天开（旧版 g 门槛让第一年 114–123s 提前开过一次）
+  const blossomK = yearIndex >= 2 ? smoothstep(0.02, 0.07, p) * (1 - smoothstep(0.22, 0.30, p)) : 0;
   tree.blossoms.visible = blossomK > 0.02;
   tree.blossomMat.opacity = blossomK * 0.95;
-  const snowCapK = smoothstep(0.78, 0.88, p) * (1 - smoothstep(0.96, 1.0, p));
+  const snowCapK = smoothstep(0.75, 0.85, p) * (1 - smoothstep(0.92, 0.99, p));
   tree.snowCaps.visible = snowCapK > 0.02;
   tree.snowCapMat.opacity = snowCapK;
 
   /* —— 果实：第二年秋天结果，入冬前落光 —— */
-  const fruitGrow = yearIndex >= 2 ? smoothstep(0.40, 0.52, p) : 0;
-  const fruitFall = smoothstep(0.70, 0.80, p);
-  const fruitMature = fruitGrow * (1 - smoothstep(0.70, 0.80, p));
+  const fruitGrow = yearIndex >= 2 ? smoothstep(0.50, 0.58, p) : 0;   // 220s 第 13 章才开始挂果
+  const fruitRipe = yearIndex >= 2 ? smoothstep(0.54, 0.62, p) : 0;   // 青果慢慢转红
+  const fruitFall = smoothstep(0.68, 0.76, p);
+  const fruitMature = fruitGrow * (1 - smoothstep(0.68, 0.76, p));
   {
     const fd = tree.fruitData;
     const fruits = tree.fruits, stems = tree.stems;
     const q0 = _q.set(0, 0, 0, 1);
     for (let i = 0; i < fd.length; i++) {
       const d = fd[i];
-      const sc = d.size * fruitGrow * (1 - smoothstep(0.80, 0.86, p));
+      const sc = d.size * fruitGrow * (1 - smoothstep(0.74, 0.80, p));   // 240s 前落光，不跨到第 14 章
       if (sc < 0.002) {
         fruits.setMatrixAt(i, hideM);
         stems.setMatrixAt(i, hideM);
@@ -3428,24 +4051,29 @@ function animate() {
       const sway = Math.sin(t * 1.5 + d.phase) * 0.02 * fruitGrow;
       _p.copy(d.pos);
       _p.x += sway;
-      _p.y -= fruitFall * (1.2 + d.stag * 0.9);   // 熟透后自然落下，而不是原地缩小
+      _p.y = Math.max(0.14, d.pos.y - fruitFall * (1.2 + d.stag * 0.9));  // 落地不穿进土里
       _m.compose(_p, d.quat, _s.setScalar(sc));
       fruits.setMatrixAt(i, _m);
+      fruits.setColorAt(i, _color.setHex(0x7fa83a).lerp(d.ripe, fruitRipe));
       _p.y += sc * 0.92;
       _m.compose(_p, q0, _s.set(1, 1, 1));
       if (fruitFall < 0.35) stems.setMatrixAt(i, _m); else stems.setMatrixAt(i, hideM);
     }
     fruits.instanceMatrix.needsUpdate = true;
+    if (fruits.instanceColor) fruits.instanceColor.needsUpdate = true;
     stems.instanceMatrix.needsUpdate = true;
   }
 
   /* —— 落叶 / 花瓣 生成 —— */
   // 小苗阶段树冠还没成形，先不要从“隐形的树冠”往下掉花瓣
   const treeMatureEnough = smoothstep(0.18, 0.34, g);
-  const autumnSpawnRate = g > 0.5 && p > 0.52 && p < 0.88 ? (6 + 26 * smoothstep(0.52, 0.68, p) * (1 - smoothstep(0.74, 0.88, p))) : 0;
-  const petalRate = (p > 0.88 || p < 0.12) ? 10 * treeMatureEnough : 0;   // 早春/冬末的花瓣（用粉色）
+  const autumnWindow = smoothstep(0.52, 0.58, p) * (1 - smoothstep(0.70, 0.74, p));
+  const autumnSpawnRate = g > 0.5 && autumnWindow > 0.01 ? (8 + 30 * smoothstep(0.52, 0.68, p)) * autumnWindow : 0;
+  // 粉色花瓣只在花期末出现；旧版 p>0.88 是深冬，会「雪中飘桃花」
+  const petalRate = (p > 0.18 && p < 0.34 && yearIndex >= 2) ? 10 * treeMatureEnough : 0;
   const spawnRate = autumnSpawnRate + petalRate;
-  if (spawnRate > 0 && Math.random() < spawnRate * dt) {
+  const spawnPhase = spawnRate * t;
+  if (spawnRate > 0 && dt > 0 && Math.floor(spawnPhase) > Math.floor(spawnPhase - spawnRate * dt)) {
     const isPetal = Math.random() > autumnSpawnRate / Math.max(0.001, spawnRate);
     const src = tree.leafData[Math.floor(Math.random() * tree.leafData.length)];
     const c = isPetal ? tmpA.setHex(0xffc9dc) : src.autumn;
@@ -3470,13 +4098,33 @@ function animate() {
   fallLeaves.instanceMatrix.needsUpdate = true;
   fallMat.opacity = 1;
 
+  /* —— 地下水层：根系抵达后水面、渗流、气泡与根尖光点才亮起来 —— */
+  const waterReveal = smoothstep(0.98, 1.16, rootAge);
+  waterGlowMat.opacity = 0.22 * waterReveal;
+  waterEdgeMat.opacity = 0.28 * waterReveal;
+  if (waterSheenMat) waterSheenMat.opacity = 0.30 * waterReveal;
+  waterRippleUniforms.uTime.value = t;
+  waterRippleUniforms.uOpacity.value = 0.18 * waterReveal;
+  bubbleMat.opacity = 0.50 * waterReveal;
+  {
+    const bp = bubbleGeo.attributes.position.array;
+    for (let i = 0; i < WATER_BUBBLES; i++) {
+      const b = i * 4;
+      bp[i * 3] = bubbleBase[b] + Math.sin(t * 0.7 + bubbleBase[b + 3]) * 0.12;
+      bp[i * 3 + 1] = WATER_TOP - 0.15 - ((bubbleBase[b + 1] + t * 0.28 + bubbleBase[b + 3] * 0.03) % 1) * 2.0;
+      bp[i * 3 + 2] = bubbleBase[b + 2];
+    }
+    bubbleGeo.attributes.position.needsUpdate = true;
+  }
+  tipMat.opacity = (0.42 + 0.30 * Math.sin(t * 2.1)) * waterReveal;
+
   /* —— 雪 —— */
-  const snowA = smoothstep(0.76, 0.88, p) * (1 - smoothstep(0.98, 1.0, p));
+  const snowA = smoothstep(0.75, 0.85, p) * (1 - smoothstep(0.92, 0.99, p));
   snowMat.opacity = snowA * 0.95;
   snow.visible = snowA > 0.01;
   const winterF = smoothstep(0.72, 0.80, p);
   // 草不是“瞬间弹回来”：深冬最后一点时间从土里慢慢返青，避免跨年一帧跳变
-  const grassSpring = p > 0.985 ? smoothstep(0.985, 1.0, p) : (p < 0.02 ? 1 : 0);
+  const grassSpring = smoothstep(0.90, 1.0, p);
   const grassK = Math.max(0.0001, Math.max(1 - winterF, grassSpring));
   scene.__grass.material.opacity = grassK;
   scene.__grass.scale.set(1, 1, 1);
@@ -3507,16 +4155,163 @@ function animate() {
       if (pos[i3 + 1] < 0) {
         pos[i3 + 1] = 24 + Math.random() * 4;
         pos[i3] = (Math.random() - 0.5) * 56;
-        pos[i3 + 2] = (Math.random() - 0.5) * 56;
+        pos[i3 + 2] = -24 + Math.random() * 28;
       }
     }
     snowGeo.attributes.position.needsUpdate = true;
   }
 
+  /* —— 天空飞鸟群：三个窗口各飞一群，雨天与隆冬不出鸟 —— */
+  const flight = birdFlightAt(t);
+  const birdRainFade = 1 - smoothstep(0.12, 0.42, rainA);
+  const birdWinterFade = 1 - 0.78 * smoothstep(0.76, 0.84, p);
+  const birdVis = flight.env * birdRainFade * birdWinterFade;
+  skyBirds.visible = birdVis > 0.01;
+  skyBirds.material.opacity = Math.min(1, birdVis * 1.25);
+  if (skyBirds.visible) {
+    const bq = camera.quaternion;
+    for (let i = 0; i < 14; i++) {
+      const lead = i < 9;
+      const k = lead ? i : i - 9;
+      const row = k === 0 ? 0 : Math.ceil(k / 2);
+      const side = k === 0 ? 0 : (k % 2 ? 1 : -1);
+      const jx = creatureJitter[i] * 0.35;
+      const jy = creatureJitter[(i + 11) % 40] * 0.30;
+      const x = -46 + 92 * flight.u + side * (0.7 + row * 0.55) + jx;
+      const y = 9.5 + 5 * Math.sin(Math.PI * flight.u) - row * 0.38 + jy + 0.9 * Math.sin(t * 0.35 + creaturePhase[i]);
+      const z = -62 + 10 * Math.sin(Math.PI * flight.u) - row * 0.6;
+      const sc = lead ? 1.30 : 0.70;
+      const flap = 0.55 + 0.45 * Math.sin(t * 7.0 + creaturePhase[i]);
+      _p.set(x, y, z);
+      _q.copy(bq);
+      _s.set(sc, sc * flap, sc);
+      _m.compose(_p, _q, _s);
+      skyBirds.setMatrixAt(i, _m);
+    }
+    skyBirds.instanceMatrix.needsUpdate = true;
+  }
+
+  /* —— 栖息的小鸟 / 蝴蝶 / 蜜蜂 / 瓢虫：对齐第 11、12 章文案 —— */
+  const perchVis = Math.min(1,
+    smoothstep(196, 199, t) * (1 - smoothstep(218, 222, t)) * 1.0 +
+    smoothstep(120, 123, t) * (1 - smoothstep(136, 140, t)) * 0.55);
+  const insectVis = smoothstep(196, 199, t) * (1 - smoothstep(218, 222, t));
+  const beeVis = Math.min(1,
+    smoothstep(181, 184, t) * (1 - smoothstep(202, 206, t)) +
+    insectVis * 0.7);
+  birdWorldPoints = [];
+  insectWorldPoints = [];
+  perchBirds.visible = perchVis > 0.01;
+  perchBirds.material.opacity = perchVis;
+  if (perchBirds.visible) {
+    for (let i = 0; i < 5; i++) {
+      const flying = i >= 3;
+      const x = flying ? 2.6 * Math.sin(t * 0.55 + creaturePhase[i]) : -2.4 + i * 1.9 + creatureJitter[i] * 0.25;
+      const y = flying ? 4.6 + 0.8 * Math.sin(t * 0.9 + creaturePhase[i]) : 3.5 + (i % 2) * 1.15 + Math.sin(t * 1.6 + creaturePhase[i]) * 0.025;
+      const z = flying ? 0.85 + 0.4 * Math.cos(t * 0.5 + creaturePhase[i]) : 0.55 + creatureJitter[(i + 7) % 40] * 0.25;
+      _p.set(x, y, z); _q.copy(camera.quaternion);
+      const sc = 0.78 + 0.06 * Math.sin(t * 2 + creaturePhase[i]);
+      _s.set(sc, sc * (0.92 + 0.08 * Math.sin(t * 6 + creaturePhase[i])), sc);
+      _m.compose(_p, _q, _s);
+      perchBirds.setMatrixAt(i, _m);
+      birdWorldPoints.push(_p.clone());
+    }
+    perchBirds.instanceMatrix.needsUpdate = true;
+  }
+  butterflies.visible = insectVis > 0.01;
+  butterflies.material.opacity = insectVis;
+  if (butterflies.visible) {
+    for (let i = 0; i < 7; i++) {
+      const ph = creaturePhase[i];
+      _p.set(2.7 * Math.sin(t * 0.85 + ph), 4.0 + 1.25 * Math.sin(t * 1.55 + ph), 0.7 + 0.7 * Math.cos(t * 0.7 + ph));
+      _q.copy(camera.quaternion);
+      const flap = 0.35 + 0.65 * Math.abs(Math.sin(t * 9 + ph));
+      const sc = 0.68 + 0.08 * creatureJitter[(i + 3) % 40];
+      _s.set(sc * flap, sc, sc);
+      _m.compose(_p, _q, _s);
+      butterflies.setMatrixAt(i, _m);
+      insectWorldPoints.push(_p.clone());
+    }
+    butterflies.instanceMatrix.needsUpdate = true;
+  }
+  bees.visible = beeVis > 0.01;
+  bees.material.opacity = beeVis;
+  if (bees.visible) {
+    for (let i = 0; i < 5; i++) {
+      const ph = creaturePhase[(i + 9) % 40];
+      _p.set(2.0 * Math.sin(t * 1.15 + ph), 4.3 + 0.7 * Math.sin(t * 2.3 + ph), 0.6 + 0.5 * Math.cos(t * 1.7 + ph));
+      _q.copy(camera.quaternion);
+      const sc = 0.52;
+      _s.set(sc, sc * (0.85 + 0.15 * Math.sin(t * 14 + ph)), sc);
+      _m.compose(_p, _q, _s);
+      bees.setMatrixAt(i, _m);
+      if (insectVis > 0.1) insectWorldPoints.push(_p.clone());
+    }
+    bees.instanceMatrix.needsUpdate = true;
+  }
+  ladybugs.visible = insectVis > 0.01;
+  ladybugs.material.opacity = insectVis;
+  if (ladybugs.visible) {
+    for (let i = 0; i < 5; i++) {
+      _p.set(-1.9 + i * 0.95 + 0.12 * Math.sin(t * 0.4 + creaturePhase[i]), 2.7 + (i % 3) * 0.55, 0.42);
+      _q.copy(camera.quaternion);
+      const sc = 0.36;
+      _s.set(sc, sc, sc);
+      _m.compose(_p, _q, _s);
+      ladybugs.setMatrixAt(i, _m);
+      insectWorldPoints.push(_p.clone());
+    }
+    ladybugs.instanceMatrix.needsUpdate = true;
+  }
+
+  /* —— 树荫 / 光斑 / 云影 / 飞絮 —— */
+  const leafPresence = p < 0.05 ? smoothstep(0, 0.05, p) : (1 - smoothstep(0.56, 0.72, p));
+  const summerShade = smoothstep(0.16, 0.32, p) * (1 - smoothstep(0.62, 0.78, p));
+  treeShadeMat.opacity = 0.88 * smoothstep(0.30, 0.90, g) * leafPresence * summerShade * (1 - 0.7 * rainA);
+  treeShade.visible = treeShadeMat.opacity > 0.01;
+  for (let i = 0; i < cloudShadowMats.length; i++) {
+    cloudShadowMats[i].opacity = (0.05 + 0.09 * pal.cloud) * (0.6 + 0.4 * Math.sin(t * 0.05 + i));
+    cloudShadowMeshes[i].position.x = ((t * (0.55 + i * 0.18) + i * 17) % 70) - 35;
+  }
+  const fluffSeason = smoothstep(0.10, 0.18, p) * (1 - smoothstep(0.34, 0.42, p));
+  fluffMat.opacity = 0.55 * fluffSeason * smoothstep(0.3, 0.9, g) * (1 - rainA);
+  fluff.visible = fluffMat.opacity > 0.01;
+  if (fluff.visible) {
+    const fp = fluffGeo.attributes.position.array;
+    for (let i = 0; i < FLUFF_COUNT; i++) {
+      const b = i * 4;
+      fp[i * 3] = fluffBase[b] + Math.sin(t * 0.45 + fluffBase[b + 3]) * 0.55;
+      fp[i * 3 + 1] = 0.3 + ((fluffBase[b + 1] * 7 + t * 0.22) % 7);
+      fp[i * 3 + 2] = fluffBase[b + 2] + Math.cos(t * 0.3 + fluffBase[b + 3]) * 0.4;
+    }
+    fluffGeo.attributes.position.needsUpdate = true;
+  }
+
+  /* —— 第 13 章落果里的新种子 / 第 14 章「新的轮回」 —— */
+  const seedDropVis = (yearIndex >= 2) ? smoothstep(0.68, 0.72, p) * (1 - smoothstep(0.78, 0.84, p)) : 0;
+  seedDropMat.opacity = 0.85 * seedDropVis;
+  seedDrop.visible = seedDropVis > 0.01;
+  if (seedDrop.visible) {
+    const sp = seedDropGeo.attributes.position.array;
+    for (let i = 0; i < SEED_DROP; i++) {
+      const b = i * 4;
+      const fall = (seedDropBase[b + 1] + t * 0.32) % 1;
+      sp[i * 3] = seedDropBase[b] + Math.sin(t * 0.9 + seedDropBase[b + 3]) * 0.12;
+      sp[i * 3 + 1] = 0.06 + (1 - fall) * 2.6;
+      sp[i * 3 + 2] = seedDropBase[b + 2];
+    }
+    seedDropGeo.attributes.position.needsUpdate = true;
+  }
+  const epilogue = smoothstep(250, 259.0, t);
+  epilogueGroup.visible = epilogue > 0.01;
+  epilogueGroup.scale.setScalar(0.45 + 1.05 * epilogue);
+
   /* —— 风：整棵树轻轻摇 —— */
   const wind = smoothstep(0, 1, g);
   treeRoot.rotation.z = Math.sin(t * 0.62) * (0.012 + 0.018 * rainA) * wind;
   treeRoot.rotation.x = Math.cos(t * 0.48) * (0.010 + 0.012 * rainA) * wind;
+  // 根系抵销整树摇摆：埋在土里的根不该跟着树冠晃，深根也不会被剖面遮住
+  if (tree.rootSub) tree.rootSub.quaternion.copy(treeRoot.quaternion).invert();
 
   /* —— 镜头 —— */
   // 剖面视角：镜头只在切面前方弧形范围内移动
@@ -3532,15 +4327,23 @@ function animate() {
   const aspectFix = aspectNow < 1.45 ? Math.min(2.8, Math.pow(1.45 / aspectNow, 0.82)) : 1;
   // 生长阶段走镜头脚本（种子微距、根系剖面、破土、幼苗、后拉），长成后自动框住全树
   const camFrame = cameraFrameAt(t);
+  const topY = Math.max(0.9, crownTop + 0.52);
+  // 第 2 年缓慢把取景下沿压到含水层，让「根越扎越深」一直看得见；
+  // 竖屏靠 aspectFix 本来就能看到很深的剖面，不再额外拉远。四季合影期间关掉。
+  const deepReveal = quartetShooting ? 0 : smoothstep(205, 255, t) * smoothstep(0.90, 1.45, aspectNow);
+  const BOTTOM_AUTO = -0.62 - 3.6 * smoothstep(0, 0.34, g) - 6.35 * deepReveal;
+  const autoTargetY = (topY + BOTTOM_AUTO) / 2;
+  const autoViewH = topY - BOTTOM_AUTO;
   let fitR;
   if (camFrame) {
     cam.target.y = camFrame.targetY;
     fitR = camFrame.viewH / (2 * Math.tan((camera.fov * Math.PI) / 360));
   } else {
-    const topY = Math.max(0.9, crownTop + 0.52);
-    const BOTTOM_Y = -0.62 - 3.6 * smoothstep(0, 0.34, g);   // 长大后框住更深的根系
-    cam.target.y = (topY + BOTTOM_Y) / 2;
-    fitR = ((topY - BOTTOM_Y) * 1.0) / (2 * Math.tan((camera.fov * Math.PI) / 360));
+    // t=120 不再一帧硬切：用 10s 从脚本末帧平滑过渡到自动取景
+    const last = cameraFrameAt(119.999);
+    const b = smoothstep(120, 130, t);
+    cam.target.y = last.targetY + (autoTargetY - last.targetY) * b;
+    fitR = (last.viewH + (autoViewH - last.viewH) * b) / (2 * Math.tan((camera.fov * Math.PI) / 360));
   }
   cam.target.x = 0.5 * smoothstep(0.15, 0.70, g);
   const effR = Math.max(1.35, fitR) * (cam.radius / 12.5) * aspectFix;
@@ -3554,7 +4357,7 @@ function animate() {
 
   /* —— UI —— */
   const sIdx = Math.floor(p * 4) % 4;
-  if (SEASONS[sIdx].name !== currentSeasonLabel) {
+  if (t < STORY_END - 2.2 && SEASONS[sIdx].name !== currentSeasonLabel) {
     currentSeasonLabel = SEASONS[sIdx].name;
     seasonEl.textContent = currentSeasonLabel;
     subEl.textContent = SEASONS[sIdx].sub;
@@ -3564,13 +4367,21 @@ function animate() {
   }
   yearEl.textContent = '第 ' + yearIndex + ' 年';
   const subText = (sIdx === 2 && fruitMature > 0.45) ? '果实熟了' : SEASONS[sIdx].sub;
-  if (subEl.textContent !== subText) subEl.textContent = subText;
+  if (t < STORY_END - 2.2 && subEl.textContent !== subText) subEl.textContent = subText;
   const seasonProgress = ((p % 1) + 1) % 1;
   if (wheelNeedleEl) wheelNeedleEl.style.transform = 'translate(-50%, -100%) rotate(' + (seasonProgress * 360).toFixed(2) + 'deg)';
   if (wheelYearEl) wheelYearEl.textContent = '第 ' + yearIndex + ' 年';
   if (classSeasonEl) {
     const seasonLine = SEASONS[sIdx].name + ' · 第 ' + yearIndex + ' 年';
     if (classSeasonEl.textContent !== seasonLine) classSeasonEl.textContent = seasonLine;
+  }
+  // 结尾「新的轮回又要开始」：最后 2 秒把季节标签与指针拨回春，配合土面新芽
+  if (t >= STORY_END - 2.2) {
+    currentSeasonLabel = '春';
+    seasonEl.textContent = '春';
+    subEl.textContent = '万物发芽 · 新的轮回';
+    if (classSeasonEl) classSeasonEl.textContent = '春 · 新的一年';
+    if (wheelNeedleEl) wheelNeedleEl.style.transform = 'translate(-50%, -100%) rotate(0deg)';
   }
 
   if (DEBUG && Math.floor(t * 2) !== Math.floor((t - dt) * 2)) {
@@ -3579,11 +4390,16 @@ function animate() {
       'grassY=' + scene.__grass.scale.y.toFixed(2));
   }
 
-  /* —— 后处理：泛光 + ACES + 调色 + 暗角 + 颗粒 —— */
-  _sunNdc.copy(sunSprite.position).project(camera);
-  _sunUv.set(_sunNdc.x * 0.5 + 0.5, _sunNdc.y * 0.5 + 0.5);
-  camera.getWorldDirection(_camDir);
-  renderer.render(scene, camera);
+  /* —— 直出：ACES 色调映射 + 天空 shader 自带的大气与光晕 ——
+     定帧 / 暂停时画面是静态的，只在「时间、镜头、季节状态」变化时重绘一次。
+     否则软件渲染的无头截图会对每帧都做 400+ draw call，审查脚本会卡死。 */
+  const staticKey = (dt === 0 && !playing && !scrubbing)
+    ? [t.toFixed(3), cam.theta.toFixed(3), cam.phi.toFixed(3), cam.radius.toFixed(3), (findActive ? 1 : 0)].join('|')
+    : '';
+  if (staticKey === '' || staticKey !== lastStaticRenderKey) {
+    lastStaticRenderKey = staticKey;
+    renderer.render(scene, camera);
+  }
 }
 
 window.addEventListener('resize', () => {
@@ -3632,6 +4448,10 @@ window.__classroom = {
   handleCanvasTap,
   startFindGame,
   stopFindGame,
-  seekForTest: (t) => { freezeOverride = t; storyTime = t; prevT = t; playing = false; updateChapterUI(t); syncPlayer(); },
+  seekForTest: (t) => {
+    freezeOverride = t; storyTime = t; prevT = t; playing = false;
+    cam.theta = 1.46; cam.radius = 12.5; cam.phi = 1.46;   // 固定正面视角，保证截图可复现
+    updateChapterUI(t); syncPlayer();
+  },
 };
 animate();

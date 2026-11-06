@@ -2,7 +2,7 @@
 
 > 本文解决：课堂布局怎么组成、旁白如何跟着章节走、播放器/键盘怎么工作，以及背景音乐（`src/bgm.js`）如何与画面时间同步。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-06 · 对应代码：`349d91f`（课堂模式 · 找一找队列 · 远山改版 · 视觉审查 r1）
+> 最后更新：2026-11-06 · 对应代码：`a99c037`（第二轮优化 · 确定性基线 · 深根水层 · 鸟虫树荫 · 文案对齐）
 
 ## 1. 桌面布局
 
@@ -52,6 +52,8 @@ UI 引用：
 
 `updateChapterUI(t)` 按 `start` 查找最后匹配的章节，只在章节变化时更新 DOM；标题带 `seasonIn` 动画。
 
+`SUBTITLE_KEYWORDS`（`src/main.js`）本轮补了 `蜜蜂 | 蝴蝶 | 瓢虫`，与「小鸟 / 昆虫」一起被 `subtitleHTML()` 包成 `<em>` 高亮：`(种子|泥土|水分|温暖|春雨|外壳|侧根|主根|根|嫩芽|种壳|子叶|真叶|阳光|养分|枝丫|树干|树冠|叶子|树荫|落叶|白雪|新芽|花朵|果实|小鸟|昆虫|蜜蜂|蝴蝶|瓢虫|轮回)`。开场页 `.start-sub` 引导语也改为「从一颗小小的种子，到一棵参天大树，还有小鸟、蜜蜂和蝴蝶来做客」。
+
 规则：
 
 - 章节时间必须与视觉事件对齐（雨窗、根/枝生长、雪/果实），详见 [`02-timeline-and-camera.md`](02-timeline-and-camera.md)。
@@ -93,10 +95,13 @@ UI 引用：
 ### 3.3 时间状态
 
 - `storyTime` 是页面故事时间；播放时按真实时间增量推进，`storyTime >= STORY_END` 自动暂停。
-- `?freeze`：`storyTime = FREEZE_T`，`playing=false`；`#player`、`#narration`、`#tips` 隐藏（截图用）。
+- `?freeze`：`storyTime = FREEZE_T`，`playing=false`；`#player`、`#narration`、`#tips` 隐藏（截图用）；树种子固定为 `20240601`，`dt=0`，画面逐像素可复现。
 - `?video`：外部通过 `window.__setVideoT(v)` 喂时间；`#player` 隐藏。
 - `?t0=N`：初始时间 N，自动跳过开场页；默认继续播放。
+- `?class` / `?stage`：同样使用固定树种子，保证课堂/舞台截图可复现。
+- 定帧 / 暂停 / 四季合影时 `dt = 0`；`animate()` 用 `staticKey`（t + 相机三参数 + 找一找状态）判断是否需要重绘，静止画面不会每帧跑 400+ draw call。
 - `syncPlayer()` 每帧同步滑块、进度色、时间码、播放图标。
+- `window.__classroom.seekForTest(t)` 会设 `freezeOverride=t` 并把 `cam.theta/radius/phi` 复位为 `1.46/12.5/1.46`，是截图工具的正面视角入口。
 
 ### 3.4 进度条细节
 
@@ -213,24 +218,34 @@ if (classroomMode && autoPauseAtChapter && nextIdx !== currentIdx) {
 ### 6.4 大字幕
 
 - `updateChapterUI()` 同时更新左侧旁白和课堂大字幕；
-- `subtitleHTML()` 用 `<em>` 高亮关键词（种子、根、芽、叶、花、果等）；
+- `subtitleHTML()` 用 `<em>` 高亮关键词（种子、根、芽、叶、花、果、**小鸟、昆虫、蜜蜂、蝴蝶、瓢虫**、轮回等）；
 - 字幕位于 `#subtitleBar` 独立区域，不覆盖 3D 舞台；
 - 字号 `clamp(21px, 2.35vw, 38px)`，手机 `clamp(16px, 4.3vw, 20px)`。
 
+### 6.4.1 结尾 HUD 与季节转盘（第二轮）
+
+- **季节转盘 90° 校正**：`index.html` 的 `.wheel-face` 由 `conic-gradient(from -90deg, …)` 改为 **`conic-gradient(from 0deg, #9bd47d 0 25%, #4fa94d 25% 50%, #e5a23d 50% 75%, #c6dcee 75% 100%)`**。四个 `.ws-*` 标签（春右上 / 夏右下 / 秋左下 / 冬左上）与色象限对齐；`animate()` 里指针仍是 `rotate(p*360)`（`wheelNeedleEl.style.transform`），无需改动即可与新色环同步。`wheelYearEl` 显示「第 N 年」，`classSeasonEl` 显示「季节 · 第 N 年」。
+- **结尾「新的轮回」**：`t >= STORY_END - 2.2`（约 257.7–259.9s）时，`animate()` 把 `currentSeasonLabel` 拨回「春」、`#sub` 改为「万物发芽 · 新的轮回」、`classSeasonEl` 改为「春 · 新的一年」、指针 `rotate(0deg)`；同时 `epilogueGroup`（`smoothstep(250,259,t)`）在土面冒出一株小新芽。这样片尾字幕「冬天又来了，一年结束，新的轮回又要开始」有画面落点，也不会出现「标着冬却是春绿」的错位。
+- 秋天的 `subEl` 副标题在 `fruitMature > 0.45` 时显示「果实熟了」。
+
 ### 6.5 点认与找一找
 
-- `buildTree()` 给每个 mesh 写 `userData.part`：`seed / root / trunk / branch / leaf / cotyledon / flower / fruit / snow`；
-- `pickPartAt()` 用 `THREE.Raycaster` 从 canvas 坐标拾取；`partVisibleAt()` + `partHasVisibleState()` 过滤透明但仍在场景里的春花、果实、积雪，以及尚未长出的细芽；
+- `buildTree()` 给每个 mesh 写 `userData.part`：`seed / root / trunk / branch / leaf / cotyledon / flower / fruit / snow`；**第二轮新增 `bird` / `insect` 两个部位**，来自模块级 `creatureGroup`（不是树上的 mesh），`PART_INFO` 增加「小鸟 / 昆虫」的名称、拼音与描述，`CHAPTER_PARTS[11]`（第 12 章）加入 `bird`、`insect`；
+- `pickPartAt()` 用 `THREE.Raycaster` 从 canvas 坐标拾取；`partVisibleAt()` **先调用 `partHasVisibleState(part)` 问真实显隐，再叠加章节时间白名单**（旧版硬编码时间窗与实际显隐偏差大），`partHasVisibleState()` 过滤透明但仍在场景里的春花、果实、积雪、尚未长出的细芽，以及 `bird`（`perchBirds.visible && birdWorldPoints.length>=2`）/ `insect`（`butterflies.visible && insectWorldPoints.length>=2`）；
+- `partVisibleAt('leaf')` 增加 `p < 0.70`，秋末/冬季叶已落光时不再被误判可见；
 - `findablePartsAt(t)` 从 `CHAPTER_PARTS` 里再按当前时刻的**实际可见状态 + 屏幕投影点**过滤候选，避免把还没长出来/在画面外的部位选成目标；
-- `partScreenPoints()` 把目标部位的世界坐标投影到当前 canvas；`isNearFindTarget()` 允许点击目标附近（桌面约 40–80px 的宽容半径），解决小花、果实、种子太小、精确射线打不中的问题；
-- 找一找按章节生成**不重复的部位队列**（顺序随章节偏移，不会连续几章都先问「根」），`#findProgress` 显示「第几轮 · 第几个/共几个」，点「下一个」或再次点顶栏「找一找」会推进到下一个问题；
-- 点击显示 `#partCard`，内容来自 `PART_INFO`；卡片固定在舞台左下角安全区，不压树；
+- `partWorldPoints('root')` 改用 `tree.rootSub.localToWorld(p)`（根系已拆到独立 group）；`bird` / `insect` 直接读 `birdWorldPoints` / `insectWorldPoints`（由 `animate()` 每帧从栖息鸟与昆虫的世界位置填充）；
+- `partScreenPoints()` 把目标部位的世界坐标投影到当前 canvas；`isNearFindTarget()` 允许点击目标附近（桌面约 40–80px 的宽容半径），解决小花、果实、种子、昆虫太小、精确射线打不中的问题；
+- `prepareFindBag()` 的 `order` 本轮加入 `bird`、`insect`：`['seed','root','trunk','branch','leaf','cotyledon','flower','fruit','snow','bird','insect']`；找一找按章节生成**不重复的部位队列**（顺序随章节偏移，不会连续几章都先问「根」），`#findProgress` 显示「第几轮 · 第几个/共几个」；
+- 点击显示 `#partCard`，内容来自 `PART_INFO`；正确提示 `「找到啦！这是<部位名>」`（点昆虫即「找到啦！这是昆虫」）；卡片固定在舞台左下角安全区，不压树；
 - 课堂模式下点树会自动暂停，方便老师讲解；
 - `#findBanner` 显示目标部位，正确后提示「找到啦」，错误时抖动并提示再找。
 
 ### 6.6 四季合影
 
-`captureQuartet()` 按 `QUARTET_TIMES` 依次设置 `storyTime`（130/150/170/190 秒），等待两帧后用 `renderer.domElement` 画到临时 canvas，生成 4 张 JPEG 放入 `#quartetGrid`。截图期间暂停播放、临时覆盖 `freezeOverride`，结束后恢复原时间、相机角度和播放状态。课堂模式播到结尾会自动生成一次。
+`captureQuartet()` 按 `QUARTET_TIMES` 依次设置 `storyTime`（130/150/170/190 秒），等待两帧后用 `renderer.domElement` 画到临时 canvas，生成 4 张 JPEG 放入 `#quartetGrid`。截图期间暂停播放、临时覆盖 `freezeOverride`、把 `cam.theta/radius/phi` 复位为 `1.46/12.5/1.46`，并置 **`quartetShooting = true` 关掉 `deepReveal`**（否则第 2 年深潜镜头会让四张照片构图不一致）；结束后恢复原时间、相机角度和播放状态。课堂模式播到结尾会自动生成一次。
+
+`index.html` 的 `.quartet-note` 本轮去掉「结果」（秋照取 t=150 是第一年秋，本来没有果实），改为：「春天新叶，夏天枝繁叶茂，秋天叶落，冬天安静休息。你最喜欢哪个季节？」
 
 ### 6.7 朗读与 BGM ducking
 
@@ -247,4 +262,5 @@ if (classroomMode && autoPauseAtChapter && nextIdx !== currentIdx) {
 | `?class` | 直接进入课堂模式（不显示开场页） |
 | `?class&t0=128` | 从第 128 秒开始进入课堂模式 |
 | `?class&t0=128&freeze` | 课堂模式 + 定帧截图 |
+| `?class&t0=210&freeze` | 课堂模式第 12 章定帧（鸟虫 / 树荫 / 大字幕 / 季节转盘） |
 | `?stage` | 只保留 3D 舞台（给章节缩略图/素材截图用） |

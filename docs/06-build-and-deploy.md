@@ -2,7 +2,7 @@
 
 > 本文解决：怎么重新打包、哪些文件是生成物、怎么发布到 GitHub Pages、怎么更新缓存，以及部署时别漏哪些资源。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-06 · 对应代码：`349d91f`（课堂模式 · 找一找队列 · 远山改版 · 视觉审查 r1）
+> 最后更新：2026-11-06 · 对应代码：`a99c037`（第二轮优化 · 确定性基线 · 深根水层 · 鸟虫树荫 · 文案对齐）
 
 ## 1. 本地运行
 
@@ -37,6 +37,32 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 | 其余 `assets/` | 授权说明等静态文件 |
 
 **不要直接编辑 `app.js`。** 它每次构建会被覆盖。
+
+> **第二轮优化后的硬提醒**：`src/main.js` 本轮改动很大（约 4.4k 行，新增确定性随机、`rootAge`、6 层土壤与水层、5 类生物 InstancedMesh、结尾 HUD 等）。**任何一次改完 `src/main.js` 都必须重新执行上面的 esbuild 命令生成 `app.js`**，否则：
+> - 本地 `index.html` 与 GitHub Pages 看到的仍是旧 build；
+> - `./tools/shoot.sh` / `./tools/visual-audit.sh` 虽然会自己打包，但手动用 Chrome 截图、课堂演示、线上部署不会；
+> - 定帧截图会出现「代码改了但画面没变」的假象，浪费一轮审查。
+>
+> 验证方式：`?dbg` 打开控制台看 `window.__renderer.info.render.calls`（本轮基线 466）；或比对 `app.js` 的修改时间是否晚于 `src/main.js`。`index.html` 的季节转盘色环（`conic-gradient(from 0deg, …)`）也在本轮改过，同步 `/tmp/tree-of-seasons-deploy` 时不要漏掉 `index.html`。
+
+### 2.1 回退点（Git）
+
+| 标签 / 分支 | 含义 |
+|---|---|
+| `pre-classroom-mode` | 课堂模式改造前 |
+| `classroom-mode` | 课堂模式开发分支 |
+| `pre-find-game-fix` / `find-game-fix-v1` | 找一找修复前 / 完成点 |
+| `pre-visual-refresh` / `visual-refresh-v1` | 远山视觉改版前 / 完成点 |
+| **`pre-round2`** | **第二轮优化改动前的干净版本**（回滚本轮全部改动用这个） |
+| **`round2-v1`** | **第二轮优化完成点**（确定性基线 / 深根水层 / 鸟虫树荫 / 文案对齐） |
+
+```bash
+git tag                                  # 查看已有回退点
+git diff pre-round2..HEAD --stat          # 看本轮改动范围
+git checkout pre-round2 -- src/main.js   # 只回退主源码（随后必须重新打包 app.js）
+```
+
+部署仓库保留全部历史标签；遇到线上回归优先切回 `pre-round2` 对应的 `app.js`，再定位问题。
 
 ## 3. GitHub Pages 当前部署
 

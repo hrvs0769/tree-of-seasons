@@ -329,7 +329,7 @@
   .wheel-face {
     position: relative; width: 100%; height: 100%; border-radius: 50%;
     border: 2px solid rgba(255,247,232,.70);
-    background: conic-gradient(from -90deg, #9bd47d 0 25%, #4fa94d 25% 50%, #e5a23d 50% 75%, #c6dcee 75% 100%);
+    background: conic-gradient(from 0deg, #9bd47d 0 25%, #4fa94d 25% 50%, #e5a23d 50% 75%, #c6dcee 75% 100%); /* 0deg：春右上 / 夏右下 / 秋左下 / 冬左上，与四个 .ws-* 标签对齐 */
     box-shadow: inset 0 0 0 7px rgba(7,17,12,.86), 0 0 0 1px rgba(0,0,0,.25);
   }
   .wheel-face span {
@@ -679,7 +679,7 @@
     <div class="start-card">
       <div class="start-kicker">自然观察课 · 幼儿园课堂版</div>
       <h1>一棵树的四季</h1>
-      <div class="start-sub">从一颗小小的种子，到一棵参天大树</div>
+      <div class="start-sub">从一颗小小的种子，到一棵参天大树，还有小鸟、蜜蜂和蝴蝶来做客</div>
       <div class="start-actions">
         <button id="startClassBtn">开始上课</button>
         <button id="freeViewBtn">自由观看</button>
@@ -782,7 +782,7 @@
         <button class="modal-close" data-close="quartetOverlay" aria-label="关闭">×</button>
       </div>
       <div id="quartetGrid" class="quartet-grid"></div>
-      <div class="quartet-note">春天发芽，夏天枝繁叶茂，秋天叶落结果，冬天安静休息。你最喜欢哪个季节？</div>
+      <div class="quartet-note">春天新叶，夏天枝繁叶茂，秋天叶落，冬天安静休息。你最喜欢哪个季节？</div>
     </div>
   </div>
 

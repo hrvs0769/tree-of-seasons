@@ -7,13 +7,14 @@ from PIL import Image, ImageDraw, ImageFont, ImageStat, ImageFilter
 
 out = Path(sys.argv[1])
 round_name = sys.argv[2] if len(sys.argv) > 2 else out.name
-files = sorted(out.glob("*.png"))
+files = sorted(f for f in out.glob("*.png") if f.name != "sheet.png")  # 排除上一轮生成的拼图
 if not files:
     raise SystemExit("no screenshots found")
 
-# 按文件名顺序排列，每行 3 张
+# 按文件名顺序排列：9 张以内每行 3 张，10 张以上每行 4 张。
+# rows 由张数自动向上取整换行；缩略图用 thumbnail 等比缩放，永不裁切。
 thumb_w, thumb_h = 420, 236
-cols = 3
+cols = 3 if len(files) <= 9 else 4
 rows = (len(files) + cols - 1) // cols
 sheet = Image.new("RGB", (cols * (thumb_w + 12) + 12, rows * (thumb_h + 44) + 12), (12, 18, 14))
 draw = ImageDraw.Draw(sheet)
@@ -38,7 +39,8 @@ for i, f in enumerate(files):
         "width": im.width, "height": im.height,
         "brightness": round(stat.mean[0], 2),
         "contrast": round(stat.stddev[0], 2),
-        "edge_density": round(sum(ImageStat.Stat(edges).mean) / max(1, edges.width * edges.height), 4),
+        # 边缘密度：边缘强度 >24 的像素占比（旧版把平均强度再除以像素总数，恒为 0）
+        "edge_density": round(sum(edges.histogram()[25:]) / max(1, edges.width * edges.height), 4),
     }
 
 sheet_path = out / "sheet.png"
@@ -51,7 +53,7 @@ sheet.save(sheet_path, quality=90)
 - 拼图：![sheet](sheet.png)
 - 指标：`metrics.json`
 
-## 八维评分（1–5）
+## 审查维度评分（1–5）
 
 | 维度 | 分数 | 备注 |
 |---|---:|---|
@@ -63,6 +65,10 @@ sheet.save(sheet_path, quality=90)
 | 远景与季节 |  |  |
 | UI 与排版 |  |  |
 | 课堂可用性 |  |  |
+| 文案—画面对齐 |  | 章节标题 / 旁白与画面事件是否同步（t=20 春雨、t=44 扎根、t=210 鸟虫、t=250 深根水层） |
+| 天空生机 |  | 云层流动、太阳光晕、飞鸟与昆虫、雨雪等天空与空气的动态层次 |
+
+> 第二轮新增两项：文案—画面对齐、天空生机。
 
 平均分：
 
