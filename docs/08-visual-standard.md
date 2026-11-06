@@ -82,10 +82,11 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 脚本会：
 
 1. 用 esbuild 重新构建 `app.js`；
-2. 在 1440×900 下截取 9 个场景时间点：种子 / 春雨 / 根系 / 破土 / 幼苗 / 夏 / 秋 / 冬 / 春 / 果；
-3. 截取课堂模式 128 秒和 170 秒的 UI；
-4. 截取 390×844 手机课堂模式；
-5. 生成 `shots/visual-audit/audit-r1/sheet.png` 和 `metrics.json`。
+2. **快速模式**（默认）：1280×800 截 6 个场景时间点（种子 / 根 / 幼苗 / 夏 / 冬 / 春）+ 1 张课堂 UI；
+3. **全量模式**（`AUDIT_FULL=1 ./tools/visual-audit.sh audit-rN`）：1440×900 截 10 个场景时间点（种子 / 春雨 / 根系 / 破土 / 幼苗 / 夏 / 秋 / 冬 / 春 / 果）+ 2 张课堂 UI + 1 张 390×844 手机；
+4. 生成该轮目录下的 `sheet.png` 拼图、`metrics.json`（亮度/对比度/边缘密度）和 `report.md` 评分骨架。
+
+> `shots/` 被 `.gitignore` 忽略，属于本机视觉迭代产物，不进仓库、不部署。仓库里保留的是**标准、脚本和每轮结论**（本文第 6 节），截图可随时用脚本复现。
 
 ### 4.2 视觉识别与评分
 
@@ -119,11 +120,11 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 | 远景 | 旧版三层剪影偏低平；已改渐变山体，仍需按季节复核 |
 | UI | 课堂按钮偏小、普通播放器控件老旧，缺少统一设计系统 |
 
-首次基线评分见 `shots/visual-audit/audit-r1/report.md`（由 `visual-audit.sh` 生成后人工填写）。
+首次基线评分与八维结论见本文第 6 节（本机 `shots/visual-audit/audit-r1/report.md` 由脚本生成后人工填写，不进仓库）。
 
 ## 6. audit-r1 结果（2026-11-06）
 
-本轮按 1280×800 快速基线（截图目录 `shots/visual-audit/audit-r1/`，可通过 `./tools/visual-audit.sh audit-r2` 重跑全量 1440×900）。
+本轮按 1280×800 快速基线完成（本机截图目录 `shots/visual-audit/audit-r1/`；全量复核用 `AUDIT_FULL=1 ./tools/visual-audit.sh audit-r2`）。
 
 | 维度 | 分数 | 备注 |
 |---|---:|---|
