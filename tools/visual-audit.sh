@@ -33,20 +33,35 @@ shot() {
 }
 
 BASE="file://$ROOT/index.html"
-for item in \
-  "desktop-06-seed 1440,900 ?stage&t0=6&freeze" \
-  "desktop-20-rain 1440,900 ?stage&t0=20&freeze" \
-  "desktop-44-root 1440,900 ?stage&t0=44&freeze" \
-  "desktop-66-sprout 1440,900 ?stage&t0=66&freeze" \
-  "desktop-100-sapling 1440,900 ?stage&t0=100&freeze" \
-  "desktop-128-summer 1440,900 ?stage&t0=128&freeze" \
-  "desktop-150-autumn 1440,900 ?stage&t0=150&freeze" \
-  "desktop-170-winter 1440,900 ?stage&t0=170&freeze" \
-  "desktop-190-spring 1440,900 ?stage&t0=190&freeze" \
-  "desktop-230-fruit 1440,900 ?stage&t0=230&freeze" \
-  "class-128-ui 1440,900 ?class&t0=128&freeze" \
-  "class-170-ui 1440,900 ?class&t0=170&freeze" \
-  "mobile-128-ui 390,844 ?class&t0=128&freeze"; do
+if [ "${AUDIT_FULL:-0}" = "1" ]; then
+  ITEMS=(
+    "desktop-06-seed 1440,900 ?stage&t0=6&freeze"
+    "desktop-20-rain 1440,900 ?stage&t0=20&freeze"
+    "desktop-44-root 1440,900 ?stage&t0=44&freeze"
+    "desktop-66-sprout 1440,900 ?stage&t0=66&freeze"
+    "desktop-100-sapling 1440,900 ?stage&t0=100&freeze"
+    "desktop-128-summer 1440,900 ?stage&t0=128&freeze"
+    "desktop-150-autumn 1440,900 ?stage&t0=150&freeze"
+    "desktop-170-winter 1440,900 ?stage&t0=170&freeze"
+    "desktop-190-spring 1440,900 ?stage&t0=190&freeze"
+    "desktop-230-fruit 1440,900 ?stage&t0=230&freeze"
+    "class-128-ui 1440,900 ?class&t0=128&freeze"
+    "class-170-ui 1440,900 ?class&t0=170&freeze"
+    "mobile-128-ui 390,844 ?class&t0=128&freeze"
+  )
+else
+  # 快速基线：覆盖种子 / 根 / 幼苗 / 夏 / 冬 / 春 + 课堂 UI
+  ITEMS=(
+    "desktop-06-seed 1280,800 ?stage&t0=6&freeze"
+    "desktop-44-root 1280,800 ?stage&t0=44&freeze"
+    "desktop-100-sapling 1280,800 ?stage&t0=100&freeze"
+    "desktop-128-summer 1280,800 ?stage&t0=128&freeze"
+    "desktop-170-winter 1280,800 ?stage&t0=170&freeze"
+    "desktop-190-spring 1280,800 ?stage&t0=190&freeze"
+    "class-128-ui 1280,800 ?class&t0=128&freeze"
+  )
+fi
+for item in "${ITEMS[@]}"; do
   set -- ${=item}
   shot "$1" "$2" "$BASE$3"
 done

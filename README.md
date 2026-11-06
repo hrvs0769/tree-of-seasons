@@ -2,9 +2,11 @@
 
 纯代码生成的 3D 树木生命周期演示（Three.js）。剖面视角：地上看发芽长叶，地下看生根。配课堂旁白、暂停和可拖动进度条，全程不加载任何外部素材。
 
-> 最后更新：2026-11-06 · 对应代码：`55ec5d5`
+> 最后更新：2026-11-06 · 对应代码：`349d91f`
 
 线上课堂模式直达：https://hrvs0769.github.io/tree-of-seasons/?class
+
+视觉审查工具：`./tools/visual-audit.sh audit-r1`（生成固定截图、拼图和报告骨架）
 
 ## 本地预览
 
@@ -101,3 +103,4 @@
 - [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) — 课堂布局、旁白、播放器、背景音乐
 - [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) — 构建、离线运行、GitHub Pages 部署
 - [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) — URL 调试、截图、章节核对、性能
+- [`docs/08-visual-standard.md`](docs/08-visual-standard.md) — 视觉标准、八维评分、自动截图与视觉审查流程
