@@ -2635,6 +2635,12 @@ function spawnFallingLeaf(color) {
 
 /* ---------------- 镜头控制 ---------------- */
 const cam = { theta: 1.46, phi: 1.46, radius: 12.5, dir: 1, target: new THREE.Vector3(0, 3.3, 0) };
+// 实际渲染用的相机状态：向目标值缓动，拖拽/滚轮因此有阻尼手感；
+// 定帧/视频模式下直接吸附，保证截图逐像素可复现。
+const camSmooth = { theta: cam.theta, phi: cam.phi, radius: cam.radius };
+const REDUCED_MOTION = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const camVel = { theta: 0, phi: 0 };
+let camLastMoveAt = 0;
 const THETA_MIN = Math.PI / 2 - 0.36, THETA_MAX = Math.PI / 2 + 0.36;
 
 // 生长阶段的镜头脚本：种子微距 → 根系剖面 → 破土 → 幼苗 → 后拉看全树
@@ -2672,18 +2678,35 @@ dom.style.touchAction = 'none';
 dom.addEventListener('pointerdown', (e) => {
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false });
   lastInteract = performance.now();
+  camVel.theta = 0; camVel.phi = 0;
   dom.setPointerCapture(e.pointerId);
+  document.body.classList.add('dragging');
 });
 dom.addEventListener('pointermove', (e) => {
   const prev = pointers.get(e.pointerId);
   if (!prev) return;
+  const total = Math.hypot(e.clientX - prev.sx, e.clientY - prev.sy);
+  // 9px 死区：手指轻点时的轻微抖动不转动镜头，也不会把「点认」变成「拖拽」
+  if (!prev.moved) {
+    if (total <= 9) { prev.x = e.clientX; prev.y = e.clientY; return; }
+    prev.moved = true;
+    prev.x = e.clientX; prev.y = e.clientY;
+    lastInteract = performance.now();
+    return;
+  }
   const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
   prev.x = e.clientX; prev.y = e.clientY;
-  if (Math.hypot(e.clientX - prev.sx, e.clientY - prev.sy) > 6) prev.moved = true;
   lastInteract = performance.now();
   if (pointers.size === 1) {
-    cam.theta = clamp(cam.theta - dx * 0.006, THETA_MIN, THETA_MAX);
-    cam.phi = clamp(cam.phi - dy * 0.005, 0.42, 1.52);
+    const dTheta = -dx * 0.006, dPhi = -dy * 0.005;
+    cam.theta = clamp(cam.theta + dTheta, THETA_MIN, THETA_MAX);
+    cam.phi = clamp(cam.phi + dPhi, 0.42, 1.52);
+    // 记录瞬时速度，松手后做一小段惯性滑行
+    const nowMs = performance.now();
+    const dtMove = Math.max(0.008, (nowMs - camLastMoveAt) / 1000);
+    camLastMoveAt = nowMs;
+    camVel.theta = camVel.theta * 0.55 + (dTheta / dtMove) * 0.45;
+    camVel.phi = camVel.phi * 0.55 + (dPhi / dtMove) * 0.45;
   } else if (pointers.size === 2) {
     const [a, b] = [...pointers.values()];
     const dist = Math.hypot(a.x - b.x, a.y - b.y);
@@ -2696,11 +2719,14 @@ function endPointer(e) {
   const p = pointers.get(e.pointerId);
   pointers.delete(e.pointerId);
   if (pointers.size < 2) pinchStart = 0;
+  document.body.classList.remove('dragging');
+  if (p && !p.moved) { camVel.theta = 0; camVel.phi = 0; }
   if (p && !p.moved && pointers.size === 0) handleCanvasTap(e.clientX, e.clientY);
 }
 function cancelPointer(e) {
   pointers.delete(e.pointerId);
   if (pointers.size < 2) pinchStart = 0;
+  document.body.classList.remove('dragging');
 }
 dom.addEventListener('pointerup', endPointer);
 dom.addEventListener('pointercancel', cancelPointer);
@@ -2709,6 +2735,41 @@ dom.addEventListener('wheel', (e) => {
   cam.radius = clamp(cam.radius * Math.exp(e.deltaY * 0.0012), 5.5, 30);
   lastInteract = performance.now();
 }, { passive: false });
+// 双击复位：给"转晕了"的老师一个明确的回家姿势
+dom.addEventListener('dblclick', (e) => {
+  e.preventDefault();
+  cam.theta = 1.46; cam.phi = 1.46; cam.radius = 12.5;
+  camVel.theta = 0; camVel.phi = 0;
+  lastInteract = performance.now();
+  hidePartCard();
+  showToast('视角已复位');
+});
+// 键盘也能环顾/缩放/点认：canvas 可 Tab 聚焦，读屏可读出用途
+dom.tabIndex = 0;
+dom.setAttribute('role', 'application');
+dom.setAttribute('aria-label', '3D 树木画面：拖动或用方向键环顾，滚轮或加减号缩放，回车点认画面中央的部位');
+dom.addEventListener('keydown', (e) => {
+  const step = 0.06;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+    cam.theta = clamp(cam.theta + (e.key === 'ArrowLeft' ? -step : step), THETA_MIN, THETA_MAX);
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+    cam.phi = clamp(cam.phi + (e.key === 'ArrowUp' ? -step : step), 0.42, 1.52);
+  } else if (e.key === '+' || e.key === '=') {
+    cam.radius = clamp(cam.radius * 0.9, 5.5, 30);
+  } else if (e.key === '-' || e.key === '_') {
+    cam.radius = clamp(cam.radius * 1.1, 5.5, 30);
+  } else if (e.key === 'Enter') {
+    const rect = dom.getBoundingClientRect();
+    const part = pickPartAt(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    if (part) showPartCard(part, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    else showToast('画面中央没有可点认的部位，试试移动视角');
+  } else {
+    return;
+  }
+  e.preventDefault();
+  e.stopPropagation();
+  lastInteract = performance.now();
+});
 
 /* ---------------- 状态、旁白与播放器 ---------------- */
 const seasonEl = document.getElementById('season');
@@ -2775,6 +2836,21 @@ const lockOverlayEl = document.getElementById('lockOverlay');
 const chapterBtnNormal = document.getElementById('chapterBtnNormal');
 const quartetBtnNormal = document.getElementById('quartetBtnNormal');
 const classEnterBtn = document.getElementById('classEnterBtn');
+const helpBtn = document.getElementById('helpBtn');
+const chapterRailEl = document.getElementById('chapterRail');
+const scrubTipEl = document.getElementById('scrubTip');
+const shortcutPanelEl = document.getElementById('shortcutPanel');
+const timelineWrapEl = document.getElementById('timelineWrap');
+const volumeWrapEl = document.getElementById('volumeWrap');
+const classProgressEl = document.getElementById('classProgress');
+const classVolumeEl = document.getElementById('classVolume');
+
+/* 播放按钮用 data-playing 驱动两个 SVG 图标，避免 textContent 把图标冲掉 */
+function setPlayUI(btn, isPlaying) {
+  if (!btn) return;
+  btn.dataset.playing = isPlaying ? '1' : '0';
+  btn.setAttribute('aria-label', isPlaying ? '暂停' : '播放');
+}
 
 let currentSeasonLabel = '';
 let currentChapter = -1;
@@ -2856,17 +2932,17 @@ const CHAPTER_PARTS = [
 ];
 
 const PART_INFO = {
-  seed: { name: '种子', pinyin: 'zhǒng zi', desc: '种子睡在泥土里，喝饱雨水就会慢慢醒来。' },
-  root: { name: '根', pinyin: 'gēn', desc: '根把树牢牢抓住，还帮大树喝水。' },
-  trunk: { name: '树干', pinyin: 'shù gàn', desc: '树干又粗又结实，把水和养分送到树枝上。' },
-  branch: { name: '树枝', pinyin: 'shù zhī', desc: '树枝向四周伸开，给叶子安家。' },
-  leaf: { name: '叶', pinyin: 'yè', desc: '叶子晒着太阳，为大树制造养分。' },
-  cotyledon: { name: '子叶', pinyin: 'zǐ yè', desc: '子叶是种子先长出的两片小叶子，帮嫩芽见阳光。' },
-  flower: { name: '花', pinyin: 'huā', desc: '花开的时候，蜜蜂和小鸟都来了。' },
-  fruit: { name: '果', pinyin: 'guǒ', desc: '果实里有新的种子，生命就这样传下去。' },
-  snow: { name: '雪', pinyin: 'xuě', desc: '雪花落在树枝上，大树在冬天安静地休息。' },
-  bird: { name: '小鸟', pinyin: 'xiǎo niǎo', desc: '夏天，小鸟飞到树荫里歇一歇，有的停在枝头唱歌。' },
-  insect: { name: '昆虫', pinyin: 'kūn chóng', desc: '蝴蝶、蜜蜂和瓢虫也喜欢这棵大树，围着花朵飞来飞去。' },
+  seed: { name: '种子', glyph: '种', pinyin: 'zhǒng zi', desc: '种子睡在泥土里，喝饱雨水就会慢慢醒来。' },
+  root: { name: '根', glyph: '根', pinyin: 'gēn', desc: '根把树牢牢抓住，还帮大树喝水。' },
+  trunk: { name: '树干', glyph: '干', pinyin: 'shù gàn', desc: '树干又粗又结实，把水和养分送到树枝上。' },
+  branch: { name: '树枝', glyph: '枝', pinyin: 'shù zhī', desc: '树枝向四周伸开，给叶子安家。' },
+  leaf: { name: '叶', glyph: '叶', pinyin: 'yè', desc: '叶子晒着太阳，为大树制造养分。' },
+  cotyledon: { name: '子叶', glyph: '叶', pinyin: 'zǐ yè', desc: '子叶是种子先长出的两片小叶子，帮嫩芽见阳光。' },
+  flower: { name: '花', glyph: '花', pinyin: 'huā', desc: '花开的时候，蜜蜂和小鸟都来了。' },
+  fruit: { name: '果', glyph: '果', pinyin: 'guǒ', desc: '果实里有新的种子，生命就这样传下去。' },
+  snow: { name: '雪', glyph: '雪', pinyin: 'xuě', desc: '雪花落在树枝上，大树在冬天安静地休息。' },
+  bird: { name: '小鸟', glyph: '鸟', pinyin: 'xiǎo niǎo', desc: '夏天，小鸟飞到树荫里歇一歇，有的停在枝头唱歌。' },
+  insect: { name: '昆虫', glyph: '虫', pinyin: 'kūn chóng', desc: '蝴蝶、蜜蜂和瓢虫也喜欢这棵大树，围着花朵飞来飞去。' },
 };
 
 const SUBTITLE_KEYWORDS = /(种子|泥土|水分|温暖|春雨|外壳|侧根|主根|根|嫩芽|种壳|子叶|真叶|阳光|养分|枝丫|树干|树冠|叶子|树荫|落叶|白雪|新芽|花朵|果实|小鸟|昆虫|蜜蜂|蝴蝶|瓢虫|轮回)/g;
@@ -2908,38 +2984,75 @@ function chapterIndexAt(t) {
   for (let i = 0; i < CHAPTERS.length; i++) if (t >= CHAPTERS[i].start) idx = i;
   return idx;
 }
+function buildChapterRail() {
+  if (!chapterRailEl) return;
+  chapterRailEl.innerHTML = CHAPTERS.map((c) => '<span title="' + c.title + '"></span>').join('');
+}
+function updateChapterRail(idx) {
+  if (!chapterRailEl) return;
+  const items = chapterRailEl.children;
+  for (let i = 0; i < items.length; i++) {
+    items[i].className = i < idx ? 'done' : (i === idx ? 'current' : '');
+  }
+}
+function retriggerAnim(el, name, dur) {
+  if (!el) return;
+  el.style.animation = 'none';
+  void el.offsetWidth;
+  el.style.animation = name + ' ' + dur + ' var(--ease-out) both';
+}
 function updateChapterUI(t) {
   const idx = chapterIndexAt(t);
   if (idx === currentChapter) return;
   currentChapter = idx;
   resetFindBag();
+  updateChapterRail(idx);
   const c = CHAPTERS[idx];
   chapterIndexEl.textContent = '第 ' + (idx + 1) + ' 章 / 共 ' + CHAPTERS.length + ' 章';
   chapterTitleEl.textContent = c.title;
   chapterTextEl.textContent = c.text;
-  chapterTitleEl.style.animation = 'none';
-  void chapterTitleEl.offsetWidth;
-  chapterTitleEl.style.animation = 'seasonIn .5s ease both';
+  retriggerAnim(chapterTitleEl, 'seasonIn', '.45s');
+  retriggerAnim(chapterTextEl, 'textIn', '.32s');
   if (classChapterIndexEl) classChapterIndexEl.textContent = '第 ' + (idx + 1) + ' 章 / 共 ' + CHAPTERS.length + ' 章';
   if (classChapterTitleEl) classChapterTitleEl.textContent = c.title;
   if (subtitleTextEl) subtitleTextEl.innerHTML = subtitleHTML(c.text);
   if (subtitleMetaEl) subtitleMetaEl.textContent = '第 ' + (idx + 1) + ' 章 · ' + c.title;
+  retriggerAnim(subtitleTextEl, 'textIn', '.3s');
   updateTeacherCard(idx);
   hidePartCard();
-  if (classroomMode && playing && voiceOn) speakCurrentChapter();
+  if (classroomMode && playing && voiceOn && !scrubbing) speakCurrentChapter();
 }
+const _syncCache = { t: -1, sec: -1, playing: null, chapter: -1 };
 function syncPlayer() {
   if (!timelineEl) return;
-  if (!scrubbing) timelineEl.value = String(storyTime);
-  timelineEl.style.setProperty('--progress', (storyTime / STORY_END * 100).toFixed(2) + '%');
-  timecodeEl.textContent = fmtTime(storyTime) + ' / ' + fmtTime(STORY_END);
-  playBtn.textContent = playing ? '⏸' : '▶';
-  playBtn.setAttribute('aria-label', playing ? '暂停' : '播放');
-  if (classPlayBtn) {
-    classPlayBtn.textContent = playing ? '⏸' : '▶';
-    classPlayBtn.setAttribute('aria-label', playing ? '暂停' : '播放');
+  // 每帧只写真正变化的 DOM：暂停时几乎零写入，低配课堂电脑更稳
+  if (!scrubbing && Math.abs((parseFloat(timelineEl.value) || 0) - storyTime) > 0.04) {
+    timelineEl.value = String(storyTime);
   }
-  if (classTimecodeEl) classTimecodeEl.textContent = fmtTime(storyTime) + ' / ' + fmtTime(STORY_END);
+  const pct = (storyTime / STORY_END * 100).toFixed(2) + '%';
+  if (pct !== _syncCache.pct) { timelineEl.style.setProperty('--progress', pct); _syncCache.pct = pct; }
+  const sec = Math.round(storyTime);
+  if (sec !== _syncCache.sec) {
+    _syncCache.sec = sec;
+    const tc = fmtTime(storyTime) + ' / ' + fmtTime(STORY_END);
+    timecodeEl.textContent = tc;
+    if (classTimecodeEl) classTimecodeEl.textContent = tc;
+  }
+  if (playing !== _syncCache.playing) {
+    _syncCache.playing = playing;
+    setPlayUI(playBtn, playing);
+    setPlayUI(classPlayBtn, playing);
+  }
+  if (classProgressEl) {
+    if (pct !== _syncCache.cpct) { classProgressEl.style.setProperty('--cp', pct); classProgressEl.firstElementChild.style.width = pct; _syncCache.cpct = pct; }
+    classProgressEl.setAttribute('aria-valuenow', String(Math.round(storyTime)));
+  }
+  const idx = chapterIndexAt(storyTime);
+  if (idx !== _syncCache.chapter) {
+    _syncCache.chapter = idx;
+    if (classPrevBtn) classPrevBtn.disabled = idx === 0;
+    if (classNextBtn) classNextBtn.disabled = idx === CHAPTERS.length - 1;
+  }
 }
 function setStoryTime(t, pause = true) {
   storyTime = clamp(t, 0, STORY_END);
@@ -2975,10 +3088,13 @@ for (const c of CHAPTERS) {
 }
 timelineEl.max = STORY_END.toFixed(1);
 timelineEl.value = String(storyTime);
+buildChapterRail();
+document.body.dataset.season = '春';
 updateChapterUI(storyTime);
 syncPlayer();
 
-if (FREEZE_T !== null || VIDEO) {
+const UI_TEST = /(^|[?&])ui=1(&|$)/.test(location.search);
+if ((FREEZE_T !== null || VIDEO) && !UI_TEST) {
   playerEl.style.display = 'none';
   narrationEl.style.display = 'none';
   document.getElementById('tips').style.display = 'none';
@@ -3043,15 +3159,74 @@ function showToast(message, ms = 1800) {
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => classToastEl.classList.remove('show'), ms);
 }
+let lastFocusedBeforeModal = null;
+const MODAL_BACKGROUND_IDS = ['app', 'sidebar', 'player', 'classroomTop', 'classroomBar', 'subtitleBar', 'seasonWheel', 'vignette'];
+function setBackgroundInert(on) {
+  for (const id of MODAL_BACKGROUND_IDS) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    if (on) el.setAttribute('inert', ''); else el.removeAttribute('inert');
+  }
+}
+function focusableIn(el) {
+  return Array.prototype.filter.call(
+    el.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'),
+    (n) => !n.disabled && n.offsetParent !== null
+  );
+}
 function openModal(el) {
   if (!el) return;
+  // 同一时间只允许一个弹层，避免 Q/C 叠出两层
+  document.querySelectorAll('.modal.show').forEach((m) => { if (m !== el) m.classList.remove('show'); });
   if (el === chapterDrawerEl) buildChapterGrid();
   if (el === teacherPanelEl) updateTeacherCard(chapterIndexAt(storyTime));
+  lastFocusedBeforeModal = document.activeElement;
   el.classList.add('show');
+  setBackgroundInert(true);
+  requestAnimationFrame(() => {
+    const first = el.querySelector('.modal-close') || focusableIn(el)[0];
+    if (first) first.focus({ preventScroll: true });
+    // 章节弹层打开时把当前章滚到视口中央（移动端尤其重要）
+    if (el === chapterDrawerEl && chapterGridEl) {
+      const cur = chapterGridEl.querySelector('.chapter-item.current');
+      if (cur) cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  });
 }
-function closeModal(el) { if (el) el.classList.remove('show'); }
-function closeAllModals() { document.querySelectorAll('.modal.show').forEach((m) => m.classList.remove('show')); }
+function closeModal(el) {
+  if (!el || !el.classList.contains('show')) return;
+  el.classList.add('closing');
+  setTimeout(() => { el.classList.remove('show', 'closing'); }, 190);
+  if (!document.querySelector('.modal.show:not(.closing)')) setBackgroundInert(false);
+  if (lastFocusedBeforeModal && lastFocusedBeforeModal.focus) {
+    lastFocusedBeforeModal.focus({ preventScroll: true });
+    lastFocusedBeforeModal = null;
+  }
+}
+function closeAllModals() {
+  const open = document.querySelectorAll('.modal.show');
+  open.forEach((m) => {
+    m.classList.add('closing');
+    setTimeout(() => { m.classList.remove('show', 'closing'); }, 190);
+  });
+  setBackgroundInert(false);
+  if (lastFocusedBeforeModal && lastFocusedBeforeModal.focus) {
+    lastFocusedBeforeModal.focus({ preventScroll: true });
+    lastFocusedBeforeModal = null;
+  }
+}
 function hasOpenModal() { return !!document.querySelector('.modal.show'); }
+
+/* Tab 在弹层内循环；ESC 由全局键盘处理 */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Tab' || !hasOpenModal()) return;
+  const modal = document.querySelector('.modal.show');
+  const list = focusableIn(modal);
+  if (!list.length) return;
+  const first = list[0], last = list[list.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 function seasonForTime(t) {
   const p = ((storySeason(t) % 1) + 1) % 1;
@@ -3062,8 +3237,9 @@ function buildChapterGrid() {
   const current = chapterIndexAt(storyTime);
   chapterGridEl.innerHTML = CHAPTERS.map((c, i) => {
     const season = seasonForTime((c.start + Math.min(c.end, STORY_END)) / 2);
+    const num = String(i + 1).padStart(2, '0');
     return '<button class="chapter-item' + (i === current ? ' current' : '') + '" data-index="' + i + '">' +
-      '<div class="chapter-thumb" data-season="' + season + '"></div>' +
+      '<div class="chapter-thumb" data-season="' + season + '" data-num="' + num + '"></div>' +
       '<div class="chapter-num">第 ' + (i + 1) + ' 章</div>' +
       '<div class="chapter-name">' + c.title + '</div>' +
       '<div class="chapter-time">' + fmtTime(c.start) + '–' + fmtTime(Math.min(c.end, STORY_END)) + '</div>' +
@@ -3098,11 +3274,20 @@ function prevChapter() {
 function updateClassroomButtons() {
   if (classAutoBtn) {
     classAutoBtn.classList.toggle('on', autoPauseAtChapter);
-    classAutoBtn.textContent = autoPauseAtChapter ? '每章停 ✓' : '每章停';
+    classAutoBtn.setAttribute('aria-pressed', autoPauseAtChapter ? 'true' : 'false');
   }
-  if (classVoiceBtn) classVoiceBtn.classList.toggle('on', voiceOn);
-  if (classProjectorBtn) classProjectorBtn.classList.toggle('on', projectorBright);
-  if (classLockBtn) classLockBtn.classList.toggle('on', touchLocked);
+  if (classVoiceBtn) {
+    classVoiceBtn.classList.toggle('on', voiceOn);
+    classVoiceBtn.setAttribute('aria-pressed', voiceOn ? 'true' : 'false');
+  }
+  if (classProjectorBtn) {
+    classProjectorBtn.classList.toggle('on', projectorBright);
+    classProjectorBtn.setAttribute('aria-pressed', projectorBright ? 'true' : 'false');
+  }
+  if (classLockBtn) {
+    classLockBtn.classList.toggle('on', touchLocked);
+    classLockBtn.setAttribute('aria-pressed', touchLocked ? 'true' : 'false');
+  }
 }
 function setAutoPause(v) {
   autoPauseAtChapter = !!v;
@@ -3225,6 +3410,9 @@ function toggleFullscreen() {
     requestFullscreenSafe();
   }
 }
+function showExitConfirm() {
+  openModal(document.getElementById('exitConfirm'));
+}
 function enterClassroomMode(opts = {}) {
   const reset = opts.reset !== false;
   classroomMode = true;
@@ -3240,6 +3428,7 @@ function enterClassroomMode(opts = {}) {
   if (reset) {
     storyTime = 0; prevT = 0; currentChapter = -1; quartetAutoDone = false;
   }
+  if (freeViewBtn) freeViewBtn.textContent = '自由观看';
   playing = false;
   setAutoPause(true);
   setProjector(false);
@@ -3276,8 +3465,9 @@ function exitClassroomMode() {
   }
   startScreenVisible = true;
   startScreenEl.classList.remove('hidden');
-  storyTime = 0; prevT = 0; currentChapter = -1;
-  updateChapterUI(0);
+  // 保留当前进度：再次进入课堂或自由观看时可以接着看
+  playing = false;
+  if (freeViewBtn) freeViewBtn.textContent = storyTime > 1 ? '继续观看' : '自由观看';
   syncPlayer();
 }
 
@@ -3435,11 +3625,32 @@ function pickPartAt(clientX, clientY) {
 function showPartCard(part, clientX, clientY) {
   const info = PART_INFO[part];
   if (!info || !partCardEl) return;
-  partGlyphEl.textContent = info.name.slice(-1);
+  partGlyphEl.textContent = info.glyph || info.name.charAt(0);
   partNameEl.textContent = info.name;
   partPinyinEl.textContent = info.pinyin;
   partDescEl.textContent = info.desc;
+  // 卡片跟随点击位置出现在手指旁边（手机端仍用底部抽屉，避免遮住画面中心）
+  partCardEl.style.left = '';
+  partCardEl.style.right = '';
+  partCardEl.style.top = '';
+  partCardEl.style.bottom = '';
   partCardEl.classList.add('show');
+  if (Number.isFinite(clientX) && Number.isFinite(clientY) && window.innerWidth > 700) {
+    const rect = partCardEl.getBoundingClientRect();
+    const gap = 14, pad = 12;
+    let x = clientX + gap;
+    let y = clientY + gap;
+    if (x + rect.width > window.innerWidth - pad) x = clientX - rect.width - gap;
+    if (y + rect.height > window.innerHeight - pad) y = clientY - rect.height - gap;
+    x = clamp(x, pad, Math.max(pad, window.innerWidth - rect.width - pad));
+    y = clamp(y, pad, Math.max(pad, window.innerHeight - rect.height - pad));
+    partCardEl.style.left = x + 'px';
+    partCardEl.style.top = y + 'px';
+    partCardEl.style.right = 'auto';
+    partCardEl.style.bottom = 'auto';
+    partCardEl.style.setProperty('--ox', clamp(clientX - x, 6, rect.width - 6) + 'px');
+    partCardEl.style.setProperty('--oy', clamp(clientY - y, 6, rect.height - 6) + 'px');
+  }
 }
 function hidePartCard() { if (partCardEl) partCardEl.classList.remove('show'); }
 function partMatches(target, actual) {
@@ -3541,10 +3752,19 @@ function snapshotCanvas() {
   ctx.drawImage(src, 0, 0, w, h);
   return c.toDataURL('image/jpeg', 0.86);
 }
+function setQuartetBusy(busy) {
+  for (const btn of [classQuartetBtn, quartetBtnNormal]) {
+    if (!btn) continue;
+    btn.disabled = busy;
+    btn.setAttribute('aria-busy', busy ? 'true' : 'false');
+    btn.classList.toggle('busy', busy);
+  }
+}
 async function captureQuartet() {
   if (quartetBusy) return;
   quartetBusy = true;
   quartetShooting = true;
+  setQuartetBusy(true);
   const old = { t: storyTime, prevT, playing, theta: cam.theta, radius: cam.radius, phi: cam.phi };
   const frames = [];
   try {
@@ -3569,15 +3789,26 @@ async function captureQuartet() {
     cam.theta = old.theta; cam.radius = old.radius; cam.phi = old.phi;
     syncPlayer(); updateChapterUI(storyTime);
     quartetBusy = false;
+    setQuartetBusy(false);
   }
 }
 
 /* ---- 自动暂停提示 ---- */
 function showPausePrompt(text) {
   if (!pausePromptEl) return;
-  pausePromptEl.innerHTML = text;
+  pausePromptEl.innerHTML = '<span class="pause-text">' + text + '</span>' +
+    '<button class="pause-btn" id="pauseContinue" type="button">继续播放</button>';
   pausePromptEl.classList.add('show');
 }
+pausePromptEl.addEventListener('click', (e) => {
+  if (!e.target.closest('#pauseContinue')) return;
+  hidePausePrompt();
+  autoPausePending = false;
+  if (storyTime >= STORY_END - 0.01) return;
+  playing = true;
+  syncPlayer();
+  if (classroomMode && voiceOn) speakCurrentChapter();
+});
 function hidePausePrompt() {
   if (pausePromptEl) pausePromptEl.classList.remove('show');
 }
@@ -3588,10 +3819,68 @@ replayBtn.addEventListener('click', () => {
   storyTime = 0; prevT = 0; playing = true; autoPausePending = false; quartetAutoDone = false;
   currentChapter = -1; updateChapterUI(0); syncPlayer();
 });
-timelineEl.addEventListener('pointerdown', () => { scrubbing = true; });
-timelineEl.addEventListener('input', (e) => { setStoryTime(parseFloat(e.target.value), true); });
-timelineEl.addEventListener('change', () => { scrubbing = false; syncPlayer(); });
-window.addEventListener('pointerup', () => { if (scrubbing) { scrubbing = false; syncPlayer(); } });
+let scrubResume = false;
+function updateScrubTip(clientX) {
+  if (!scrubTipEl || !timelineWrapEl) return;
+  const rect = timelineWrapEl.getBoundingClientRect();
+  if (rect.width <= 0) return;
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+  const tt = ratio * STORY_END;
+  const idx = chapterIndexAt(tt);
+  scrubTipEl.textContent = fmtTime(tt) + ' · ' + CHAPTERS[idx].title;
+  scrubTipEl.style.left = (ratio * 100) + '%';
+  scrubTipEl.classList.add('show');
+}
+function beginScrub() {
+  scrubbing = true;
+  scrubResume = playing;
+}
+function endScrub() {
+  if (!scrubbing) return;
+  scrubbing = false;
+  if (scrubResume) { playing = true; scrubResume = false; }
+  syncPlayer();
+  if (classroomMode && playing && voiceOn) speakCurrentChapter();
+}
+timelineEl.addEventListener('pointerdown', () => { beginScrub(); });
+timelineEl.addEventListener('input', (e) => { setStoryTime(parseFloat(e.target.value), !scrubResume); });
+timelineEl.addEventListener('change', endScrub);
+timelineWrapEl.addEventListener('pointermove', (e) => updateScrubTip(e.clientX));
+timelineWrapEl.addEventListener('pointerdown', (e) => updateScrubTip(e.clientX));
+timelineWrapEl.addEventListener('pointerleave', () => { if (!scrubbing) scrubTipEl.classList.remove('show'); });
+window.addEventListener('pointerup', () => { endScrub(); scrubTipEl.classList.remove('show'); });
+
+/* 课堂底栏的细进度条：点击/拖动都能跳转（老师重讲某句话） */
+let classScrubResume = false;
+function seekClassProgress(clientX) {
+  if (!classProgressEl) return;
+  const rect = classProgressEl.getBoundingClientRect();
+  if (rect.width <= 0) return;
+  const ratio = clamp((clientX - rect.left) / rect.width, 0, 1);
+  setStoryTime(ratio * STORY_END, !classScrubResume);
+}
+if (classProgressEl) {
+  classProgressEl.addEventListener('pointerdown', (e) => {
+    classScrubResume = playing;
+    try { classProgressEl.setPointerCapture(e.pointerId); } catch (err) {}
+    seekClassProgress(e.clientX);
+  });
+  classProgressEl.addEventListener('pointermove', (e) => {
+    let captured = false;
+    try { captured = classProgressEl.hasPointerCapture(e.pointerId); } catch (err) {}
+    if (captured) seekClassProgress(e.clientX);
+  });
+  classProgressEl.addEventListener('pointerup', (e) => {
+    try { if (classProgressEl.hasPointerCapture(e.pointerId)) classProgressEl.releasePointerCapture(e.pointerId); } catch (err) {}
+    if (classScrubResume) { playing = true; classScrubResume = false; syncPlayer(); }
+  });
+  classProgressEl.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      e.preventDefault();
+      setStoryTime(storyTime + (e.key === 'ArrowLeft' ? -5 : 5), !playing);
+    }
+  });
+}
 document.getElementById('replant').addEventListener('click', () => {
   seedCounter = Math.floor(Math.random() * 100000);
   plant(seedCounter);
@@ -3622,11 +3911,14 @@ classQuartetBtn.addEventListener('click', captureQuartet);
 classAutoBtn.addEventListener('click', toggleAutoPause);
 classProjectorBtn.addEventListener('click', toggleProjector);
 classLockBtn.addEventListener('click', toggleLock);
-classExitBtn.addEventListener('click', exitClassroomMode);
+classExitBtn.addEventListener('click', showExitConfirm);
+document.getElementById('exitCancelBtn').addEventListener('click', () => closeModal(document.getElementById('exitConfirm')));
+document.getElementById('exitConfirmBtn').addEventListener('click', () => { closeModal(document.getElementById('exitConfirm')); exitClassroomMode(); });
 classVoiceBtn.addEventListener('click', toggleVoice);
 chapterBtnNormal.addEventListener('click', () => openModal(chapterDrawerEl));
 quartetBtnNormal.addEventListener('click', captureQuartet);
 classEnterBtn.addEventListener('click', () => enterClassroomMode({ reset: false, fullscreen: true, autoplay: true }));
+helpBtn.addEventListener('click', () => openModal(shortcutPanelEl));
 partCloseEl.addEventListener('click', hidePartCard);
 findNextEl.addEventListener('click', nextFindQuestion);
 findCloseEl.addEventListener('click', stopFindGame);
@@ -3637,7 +3929,7 @@ chapterGridEl.addEventListener('click', (e) => {
   closeModal(chapterDrawerEl);
 });
 document.querySelectorAll('.modal').forEach((m) => {
-  m.addEventListener('pointerdown', (e) => { if (e.target === m) m.classList.remove('show'); });
+  m.addEventListener('pointerdown', (e) => { if (e.target === m) closeModal(m); });
 });
 document.querySelectorAll('[data-close]').forEach((b) => {
   b.addEventListener('click', () => closeModal(document.getElementById(b.dataset.close)));
@@ -3665,11 +3957,18 @@ window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); unlockScreen(); }
     return;
   }
+  // 弹层打开时只保留 Esc 与 Tab，全局快捷键全部挂起
+  if (hasOpenModal()) {
+    if (e.key === 'Escape') { e.preventDefault(); closeAllModals(); }
+    return;
+  }
+  // 焦点在按钮/输入控件上时，空格交给控件本身，不触发全局播放
+  if (e.code === 'Space' && e.target && e.target.closest && e.target.closest('button, a, input, textarea, select, [contenteditable="true"]')) return;
   if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
-  else if (e.key === 'ArrowLeft') { e.preventDefault(); setStoryTime(storyTime - 5, true); }
-  else if (e.key === 'ArrowRight') { e.preventDefault(); setStoryTime(storyTime + 5, true); }
-  else if (e.key === 'Home') { e.preventDefault(); setStoryTime(0, true); }
-  else if (e.key === 'End') { e.preventDefault(); setStoryTime(STORY_END, true); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); setStoryTime(storyTime - 5, !playing); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); setStoryTime(storyTime + 5, !playing); }
+  else if (e.key === 'Home') { e.preventDefault(); setStoryTime(0, !playing); }
+  else if (e.key === 'End') { e.preventDefault(); setStoryTime(STORY_END, !playing); }
   else if (e.key === 'PageUp') { e.preventDefault(); prevChapter(); }
   else if (e.key === 'PageDown') { e.preventDefault(); nextChapter(); }
   else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
@@ -3678,8 +3977,12 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); captureQuartet(); }
   else if (e.key === 'p' || e.key === 'P') { e.preventDefault(); toggleProjector(); }
   else if (e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleLock(); }
+  else if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); openModal(shortcutPanelEl); }
   else if (e.key === 'Escape') {
-    if (hasOpenModal()) { e.preventDefault(); closeAllModals(); }
+    if (partCardEl.classList.contains('show')) { e.preventDefault(); hidePartCard(); }
+    else if (findActive) { e.preventDefault(); stopFindGame(); }
+    else if (pausePromptEl.classList.contains('show')) { e.preventDefault(); hidePausePrompt(); }
+    else if (classroomMode) { e.preventDefault(); showExitConfirm(); }
   }
   else if (e.key === 'r' || e.key === 'R') {
     seedCounter = Math.floor(Math.random() * 100000);
@@ -3768,7 +4071,7 @@ function animate() {
         playing = false;
         if (classroomMode && !quartetAutoDone) {
           quartetAutoDone = true;
-          setTimeout(() => { if (classroomMode) captureQuartet(); }, 900);
+          setTimeout(() => { if (classroomMode) showToast('本课播放结束 · 可点「四季合影」回顾四季'); }, 900);
         }
       }
     }
@@ -3780,6 +4083,23 @@ function animate() {
   prevT = t;
   updateChapterUI(t);
   syncPlayer();
+
+  /* —— 相机缓动：拖拽/滚轮/双击都带一点阻尼，动画更顺 —— */
+  const snapCam = VIDEO || FREEZE_T !== null || freezeOverride !== null || quartetShooting;
+  // 松手后的惯性滑行
+  if (!snapCam && pointers.size === 0 && (Math.abs(camVel.theta) > 0.002 || Math.abs(camVel.phi) > 0.002)) {
+    cam.theta = clamp(cam.theta + camVel.theta * realDt, THETA_MIN, THETA_MAX);
+    cam.phi = clamp(cam.phi + camVel.phi * realDt, 0.42, 1.52);
+    const decay = Math.exp(-realDt * 5.2);
+    camVel.theta *= decay; camVel.phi *= decay;
+  }
+  const camEase = snapCam ? 1 : 1 - Math.exp(-realDt * 14);
+  camSmooth.theta += (cam.theta - camSmooth.theta) * camEase;
+  camSmooth.phi += (cam.phi - camSmooth.phi) * camEase;
+  camSmooth.radius += (cam.radius - camSmooth.radius) * camEase;
+  const camMoving = Math.abs(cam.theta - camSmooth.theta) > 0.0002 ||
+    Math.abs(cam.phi - camSmooth.phi) > 0.0002 ||
+    Math.abs(cam.radius - camSmooth.radius) > 0.002;
 
   /* —— 时间推进 —— */
   const pRaw = storySeason(t);
@@ -3811,7 +4131,7 @@ function animate() {
   const sunElev = 0.16 + 0.10 * (0.5 + 0.5 * Math.cos((p - 0.25) * Math.PI * 2));
   // 太阳跟随相机方位角偏左 0.28 弧度：始终留在右侧 3D 舞台的安全区内，
   // 不会被左侧讲解栏裁掉，也不会因为镜头自动摆动而跑出画面。
-  const sunAz = cam.theta - Math.PI - 0.28 + Math.sin(t * 0.03) * 0.04;
+  const sunAz = camSmooth.theta - Math.PI - 0.28 + Math.sin(t * 0.03) * 0.04;
   const sunDir = _sunDir.set(Math.cos(sunAz) * Math.cos(sunElev), Math.sin(sunElev), Math.sin(sunAz) * Math.cos(sunElev)).normalize();
   sun.position.copy(sunDir).multiplyScalar(34);
   sunSprite.position.copy(sunDir).multiplyScalar(150);
@@ -4317,7 +4637,7 @@ function animate() {
   // 剖面视角：镜头只在切面前方弧形范围内移动
   if (VIDEO) {
     cam.theta = 1.43 + Math.sin(t * 0.05) * 0.085;
-  } else if (playing && now - lastInteract > 6000) {
+  } else if (!REDUCED_MOTION && playing && now - lastInteract > 6000) {
     cam.theta += cam.dir * 0.035 * dt;
     if (cam.theta > THETA_MAX) { cam.theta = THETA_MAX; cam.dir = -1; }
     if (cam.theta < THETA_MIN) { cam.theta = THETA_MIN; cam.dir = 1; }
@@ -4346,12 +4666,12 @@ function animate() {
     fitR = (last.viewH + (autoViewH - last.viewH) * b) / (2 * Math.tan((camera.fov * Math.PI) / 360));
   }
   cam.target.x = 0.5 * smoothstep(0.15, 0.70, g);
-  const effR = Math.max(1.35, fitR) * (cam.radius / 12.5) * aspectFix;
-  const sp = Math.sin(cam.phi), cp = Math.cos(cam.phi);
+  const effR = Math.max(1.35, fitR) * (camSmooth.radius / 12.5) * aspectFix;
+  const sp = Math.sin(camSmooth.phi), cp = Math.cos(camSmooth.phi);
   camera.position.set(
-    cam.target.x + effR * sp * Math.cos(cam.theta),
+    cam.target.x + effR * sp * Math.cos(camSmooth.theta),
     cam.target.y + effR * cp,
-    cam.target.z + effR * sp * Math.sin(cam.theta)
+    cam.target.z + effR * sp * Math.sin(camSmooth.theta)
   );
   camera.lookAt(cam.target);
 
@@ -4361,6 +4681,7 @@ function animate() {
     currentSeasonLabel = SEASONS[sIdx].name;
     seasonEl.textContent = currentSeasonLabel;
     subEl.textContent = SEASONS[sIdx].sub;
+    document.body.dataset.season = currentSeasonLabel;
     seasonEl.style.animation = 'none';
     void seasonEl.offsetWidth;
     seasonEl.style.animation = 'seasonIn .7s ease both';
@@ -4372,7 +4693,7 @@ function animate() {
   if (wheelNeedleEl) wheelNeedleEl.style.transform = 'translate(-50%, -100%) rotate(' + (seasonProgress * 360).toFixed(2) + 'deg)';
   if (wheelYearEl) wheelYearEl.textContent = '第 ' + yearIndex + ' 年';
   if (classSeasonEl) {
-    const seasonLine = SEASONS[sIdx].name + ' · 第 ' + yearIndex + ' 年';
+    const seasonLine = '第 ' + yearIndex + ' 年';
     if (classSeasonEl.textContent !== seasonLine) classSeasonEl.textContent = seasonLine;
   }
   // 结尾「新的轮回又要开始」：最后 2 秒把季节标签与指针拨回春，配合土面新芽
@@ -4380,7 +4701,8 @@ function animate() {
     currentSeasonLabel = '春';
     seasonEl.textContent = '春';
     subEl.textContent = '万物发芽 · 新的轮回';
-    if (classSeasonEl) classSeasonEl.textContent = '春 · 新的一年';
+    document.body.dataset.season = '春';
+    if (classSeasonEl) classSeasonEl.textContent = '新的一年';
     if (wheelNeedleEl) wheelNeedleEl.style.transform = 'translate(-50%, -100%) rotate(0deg)';
   }
 
@@ -4393,8 +4715,8 @@ function animate() {
   /* —— 直出：ACES 色调映射 + 天空 shader 自带的大气与光晕 ——
      定帧 / 暂停时画面是静态的，只在「时间、镜头、季节状态」变化时重绘一次。
      否则软件渲染的无头截图会对每帧都做 400+ draw call，审查脚本会卡死。 */
-  const staticKey = (dt === 0 && !playing && !scrubbing)
-    ? [t.toFixed(3), cam.theta.toFixed(3), cam.phi.toFixed(3), cam.radius.toFixed(3), (findActive ? 1 : 0)].join('|')
+  const staticKey = (dt === 0 && !playing && !scrubbing && !camMoving)
+    ? [t.toFixed(3), camSmooth.theta.toFixed(3), camSmooth.phi.toFixed(3), camSmooth.radius.toFixed(3), (findActive ? 1 : 0)].join('|')
     : '';
   if (staticKey === '' || staticKey !== lastStaticRenderKey) {
     lastStaticRenderKey = staticKey;
@@ -4409,7 +4731,13 @@ window.addEventListener('resize', () => {
   renderer.setSize(vp.w, vp.h);
 });
 
-document.getElementById('loading').style.display = 'none';
+{
+  const loadingEl = document.getElementById('loading');
+  if (loadingEl) {
+    requestAnimationFrame(() => loadingEl.classList.add('hidden'));
+    setTimeout(() => { loadingEl.style.display = 'none'; }, 620);
+  }
+}
 if (window.matchMedia('(pointer: coarse)').matches) {
   document.getElementById('tips').textContent = '单指拖动环顾 · 双指缩放 · 用底部进度条控制播放';
 }

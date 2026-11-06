@@ -24,6 +24,7 @@
   var musicBtn = document.getElementById('musicBtn');
   var classMusicBtn = document.getElementById('classMusicBtn');
   var volumeEl = document.getElementById('volume');
+  var classVolumeEl = document.getElementById('classVolume');
   var audio = document.getElementById('bgm');
   if (!timeline || !playBtn || !playerEl || !audio) return;
 
@@ -38,6 +39,7 @@
   applyVolume();
   audio.loop = false;                       // 故事播完就停，不循环
   if (volumeEl) volumeEl.value = String(Math.round(volume * 100));
+  if (classVolumeEl) classVolumeEl.value = String(Math.round(volume * 100));
 
   var unlocked = false;                    // 浏览器是否允许出声
   var lastT = parseFloat(timeline.value) || 0;
@@ -50,14 +52,21 @@
   function label() {
     if (!musicBtn) return;
     var audible = on && unlocked;
-    musicBtn.textContent = audible ? '♫ 音乐' : (on ? '♫ 开启音乐' : '♪ 已静音');
+    // 固定短文案，状态只靠 aria-label 与状态点表达，避免按钮宽度抖动
+    var labelEl = musicBtn.querySelector ? musicBtn.querySelector('.btn-label') : null;
+    if (labelEl) labelEl.textContent = '音乐'; else musicBtn.textContent = '音乐';
     musicBtn.setAttribute('aria-label', audible ? '关闭背景音乐' : '开启背景音乐');
+    musicBtn.setAttribute('aria-pressed', audible ? 'true' : 'false');
     musicBtn.title = (audible ? '关闭背景音乐（M）' : '开启背景音乐（M）');
-    if (musicBtn.classList) musicBtn.classList.toggle('off', !on);
+    if (musicBtn.classList) {
+      musicBtn.classList.toggle('off', !on);
+      musicBtn.classList.toggle('on', audible);
+    }
     if (classMusicBtn) {
-      classMusicBtn.textContent = audible ? '♫ 音乐' : (on ? '♫ 开启' : '♪ 静音');
+      classMusicBtn.textContent = '音乐';
       classMusicBtn.classList.toggle('on', audible);
       classMusicBtn.setAttribute('aria-label', audible ? '关闭背景音乐' : '开启背景音乐');
+      classMusicBtn.setAttribute('aria-pressed', audible ? 'true' : 'false');
     }
   }
   function seekToStory() {
@@ -114,13 +123,16 @@
     classMusicBtn.addEventListener('touchstart', function (e) { e.stopPropagation(); });
     classMusicBtn.addEventListener('click', toggleMusic);
   }
-  if (volumeEl) {
-    volumeEl.addEventListener('input', function () {
-      volume = Math.max(0, Math.min(1, (parseFloat(volumeEl.value) || 0) / 100));
-      applyVolume();
-      persist();
-    });
+  function onVolumeInput(e) {
+    var v = Math.max(0, Math.min(1, (parseFloat(e.target.value) || 0) / 100));
+    volume = v;
+    if (volumeEl) volumeEl.value = String(Math.round(volume * 100));
+    if (classVolumeEl) classVolumeEl.value = String(Math.round(volume * 100));
+    applyVolume();
+    persist();
   }
+  if (volumeEl) volumeEl.addEventListener('input', onVolumeInput);
+  if (classVolumeEl) classVolumeEl.addEventListener('input', onVolumeInput);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleMusic(); return; }
     // 空格 / ←→ / Home / End / R 都会改变时间轴，等 app.js 处理完再对齐
@@ -147,7 +159,7 @@
   function syncPlayState() {
     label();
     var t = now();
-    var playing = playBtn.textContent.trim() === '⏸';
+    var playing = playBtn.dataset ? playBtn.dataset.playing === '1' : playBtn.textContent.trim() === '⏸';
     var end = parseFloat(timeline.max) || 259.9;
     var hidden = playerEl.style.display === 'none';   // 定帧截图 / 导出视频：不出声
     var shouldPlay = on && unlocked && playing && !hidden && t < end - 0.05;
