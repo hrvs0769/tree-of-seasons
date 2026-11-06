@@ -1,6 +1,6 @@
 # 视觉迭代记录（自截图 → 图像分析 → 自我改进）
 
-> 最后更新：2026-11-06 · 对应代码：`a99c037`（第二轮优化 · 确定性基线 · 深根水层 · 鸟虫树荫 · 文案对齐）
+> 最后更新：2026-11-07 · 对应代码：`6e5f29f`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
 >
 > 历史记录 · 当前功能说明以 `DEVELOPMENT.md` 为准
 
@@ -445,3 +445,32 @@ HR 连续四次否定自制配乐（正弦合成 → 采样编曲 → 悠然版 
 | 工具 | `./tools/visual-audit.sh` 快速 8 张 / `AUDIT_FULL=1` 全量 24 张（1440×900）；审查结论见 `docs/08-visual-standard.md` 的 audit-r2 |
 
 还剩（下一轮，非本轮范围）：末级枝条的节疤/树瘤层次、44 秒极近景主根的表面细节、草丛与远山的重复感、叶片极端近景的平面感。回退点 `pre-round2`（本轮前）与 `round2-v1`（本轮完成点）。
+
+---
+
+### r32 —— 第三轮 UI 现代化与交互打磨（2026-11-07）
+
+> 本轮只改界面与交互层，**不改 3D 场景、14 章文案、章节时序、旁白与 BGM 音频**。基线是 `docs/10-round3-ui-plan.md` 的只读审计（P0 4 / P1 22 / P2 20，共 46 条），逐条整改状态与截图索引见 `docs/11-round3-ui-system.md`。
+
+看到（旧版基线）：
+
+1. 宋体 + 金棕 + 深绿渐变 + 点状纹理 + 装饰光晕 + 胶囊按钮 + emoji 图标，整体像十年前的网页；`#loading` 还是浅蓝渐变，首屏闪色。
+2. 移动端课堂顶栏 8 个按钮只有 43.9×26px、9px 字；播放器 `#playBtn` 36×36、`#timeline` 只有 6px 高，拇指几乎拖不动。
+3. 弹层 `openModal()` 只加 `.show`：Tab 在背景控件里循环、Space 会穿透改变播放、按 `Q` 能叠两层弹层；自动暂停提示 `pointer-events:none` 完全不可点；退出课堂无确认且把 `storyTime` 归零。
+4. 画布没有 `tabindex` / 角色 / 键盘操作；4px 抖动就会转镜头却仍触发点认；季节转盘看着能点其实 `pointer-events:none`；点认卡固定在左下角、glyph 取名称末字（「树干」显示「干」）。
+5. `bgm.js` 用 `playBtn.textContent === '⏸'` 判断播放状态，音乐按钮文案随状态变宽（84.7 / 62.7 / 68.2px），换图标就会坏；找一找错误 toast 盖住任务条；`syncPlayer()` 每帧写 DOM；无 `prefers-reduced-motion`；viewport 禁止用户缩放。
+
+改：
+
+- **设计系统**：`:root` 重做为暖纸色 `--paper #F4F2ED` / `--surface #FBFAF7` + 墨色 `--ink #14181A` / `--ink-2 #5D635E` / `--ink-3 #6A706A`（AA）+ 单一森林绿 `--accent #246B4E`，四季色由 `body[data-season]` 写入 `--season`；1px `--line`、圆角 9/14/20px、`--shadow-sm/md/lg`、`--ease cubic-bezier(.22,.9,.28,1)` / `--ease-out cubic-bezier(.16,1,.3,1)`；全站无衬线系统字体栈（无宋体、无网络字体）。图标换成 15 个内联 SVG symbol（`#i-play / #i-pause / #i-replay / #i-music / #i-volume / #i-chapters / #i-grid / #i-present / #i-close / #i-lock / #i-keyboard / …`），状态用 `data-playing` / `aria-pressed` / class，不再依赖 textContent。
+- **布局**：左侧改为编辑式讲解栏（品牌 + 季节 54–70px 大字 + 14 段 `#chapterRail` + 旁白 + `#sidebarTools` + 两行 `#tips`），右侧 3D 舞台变 `--gutter 18px` 留白的浮动圆角画框（圆角 18px + 阴影），底部播放条浮在纸面上；课堂模式改浅色顶栏 + 白色字幕带 + 白色控制条；开场页左右分栏，右下「年轮四季」SVG 插画带 46s 缓慢环绕的小圆点；`#loading` 改纸色 logo + 生长进度线，加载完 `.hidden` 500ms 级淡出。
+- **播放器**：SVG 播放/暂停由 `setPlayUI()` 写 `data-playing` 与 `aria-label`；`#timelineWrap / #timeline` 36px 命中区（移动端 44px）+ `#scrubTip`「mm:ss · 章名」气泡；`beginScrub/endScrub` 用 `scrubResume` 保留并恢复原播放状态；`#musicBtn` 固定文案「音乐」+ `.status-dot` + `aria-pressed`；`syncPlayer()` 用 `_syncCache` 差异写入，暂停时几乎零 DOM 操作；首尾章自动 `disabled`。
+- **镜头**：新增 `camSmooth` + `camEase = 1 - exp(-realDt*14)`（14Hz 缓动，定帧/视频/合影 `snapCam` 直接吸附保证可复现）；9px 拖拽死区、松手 `camVel` 惯性、双击复位 `1.46/1.46/12.5`、滚轮平滑缩放；canvas 加 `tabindex=0 / role=application / 中文 aria-label`，方向键旋转、`+/-` 缩放、`Enter` 点认画面中心；`REDUCED_MOTION` 关自动环绕，CSS `@media (prefers-reduced-motion: reduce)` 把动画时长压到 `.001ms`；viewport 去掉 `maximum-scale=1 / user-scalable=no`。
+- **课堂模式**：顶栏 8 个工具（移动端 `flex: 0 0 calc(25% - 3px)` + `height:44px` 两行，退出按钮 danger 色 + 确认）；新增 `#classProgress`（`role=slider aria-valuemin/max/now`，点击 / 拖动 / 键盘 ←→，同样保留播放状态）与 `#classVolume`；`updateClassroomButtons()` 为每章停 / 朗读 / 增亮 / 锁定写 `aria-pressed` 且文案固定；`#exitConfirm` 二次确认，`exitClassroomMode()` **不再归零 `storyTime`**，`#freeViewBtn` 变「继续观看」；结束不再自动弹四季合影，只 toast 提示；`#classTimecode` 移动端保留。
+- **弹层 / 浮层 / a11y**：5 个 `.modal`（章节 / 教师 / 合影 / 快捷键 / 退出确认）全部 `role=dialog aria-modal=true aria-labelledby=…`；`setBackgroundInert()` 给 8 个背景容器加 `inert`，打开聚焦 `.modal-close`、Tab 循环、关闭恢复 `lastFocusedBeforeModal`，`.closing` + `modalFadeOut .18s` 退场，`openModal` 先关其它弹层；全局快捷键在 `hasOpenModal()` 时只留 Esc/Tab；Esc 分层关闭（弹层 → 点认卡 → 找一找 → 暂停提示 → 退出确认）。`#findBanner / #pausePrompt / #classToast / #subtitleText` 补 `role=status` 与 `aria-live`；错误 toast 移到底部；`#pausePrompt` 可点 `#pauseContinue`「继续播放」；`#partCard` 锚定点击位置、自动翻转、移动固定底部、glyph 用 `PART_INFO.glyph` 专用字（种/根/干/枝/叶/花/果/雪/鸟/虫）；四季合影 `setQuartetBusy()` 给按钮 `disabled + aria-busy + busy` 态，图片 `object-fit:contain` 不裁切。
+- **动效与细节**：`retriggerAnim()` 让标题 `seasonIn .45s`、正文 `textIn .32s`、字幕 `textIn .3s` 淡入上移；课堂 chrome `chromeDown/chromeUp .42–.45s`；弹层 `modalFade .24s / modalPop .34s`；统一 hover/active(`scale(.97)`)/focus-visible/disabled；`--ink-3` 提到 AA；文本区域显式 `user-select:text`；`#tips` 两行不孤字；季节转盘重做细环（conic + 挖空 mask + 四角标签圆点 + 细指针）；新增 `?` 快捷键面板（12 条 `<kbd>`）；章节缩略图改抽象季节色块 + `data-num`。
+- **BGM 同步**：`src/bgm.js` 改读 `playBtn.dataset.playing`（保留一行 legacy `textContent` 兜底），音乐按钮固定文案 + 状态点 + `aria-pressed`，`#volume` 与 `#classVolume` 双向同步，`M` 键在 `bgm.js` 内处理。
+
+验收（对照 `docs/10` 46 条）：**已修复 34 / 部分 12 / 不做 0**；`docs/10 §5` 的 10 条范围约定单列为 9 条不做 / 1 条部分（双击复位属点按级补充，记为部分）。截图见 `shots/round3/`：`v12-start.png`（开场）、`v12-normal.png`（自由观看）、`v12-class.png`（桌面课堂）、`v12-mobile-class.png`（移动课堂）、`v14-quartet.png`（四季合影）、`v8-chapters.png` / `v8-teacher.png`（弹层）、`v4-partcard.png` / `v4-find.png` / `v4-pause.png`（点认 / 找一找 / 自动暂停）、`v12-exit.png`（退出确认）；另有 `a11y-*` 五种尺寸与 `a11y-reduced-motion-1280x800.png`。新增独立截图工具 `tools/ui-shot.js`（Playwright，可指定视口、actions JSON、等待时间）。
+
+还剩（`docs/11 §7` 的「部分」项）：移动端 / ≤980px 音量控件、辅助字号统一到 ≥12px、`#partClose / #findClose` 命中区补到 44px、桌面顶栏分组、移动端双提示层避让、`backdrop-filter` 无模糊回退、章节缩略图真实化、章节弹层 DOM 复用、季节转盘点击跳季。

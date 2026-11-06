@@ -2,7 +2,7 @@
 
 > **给新会话的 AI / 新开发者：先读这份主文档。**
 > 这里只放项目概况、架构、文件索引、关键约定和常见任务。需要改某个模块时，再按下方文档索引进入对应子文档，不要先通读整个 `src/main.js`。
-> 最后更新：2026-11-06 · 对应代码：`a99c037`（第二轮优化 · 确定性基线 · 深根水层 · 鸟虫树荫 · 文案对齐）
+> 最后更新：2026-11-07 · 对应代码：`6e5f29f`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
 
 ---
 
@@ -21,11 +21,14 @@
 | 技术栈 | Three.js r170（本地 `lib/three.module.min.js`）、原生 JavaScript、HTML/CSS、Canvas 程序化贴图、esbuild |
 | 3D 资源 | 全部程序化生成；没有外部模型、图片或字体依赖 |
 | 随机基线 | `APP_SEED = 0x5EED2024` 的固定 `mulberry32` 覆盖 `Math.random`；定帧/课堂/舞台/视频用固定树种子 `20240601` |
+| 界面系统（第三轮） | 暖纸色 `--paper #F4F2ED` + 墨色 `--ink #14181A` + 单一森林绿 `--accent #246B4E`；全站无衬线、内联 SVG 图标、1px 细线、圆角 9/14/20；设计 token 与验收见 `docs/11` |
 | 音乐 | Yoiyami《The Budding of Consciousness》，CC0，见 `assets/MUSIC-LICENSE.md` |
 
-当前版本包含两种观看方式：默认是「左侧讲解栏 + 右侧 3D 舞台 + 底部播放条」的自由观看布局；点「开始上课」或访问 `?class` 后进入**幼儿园课堂模式**（全屏、大字幕、每章自动暂停、章节卡片、点认/找一找、四季转盘与四季合影、故事姐姐朗读、投影增亮、屏幕锁定）。
+当前版本包含两种观看方式：默认是「左侧编辑式讲解栏 + 右侧浮动圆角 3D 画框 + 底部播放条」的自由观看布局；点「开始上课」或访问 `?class` 后进入**幼儿园课堂模式**（浅色顶栏、白色大字幕带、白色控制条、每章自动暂停、章节卡片、点认/找一找、细环季节转盘与四季合影、故事姐姐朗读、投影增亮、屏幕锁定）。
 
 第二轮优化后，画面新增：6 层土壤剖面与地下水层、扎到含水层的深根、真正可见的云、远处偶尔飞过的鸟群、栖息的小鸟与蝴蝶/蜜蜂/瓢虫、树荫光斑、云影、飞絮、结尾新芽；所有章节文案提到的元素都能在画面里找到。
+
+**第三轮（本轮）重做界面与交互，不改 3D 场景**：全站改为暖纸色 `#F4F2ED` + 墨色 `#14181A` + 单一森林绿 `#246B4E`，无衬线系统字体、1px 细线、9/14/20px 圆角与轻投影，emoji 换成 15 个内联 SVG symbol。播放器加 36px 进度命中区与 hover 时间气泡，镜头加 14Hz 缓动 / 9px 拖拽死区 / 松手惯性 / 双击复位 / 键盘可达；课堂模式补细进度条 `#classProgress`、课堂音量、退出确认（保留 `storyTime`）与 `aria-pressed` 状态；5 个弹层补齐 dialog 语义、`inert`、焦点循环与 180ms 退场；点认卡锚定点击位置、找一找错误 toast 移到底部、章节与字幕 300–450ms 淡入、新增 `?` 快捷键面板与纸色加载页。设计 token、组件清单、动效规范与逐条验收见 [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md)。
 
 ---
 
@@ -73,9 +76,9 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 ### 3.1 代码与资源
 
 ```text
-index.html                 页面结构、课堂布局、课堂模式 DOM、旁白/播放器 DOM、BGM <audio>、季节转盘
+index.html                 页面结构、CSS 设计 token、SVG 图标 sprite、课堂布局与全部 DOM（约 1.2k 行）
 app.js                     esbuild 打包后的运行时（生成物）
-src/main.js                全部 3D 场景/时间轴/UI 播放逻辑（主源码，约 4.4k 行）
+src/main.js                全部 3D 场景/时间轴/UI 交互逻辑（主源码，约 4.8k 行）
 src/bgm.js                 背景音乐播放同步（独立普通脚本，不进 app.js bundle）
 lib/three.module.min.js    Three.js r170
 assets/
@@ -85,7 +88,11 @@ README.md                  面向使用者的简要说明
 DEVELOPMENT.md             本文件：开发者主文档 / 索引
 ITERATIONS.md              长期视觉与功能迭代记录（按轮次）
 docs/                      开发者子文档（本文件下方索引）
-tools/                     截图、视觉审查、渲染、探测、BGM 生成等工具（`visual-audit.sh`）
+tools/
+  shoot.sh / visual-audit.sh   固定时间点截图与视觉审查
+  ui-shot.js                  独立 Playwright UI 定点截图器（第三轮新增）
+  render.js / make-video.sh    旧成片流水线（勿当现行时间轴）
+  probe.js / make-*.js         调试探针与 BGM 生成存档
 ```
 
 ### 3.2 子文档索引（改哪里读哪里）
@@ -96,32 +103,36 @@ tools/                     截图、视觉审查、渲染、探测、BGM 生成�
 | [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | `t/g/p/rootAge` 时间模型、14 章章节表、生长曲线、雨窗/花果雪窗口、镜头关键帧、播放器状态 | 改时长、章节、旁白、镜头、进度条 |
 | [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 种子、枝条递归生成、根系（rootSub / 深扎续根 / 含水层须根）、叶片挂点、花/果/积雪、树体参数 | 改树的形态、生长动画、根系、叶片、果实 |
 | [`docs/04-environment.md`](docs/04-environment.md) | 天空、太阳、光照、地面、6 层土壤、地下水层、草花、远山、雾、云影、飞鸟虫、雨雪粒子 | 改环境、光照、天气、季节材质 |
-| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 左侧讲解栏、旁白章节、播放器控件、季节转盘、找一找（含 bird/insect）、BGM | 改 UI、交互、旁白、背景音乐 |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | v3 界面布局、组件与事件表、快捷键、镜头交互、弹层焦点、课堂流程、BGM 同步 | 改 UI、交互、旁白、背景音乐 |
 | [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 构建命令、离线模式、GitHub Pages 部署、缓存、资源清单、回退点 | 打包、发布、换部署地址 |
 | [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | URL 调试参数、确定性验证、截图流水线、章节/画面核对清单、性能 | 验证改动、找视觉回归、定位怪东西 |
 | [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 视觉标准、十维评分、第二轮审查结论、自动截图与视觉审查流程 | 做视觉升级、评审截图、判断是否达到标准 |
-| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 第二轮优化的问题清单、实施范围与验收标准（本轮已完成，保留原始清单） | 追溯「为什么这样改」、查 P0/P1/P2 问题编号 |
+| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 第二轮优化的问题清单、实施范围与验收标准（已完成，保留原始清单） | 追溯「为什么这样改」、查 P0/P1/P2 问题编号 |
+| [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 第三轮 UI 整改前的基线审计问题清单（P0 4 / P1 22 / P2 20，共 46 条） | 查整改前问题、复现步骤与旧版截图 |
+| [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 第三轮设计系统：token、组件清单、动效时长与 easing、交互映射、a11y、逐条验收状态、截图索引 | 改界面/组件、做 UI 回归、判断整改是否完成 |
 
-`ITERATIONS.md` 是历史记录，不是运行文档；当需要知道“为什么上一版这样做”时再查。
+`ITERATIONS.md` 是历史记录，不是运行文档；当需要知道“为什么上一版这样做”时再查。`docs/10` 是旧版基线审计，`docs/11` 是 v3 的整改结果与现行规范，两篇要一起看。
 
 ### 3.3 文档更新时间
 
 | 文档 | 最后更新 | 对应代码 / 说明 |
 |---|---|---|
-| [`README.md`](README.md) | 2026-11-06 | `a99c037` · 第二轮优化 · 用户使用说明与本轮新增 |
-| `DEVELOPMENT.md` | 2026-11-06 | `a99c037` · 第二轮优化 · 本文件：主索引与文档表 |
-| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-06 | `a99c037` · 第二轮优化 · 确定性随机 / rootAge / 水层 / 生物实例 / 静态对象 |
-| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-06 | `a99c037` · 第二轮优化 · 时间表重写（雨窗/裂壳/花果雪/深潜镜头） |
-| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-06 | `a99c037` · 第二轮优化 · rootSub / rootFat / 深扎续根 / 含水层须根 / 根毛 |
-| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-06 | `a99c037` · 第二轮优化 · 6 层土壤 / 水层 / 云 / 鸟虫 / 云影飞絮 |
-| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-06 | `a99c037` · 第二轮优化 · 季节转盘 90° / bird/insect / 结尾 HUD / 合影文案 |
-| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-06 | `a99c037` · 第二轮优化 · 重建提醒与 pre-round2 / round2-v1 |
-| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-06 | `a99c037` · 第二轮优化 · 确定性验证与本轮复核时间点 |
-| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-06 | `a99c037` · 第二轮优化 · audit-r2 结论与 ten-dim 通过判断 |
-| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-06 | `a99c037` · 第二轮优化 · 问题清单状态改为已完成并补实测值 |
-| [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-06 | 历史记录追加 r31；功能说明以本文件为准 |
+| [`README.md`](README.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 界面与交互段落、本轮新增 |
+| `DEVELOPMENT.md` | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 主索引、文件表与文档表 |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 架构（确定性 / rootAge / 水层 / 静态对象） |
+| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 时间表与镜头（第二轮结论保留） |
+| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 树体与根系（第二轮结论保留） |
+| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 环境（第二轮结论保留） |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · **整篇重写**：布局 / 组件 / 事件表 / 快捷键 / 课堂流程 / BGM |
+| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 构建与部署（结论保留） |
+| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 测试与调试（结论保留） |
+| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
+| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 第二轮问题清单（历史） |
+| [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
+| [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 2026-11-07 | `6e5f29f` · 第三轮 UI 现代化 · **新建**：设计 token / 组件 / 动效 / 交互映射 / a11y / 逐条验收 |
+| [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-07 | 历史记录追加 r32；功能说明以本文件为准 |
 
-维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮 `a99c037` 为占位符，提交后由维护者全局替换为真实哈希。
+维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `6e5f29f` 占位符，提交后由维护者全局替换为真实哈希。
 
 ---
 
@@ -189,7 +200,9 @@ FACE_H = SOIL_DEPTH + 2.5; // 14.5
 | 改旁白、播放器、键盘、季节转盘 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`src/main.js` 状态区 + `index.html` |
 | 改课堂模式、章节卡片、点认、四季合影、找一找 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`src/main.js` 的「课堂模式」段 + `index.html` 的 `#startScreen` / `#classroomTop` / `#classroomBar` |
 | 改飞鸟/昆虫/树荫/云影/飞絮 | [`docs/04-environment.md`](docs/04-environment.md)；`BIRD_WINDOWS`、`birdFlightAt()`、`makeCreature()`、`creatureGroup` |
-| 做视觉审查、对齐画面标准 | [`docs/08-visual-standard.md`](docs/08-visual-standard.md)；运行 `./tools/visual-audit.sh audit-rN` |
+| 改界面、组件、动效、无障碍 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) 与 [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md)；`index.html` 的 `:root` token、`src/main.js` 交互层 |
+| 做视觉审查、对齐画面标准 | [`docs/08-visual-standard.md`](docs/08-visual-standard.md)；运行 `./tools/visual-audit.sh audit-rN`；UI 定点截图用 `node tools/ui-shot.js` |
+| 查第三轮 UI 整改前问题 / 逐条状态 | [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md)（基线清单） / [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) §7（验收状态） |
 | 改背景音乐 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`assets/`、`src/bgm.js`、`index.html` 的 `<audio>` |
 | 重新打包 / 发布 GitHub Pages | [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) |
 | 截图 / 定位视觉回归 / 确定性验证 | [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) |
@@ -200,7 +213,7 @@ FACE_H = SOIL_DEPTH + 2.5; // 14.5
 
 1. **`app.js` 是生成物**：源码改完必须重新打包，否则线上/本地看到的还是旧 build。
 2. **`tools/render.js` 是旧的 58 秒成片流水线**：内部 `KEYS` 仍是旧版时间映射，不要把它当成当前网页时间轴依据；网页以 `src/main.js` 的 `GROW_KEYS/CHAPTERS` 为准。
-3. **音频自动播放**：浏览器通常禁止无手势自动出声；`src/bgm.js` 会先尝试，失败后等待首次点击，或点底部「♫ 开启音乐」。
+3. **音频自动播放**：浏览器通常禁止无手势自动出声；`src/bgm.js` 会先尝试，失败后等待首次点击，或点底部固定文案的「音乐」按钮（SVG 图标 + 状态点）。
 4. **GitHub Pages 是静态快照**：本地仓库没有把 GitHub 配置成 upstream；部署需要按 `docs/06-build-and-deploy.md` 把运行文件同步到 GitHub 仓库。
 5. **叶片仍是带纹理的小卡片**：远处层次已经足够，极端近景（<0.5m）还能看出平面；要再升级见 `docs/03` 的“后续方向”。
 6. **性能基线（第二轮实测）**：`?dbg` 下 `renderer.info.render.calls = 466`、`triangles ≈ 628574`，仍在 450–500 / ≤0.65M 预算内。改树/根/粒子后一定要用 `renderer.info` 复测。
