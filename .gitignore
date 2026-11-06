@@ -11,3 +11,4 @@ shots/
 # 打包中间产物
 *.map
 /tmp/
+__pycache__/
