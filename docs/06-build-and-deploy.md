@@ -2,6 +2,7 @@
 
 > 本文解决：怎么重新打包、哪些文件是生成物、怎么发布到 GitHub Pages、怎么更新缓存，以及部署时别漏哪些资源。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
+> 最后更新：2026-11-06 · 对应代码：`55ec5d5`（课堂模式 · 找一找队列 · 远山改版）
 
 ## 1. 本地运行
 
@@ -11,7 +12,7 @@
 open /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons/index.html
 ```
 
-不需要 `npm install`、不需要本地服务器、不需要联网。所有 3D 贴图都是 Canvas 程序化生成；音频是本地 `assets/` 文件。
+不需要 `npm install`、不需要本地服务器、不需要联网。所有 3D 贴图都是 Canvas 程序化生成；音频是本地 `assets/` 文件。这是开发预览方式；幼儿园课堂使用请走 GitHub Pages 的 `?class` 入口，不另外提供离线课堂包。
 
 ## 2. 构建（修改 `src/main.js` 后必须执行）
 
@@ -43,6 +44,7 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 |---|---|
 | GitHub 仓库 | https://github.com/hrvs0769/tree-of-seasons |
 | GitHub Pages | https://hrvs0769.github.io/tree-of-seasons/ |
+| 课堂模式入口 | https://hrvs0769.github.io/tree-of-seasons/?class |
 | 分支/目录 | `main` / `/` |
 | 发布方式 | GitHub Pages legacy branch source（`gh api .../pages`） |
 | 账号 | `gh` 已登录 `hrvs0769` |
@@ -62,7 +64,7 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 ### 4.2 同步运行文件
 
 ```bash
-cp index.html app.js README.md ITERATIONS.md /tmp/tree-of-seasons-deploy/
+cp index.html app.js README.md DEVELOPMENT.md ITERATIONS.md /tmp/tree-of-seasons-deploy/
 cp -R lib /tmp/tree-of-seasons-deploy/            # Three.js
 cp -R src /tmp/tree-of-seasons-deploy/            # main.js + bgm.js（源码也公开）
 mkdir -p /tmp/tree-of-seasons-deploy/assets

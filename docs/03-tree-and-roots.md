@@ -2,8 +2,9 @@
 
 > 本文解决：树是怎么“长”出来的，种子/枝条/根系/叶片/花/果/雪各自在哪些函数里、有哪些参数，以及改树形时最容易踩的坑。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
+> 最后更新：2026-11-06 · 对应代码：`55ec5d5`（课堂模式 · 找一找队列 · 远山改版）
 
-代码主入口：`src/main.js` 的 `buildTree(seed)`（约 `src/main.js:1247` 起）。
+代码主入口：`src/main.js` 的 `buildTree(seed)`。
 
 ## 1. 树的生成顺序
 
@@ -19,7 +20,25 @@
 8. 创建种子（上下两个半球 + 裂缝环）和两片子叶；
 9. 返回 `result`，由 `treeRoot.add(group)` 挂到场景。
 
-返回对象包含 `branches/roots/leaves/leafData/fruits/stems/fruitData/blossoms/snowCaps/seedMesh/...`，`disposeTree()` 负责释放。
+返回对象包含 `branches/roots/leaves/leafData/fruits/stems/fruitData/blossoms/blossomData/snowCaps/snowCapData/seedMesh/...`，`disposeTree()` 负责释放。
+
+## 1.1 部位拾取标记
+
+为了让课堂模式的「点一点认一认 / 找一找」能识别树体，`buildTree()` 给关键 mesh 写了 `mesh.userData.part`：
+
+| `userData.part` | 对应对象 |
+|---|---|
+| `seed` | `seedMesh` |
+| `root` | 根系每段 Mesh、`flare` |
+| `trunk` | `branches[0]`（主干） |
+| `branch` | `branches[1..]`（侧枝） |
+| `leaf` | `leaves` InstancedMesh |
+| `cotyledon` | 两片子叶 |
+| `flower` | `blossoms` InstancedMesh |
+| `fruit` | `fruits`、`stems` InstancedMesh |
+| `snow` | `snowCaps` InstancedMesh |
+
+`src/main.js` 的 `partVisibleAt()` / `partHasVisibleState()` 过滤当前不可见对象，`partScreenPoints()` 把部位投影到屏幕，供 `isNearFindTarget()` 做宽容点击；细节见 [`05-ui-and-audio.md`](05-ui-and-audio.md)。
 
 ## 2. 枝条
 

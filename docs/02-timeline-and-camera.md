@@ -2,6 +2,7 @@
 
 > 本文解决：故事时间怎么走、14 个章节与画面如何对应、镜头关键帧在哪里，以及改时长/改章节时必须同步哪些地方。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
+> 最后更新：2026-11-06 · 对应代码：`55ec5d5`（课堂模式 · 找一找队列 · 远山改版）
 
 ## 1. 三个时间量
 
@@ -149,7 +150,9 @@ dur = [0.025, 0.020, 0.015, 0.010]
 - 到 `STORY_END` 自动 `playing=false`，不循环。
 - `?freeze`：`t = FREEZE_T`，`playing=false`，播放器隐藏。
 - `?video`：`t = videoT`，由 `tools/render.js` 或其它外部脚本喂入。
-- `?t0=N`：初始 `storyTime=N`，默认继续播放。
+- `?t0=N`：初始 `storyTime=N`，默认继续播放；会自动跳过开场页。
+- `?class`：进入课堂模式；课堂模式默认开启“每章结束自动暂停”，停在 `CHAPTERS[i].end`，此时 `chapterIndexAt` 已自然指向下一章，点播放/空格从下一章继续。
+- 课堂模式下的 `syncPlayer()` 同时更新 `#classTimecode` 和底部大播放按钮；`updateChapterUI()` 同时更新课堂大字幕和教师提示。
 
 进度条和章节刻度：
 
@@ -168,6 +171,7 @@ dur = [0.025, 0.020, 0.015, 0.010]
 6. 检查 `snowA`、`winterF`、`groundLeafDecay`、`fruitGrow/fruitFall` 的 `p` 窗口是否仍在对应章节；
 7. 改 `README.md` 的章节表和总时长；
 8. 用 `?t0=16`、`?t0=20`、`?t0=32/56/76/94/108/120` 逐章截图核对。
+9. 课堂模式检查 `?class&t0=15` 播放到 16 秒是否自动暂停；确认 `?class&t0=128&freeze` 的标题/字幕/季节转盘与章节一致。
 
 ## 7. 已知教训
 
