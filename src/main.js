@@ -3044,8 +3044,18 @@ function syncPlayer() {
     setPlayUI(classPlayBtn, playing);
   }
   if (classProgressEl) {
-    if (pct !== _syncCache.cpct) { classProgressEl.style.setProperty('--cp', pct); classProgressEl.firstElementChild.style.width = pct; _syncCache.cpct = pct; }
-    classProgressEl.setAttribute('aria-valuenow', String(Math.round(storyTime)));
+    if (pct !== _syncCache.cpct) {
+      classProgressEl.style.setProperty('--cp', pct);
+      classProgressEl.firstElementChild.style.width = pct;
+      classProgressEl.setAttribute('aria-valuetext', fmtTime(storyTime) + ' / ' + fmtTime(STORY_END));
+      _syncCache.cpct = pct;
+    }
+    const nowSec = Math.round(storyTime);
+    if (nowSec !== _syncCache.caria) { classProgressEl.setAttribute('aria-valuenow', String(nowSec)); _syncCache.caria = nowSec; }
+  }
+  if (timelineEl) {
+    const tSec = Math.round(storyTime);
+    if (tSec !== _syncCache.tts) { timelineEl.setAttribute('aria-valuetext', fmtTime(storyTime) + ' / ' + fmtTime(STORY_END)); _syncCache.tts = tSec; }
   }
   const idx = chapterIndexAt(storyTime);
   if (idx !== _syncCache.chapter) {
@@ -3379,6 +3389,7 @@ function lockScreen() {
   hidePartCard();
   stopFindGame();
   lockOverlayEl.classList.add('show');
+  requestAnimationFrame(() => { try { lockOverlayEl.focus({ preventScroll: true }); } catch (e) {} });
   updateClassroomButtons();
 }
 function unlockScreen() {

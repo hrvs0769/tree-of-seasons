@@ -35,7 +35,12 @@
   var volume = saved && typeof saved.volume === 'number' ? saved.volume : 0.85;
   volume = Math.max(0, Math.min(1, volume));
   var ducked = false;                       // 故事姐姐朗读时自动压低背景音乐
-  function applyVolume() { audio.volume = volume * (ducked ? 0.18 : 1); }
+  function applyVolume() {
+    audio.volume = volume * (ducked ? 0.18 : 1);
+    var pctText = Math.round(volume * 100) + '%';
+    if (volumeEl) volumeEl.setAttribute('aria-valuetext', pctText);
+    if (classVolumeEl) classVolumeEl.setAttribute('aria-valuetext', pctText);
+  }
   applyVolume();
   audio.loop = false;                       // 故事播完就停，不循环
   if (volumeEl) volumeEl.value = String(Math.round(volume * 100));

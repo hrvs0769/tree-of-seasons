@@ -26,7 +26,7 @@
     --ink-3: #6A706A;
     --line: rgba(20, 24, 26, .09);
     --line-2: rgba(20, 24, 26, .16);
-    --track: #918F88;
+    --track: #8C8A83;
     --accent: #246B4E;
     --accent-2: #1B5540;
     --accent-soft: #E3EEE7;
@@ -184,7 +184,7 @@
     display: flex; flex-direction: column; gap: 2px; flex: none;
   }
   #sidebarTools button {
-    display: flex; align-items: center; gap: 10px; width: 100%; height: 37px; padding: 0 10px;
+    display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 10px;
     border: 0; border-radius: 9px; background: transparent; color: var(--ink-2);
     font-size: 12.5px; font-weight: 500; text-align: left; cursor: pointer;
     transition: background .18s var(--ease), color .18s var(--ease);
@@ -422,7 +422,7 @@
     padding: 3px; border-radius: 11px; background: rgba(20, 24, 26, .045);
   }
   .class-top-actions button {
-    height: 44px; padding: 0 11px; border-radius: 9px; border: 0;
+    height: 44px; min-width: 44px; padding: 0 11px; border-radius: 9px; border: 0;
     background: transparent; color: var(--ink-2);
     font-size: 11.5px; font-weight: 550; letter-spacing: .01em; cursor: pointer; white-space: nowrap;
     transition: background .18s var(--ease), color .18s var(--ease), box-shadow .18s var(--ease);
@@ -555,7 +555,7 @@
   #classPlayBtn .icon { width: 20px; height: 20px; }
   #classPlayBtn .i-play { margin-left: 2px; }
   .class-small-btn {
-    height: 44px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line);
+    height: 44px; min-width: 44px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--line);
     background: transparent; color: var(--ink-2); font-size: 11px; font-weight: 500;
     cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
     transition: background .18s var(--ease), color .18s var(--ease), border-color .18s var(--ease);
@@ -944,7 +944,7 @@
   <div id="tips">拖动环顾 · 滚轮缩放 · 双击复位<br>空格暂停 · ← → 快进 · F 全屏 · M 音乐 · ? 快捷键</div>
 </aside>
 
-<div id="player">
+<div id="player" role="region" aria-label="播放控制">
   <div class="row">
     <button id="playBtn" data-playing="1" aria-label="暂停">
       <svg class="icon i-play" aria-hidden="true"><use href="#i-play"/></svg>
@@ -1038,7 +1038,7 @@
     <span id="classChapterTitle">种子入土</span>
     <span id="classSeason">春 · 第 1 年</span>
   </div>
-  <div class="class-top-actions">
+  <div class="class-top-actions" role="toolbar" aria-label="课堂工具">
     <button id="classChapterBtn" title="选择章节（C）">章节</button>
     <button id="classTeacherBtn" title="教师提示（T）">教师提示</button>
     <button id="classFindBtn" title="找一找小游戏">找一找</button>
@@ -1206,7 +1206,7 @@
 <div id="classToast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <!-- 屏幕锁定 -->
-<div id="lockOverlay" role="dialog" aria-modal="true" aria-label="屏幕已锁定">
+<div id="lockOverlay" role="dialog" aria-modal="true" aria-label="屏幕已锁定" tabindex="-1">
   <div class="lock-inner">
     <div class="lock-icon"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg></div>
     <div class="lock-title">屏幕已锁定</div>
