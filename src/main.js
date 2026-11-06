@@ -1415,7 +1415,7 @@ function buildTree(seed) {
     const bendAxis = new THREE.Vector3().crossVectors(dir, UP);
     if (bendAxis.lengthSq() < 1e-6) bendAxis.set(1, 0, 0);
     bendAxis.normalize().applyAxisAngle(dir, rand() * Math.PI * 2);
-    const bend = depth === 0 ? randRange(rand, 0.18, 0.40) : randRange(rand, 0.16, 0.54);
+    const bend = depth === 0 ? randRange(rand, 0.24, 0.52) : randRange(rand, 0.22, 0.62);
     const step = len / (rings - 1);
 
     for (let i = 1; i < rings; i++) {
@@ -1547,7 +1547,7 @@ function buildTree(seed) {
       const azim = depth <= 1
         ? (i / sides) * Math.PI * 2 + randRange(rand, -0.42, 0.42)
         : rand() * Math.PI * 2;
-      const tilt = randRange(rand, 0.68, 1.05);
+      const tilt = randRange(rand, 0.60, 1.14);
       const at = depth === 0 ? randRange(rand, 0.3, 0.85) : randRange(rand, 0.22, 0.94);
       const { p, tangent } = pointAt(pts, at);
       const ri = Math.min(radii.length - 1, Math.max(0, Math.round(at * (radii.length - 1))));
