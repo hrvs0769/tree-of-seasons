@@ -499,6 +499,12 @@
   #findBanner b { color: #ffd77e; }
   #findBanner.shake { animation: findShake .35s ease; }
   @keyframes findShake { 0%,100%{transform:translateX(-50%)} 25%{transform:translateX(calc(-50% - 6px))} 75%{transform:translateX(calc(-50% + 6px))} }
+  #findProgress { flex: none; font-size: 10px; letter-spacing: .08em; color: rgba(247,240,227,.50); white-space: nowrap; }
+  #findNext {
+    flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(232,196,122,.40);
+    background: rgba(232,196,122,.14); color: #ffd77e; font-family: inherit; font-size: 11px; cursor: pointer;
+  }
+  #findNext:hover { background: rgba(232,196,122,.26); }
   #findClose { border: 0; background: transparent; color: rgba(247,240,227,.55); font-size: 22px; cursor: pointer; line-height: 1; }
 
   /* 自动暂停提示 */
@@ -592,7 +598,9 @@
     #partCard { left: 10px; bottom: calc(var(--player-h) + 10px); padding: 13px 14px; }
     body.classroom-mode #partCard { left: 10px; bottom: calc(var(--class-bottom) + 10px); }
     #partGlyph { width: 48px; height: 48px; font-size: 22px; }
-    #findBanner { font-size: 14px; padding: 9px 14px; gap: 10px; max-width: calc(100vw - 20px); }
+    #findBanner { font-size: 14px; padding: 8px 10px; gap: 7px; max-width: calc(100vw - 16px); flex-wrap: wrap; justify-content: center; }
+    #findProgress { font-size: 8px; }
+    #findNext { padding: 5px 9px; font-size: 10px; }
     #pausePrompt { font-size: 12px; padding: 8px 14px; max-width: calc(100vw - 20px); white-space: normal; }
   }
 
@@ -775,6 +783,8 @@
   <!-- 找一找提示 -->
   <div id="findBanner">
     <span id="findText">找一找：<b>根</b>在哪里？</span>
+    <span id="findProgress">第 1 轮 · 1/4</span>
+    <button id="findNext">下一个</button>
     <button id="findClose" aria-label="关闭">×</button>
   </div>
 
