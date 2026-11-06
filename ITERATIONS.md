@@ -1,6 +1,8 @@
 # 视觉迭代记录（自截图 → 图像分析 → 自我改进）
 
-> 历史记录 · 最后更新：2026-11-05 · 当前功能说明以 `DEVELOPMENT.md` 为准
+> 最后更新：2026-11-06 · 对应代码：`a99c037`（第二轮优化 · 确定性基线 · 深根水层 · 鸟虫树荫 · 文案对齐）
+>
+> 历史记录 · 当前功能说明以 `DEVELOPMENT.md` 为准
 
 ## 机制
 
@@ -407,3 +409,39 @@ HR 连续四次否定自制配乐（正弦合成 → 采样编曲 → 悠然版 
 - 自制配乐的 v2 mp3 移出仓库备份；`tools/make-web-bgm.js`、`tools/make-bgm-sampled.py` 保留作存档，网页不再加载。
 - 验证：无头浏览器确认新音频加载（260 秒）、播放 / 暂停 / 跳到 120 秒 / 静音 / 偏好记忆 / 定帧静音全部正常，页面零报错。
 - 备选 CC0 曲子与 Mixkit 候选留在 `/tmp/tree-music-candidates/`，说一句即可替换。
+
+---
+
+### r31 —— 第二轮优化：确定性基线 / 深根水层 / 鸟虫树荫 / 文案对齐（2026-11-06）
+
+> 本轮不是「只改三件事」，而是把 `docs/09-round2-plan.md` 里用户点名的 5 个问题 + 三份只读审查报告（文案—画面对齐 / 根系—土壤 / 全场景仿真）合并成一张清单整体修完。问题清单与验收标准见 `docs/09-round2-plan.md`，本节只记录结果。
+
+看到（三份审查 + 基线截图）：
+
+1. `?t0=N&freeze` 每次加载都是不同的树：`seedCounter = Math.random()`、6 类贴图与 4 类粒子用裸 `Math.random()`、`dt` 下限 0.0001 让冻结帧仍在漂移 —— 所有截图 A/B 对比其实无效。
+2. 第一章 `?t0=6&freeze` 下半屏亮度仅 **16.9/255**，是一块几乎无结构的黑色异常区（腐殖质暗带 0.58 + AO 顶部遮光 0.22 + 表土深色叠加）。
+3. 天空只有太阳：云 shader 阈值 `0.84 - cloudCover*0.07` 远高于 fbm 典型值 0.48，`cover` 恒为 0；无飞鸟、飞絮、云影；第 12 章旁白「小鸟和昆虫都来这里休息」画面里一只都没有。
+4. 根系最深仅 y≈-3.49，且 `g` 在 120s 饱和后第 2 年完全静止；相机底边 -4.22 以下 7 单位空土，没有地下水层。
+5. 发芽顺序与文案错乱：根先于裂壳、裂缝环在 t<66 恒不可见、种子躺在草面、子叶被抬到树梢；季节配色在每季 55% 就混下一季（t=179 绿地下雪、结尾是春天却标「冬」）；春花在第一年提前开、果实穿地、落叶毯比落叶早 6 秒。
+
+改：
+
+- **确定性**：新增 `APP_SEED = 0x5EED2024` 的固定 `mulberry32` 并覆盖全局 `Math.random`（所有贴图/粒子/树形共用一条流）；`?t0=N&freeze` / `?class` / `?stage` / `?video` 用固定树种子 `20240601`；定帧 / 暂停 / 四季合影时 `dt = 0`；落叶生成改为 `spawnPhase = spawnRate * t` 的闭式相位判断；新对象（鸟虫、气泡、飞絮、种子）全部是 `t` 的闭式函数。`window.__classroom.seekForTest(t)` 复位 `cam.theta/radius/phi = 1.46/12.5/1.46`，保证正面视角。
+- **土壤与第一章**：`soilTexture()` 重写为 2048×768、`repeat.set(1,1)`（消除纵向接缝）、6 层（表土 / 心土 / 底土 / 毛管湿润带 / 含水饱和带 / 母质），层界 4 八度噪声、层内色斑、透镜体、根孔、潜育斑/渗流纹、近景土粒与孔隙；表土暗带 0.58→0.30 且厚度减半。`SOIL_DEPTH 9→12`、`FACE_H=14.5`、`WATER_TOP=-9.6`、`ROOT_FLOOR=-10.0`，`bumpScale 0.18→0.14`、`fog:false`。手工 AO 顶部遮光带 0.22→0.10（厚度 22%→10%）、深部只在最底 20% 收边；接触 AO 随 `g` 缩放/透明度变化。新增微距补光 `closeBoost`（frontFill/fillUnder 随 `viewH` 平滑增强）、近景 3D 草根 LineSegments + 土粒 InstancedMesh、草土边缘噪声幅度 ×3。
+- **根系与水层**：新增 `rootAge = g + 0.30*smoothstep(120,235,t)` 解开时间轴死锁；`rootPath` 主根陡直下垂 / 更缓收细、x 夹 ±11、z 放宽到 0.05–0.62（有体积）；`rootChain` 环数加密、侧根 12→14、长度 0.42–0.62、子根排期提前到第 3 章；主根 4.7–5.5 / r0 0.165、板根 8 条；新增 7 条第 2 年深扎续根（rootAge 1.00→1.20）与 8 条贴近潜水面的吸水须根。根拆到独立 `rootSub` 并每帧抵销 `treeRoot` 摇摆；根毛按成熟时刻排序 + `setDrawRange` 逐段显现（1 draw call）；`rootFat` 让幼根细老根粗、幼根颜色浅褐渐变深褐。水层为模块级对象（`waterGlow` / `waterEdge` / 湿润渐变 / `waterRipples` Shader / `waterBubbles` / `tipGlow`），由 `waterReveal = smoothstep(0.98,1.16,rootAge)` 驱动。相机 `BOTTOM_AUTO = -0.62-3.6*smoothstep(0,0.34,g)-6.35*deepReveal`，`deepReveal = smoothstep(205,255,t)*smoothstep(0.9,1.45,aspect)`，只在最后两章渐进露出含水层；t=120 硬切改为 120–130 平滑过渡；四季合影期间关掉深潜；`THETA_MIN/MAX` 由 ±0.62 收到 ±0.36。
+- **天空与生物**：云 shader 阈值改为 `0.40 - cloudCover*0.14`、三层 fbm、流速 ×2、不透明度 ×2；`pal.exposure` / `pal.bloom` 现在生效（`toneMappingExposure` 每帧更新、光芒透明度乘 `pal.bloom`）；太阳光芒改 28 条锥形渐变、太阳盘缩小柔化。新增程序化贴图与 InstancedMesh：`skyBirds`(14，窗口 46–84 / 128–158 / 196–232，雨天与隆冬不出鸟)、`perchBirds`(5)、`butterflies`(7)、`bees`(5)、`ladybugs`(5)，全部 `t` 的闭式函数、世界空间、树冠前 z>0 避免被叶遮挡；另有带光斑的 `treeShade` 树荫、`cloudShadowMeshes` 云影、`fluff` 飞絮、`seedDrop` 落果种子、`epilogueGroup` 结尾新芽。
+- **文案对齐**：`RAIN_WINDOWS` 删掉两个夏雨窗 `[128,138]` / `[206,216]`，补第 6 章 `[96,106,0.42]`；种子半埋 y=-0.035、`seedSplit` 提前到 18–30s、修 `seedCrack` 恒不可见的 bug、56–80s 被芽顶起；子叶固定在近地面胚轴并展开、第 5 章末枯萎；主根/板根排期后移到裂壳之后；春花只在 `yearIndex>=2` 开、尺寸 0.20–0.31、推到叶片前、MeshBasicMaterial 亮粉；果实只在第 13 章（220–240s）、青→熟变色、推到树冠前、落地不穿土；雪帽/雪花提前到冬章开头且放大；落叶毯延后到 p≥0.58 并连续淡入淡出；粉花瓣只在花期、落叶粒子冬季不生成；季节配色过渡 `0.55–0.95` → `0.86–1.0`；结尾 2.2s HUD 拨回「春 · 万物发芽 · 新的轮回」。
+- **UI**：季节转盘 `conic-gradient(from -90deg)` → `from 0deg`（指针维持 `rotate(p*360)` 与新色象限对齐）；四季合影说明去掉「结果」；开场页引导语补「还有小鸟、蜜蜂和蝴蝶来做客」；`SUBTITLE_KEYWORDS` 增加蜜蜂/蝴蝶/瓢虫。`PART_INFO` / `CHAPTER_PARTS[11]` / `partVisibleAt` / `partHasVisibleState` / `partWorldPoints` / `prepareFindBag` 新增 `bird` / `insect`；`partVisibleAt` 改为先问真实显隐再叠时间白名单；叶子在秋末/冬季不再被误判可见。
+
+实测验收：
+
+| 检查 | 结果 |
+|---|---|
+| 确定性 | 两个独立 `--user-data-dir` 加载 `?t0=128&freeze`，`ImageChops.difference` 的 `bbox = None`（逐像素一致）；间隔数秒再截仍一致 |
+| 第一章 | `?t0=6` 下半屏亮度 **16.9 → 85.7/255**，土粒 / 层理 / 草根可读，不再是一块黑色异常区 |
+| 逐章 | `?t0=20` 春雨、`?t0=44` 幼根细且侧根可见、`?t0=128` 夏、`?t0=170` 冬雪、`?t0=190` 花簇与蜜蜂、`?t0=210` 飞鸟/蝴蝶/蜜蜂/瓢虫/树荫、`?t0=230` 红果、`?t0=250` 深根抵达含水层、`?t0=259.8` 结尾新芽，全部通过 |
+| 性能 | `?dbg` 下 `renderer.info.render.calls = 466`、`triangles ≈ 628574`（在 450–500 / ≤0.65M 预算内） |
+| 课堂 | `?class&t0=210&freeze` 大字幕 / 季节转盘正常；找一找队列含 bird/insect，点昆虫返回「找到啦！这是昆虫」 |
+| 工具 | `./tools/visual-audit.sh` 快速 8 张 / `AUDIT_FULL=1` 全量 24 张（1440×900）；审查结论见 `docs/08-visual-standard.md` 的 audit-r2 |
+
+还剩（下一轮，非本轮范围）：末级枝条的节疤/树瘤层次、44 秒极近景主根的表面细节、草丛与远山的重复感、叶片极端近景的平面感。回退点 `pre-round2`（本轮前）与 `round2-v1`（本轮完成点）。
