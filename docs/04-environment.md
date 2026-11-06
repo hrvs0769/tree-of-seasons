@@ -82,7 +82,7 @@ const sunAz = cam.theta - Math.PI - 0.28 + Math.sin(t * 0.03) * 0.04;
 
 ### 3.3 远山
 
-`ridgeGroup` 三层 `makeRidge()`：半径 138/96/61，高度 17/8.5/3.4；用 fbm 产生轮廓，颜色按 `pal.fog/pal.skyTop/pal.ground` 混合；`fog:false`（自行做空气透视）。
+`ridgeGroup` 三层 `makeRidge()`：半径 172/124/82，高度 24/12.5/5.2；使用 ridged fbm 生成更有起伏的山脊线，每层是 7 段竖向渐变网格 + `ShaderMaterial`：底部接近雾色、顶部为山体色，远山带雪线（`uSnowLine/uSnowStrength`），中景丘陵偏青绿、近景草坡偏暗；`fog:false`，颜色在 `animate()` 中随 `pal.fog/pal.skyTop/pal.ground` 季节性更新。
 
 ## 4. 草、花、地面落叶
 

@@ -788,11 +788,14 @@ scene.add(turf);
   scene.add(shade);
 })();
 
-/* 远景山脊：三层剪影叠出空气透视，比一排圆球更像真实地貌 */
+/* 远景山脊：多层渐变山体 + 雪线 + 空气透视
+   不是一排剪影，而是用「底部雾色 → 山体色」的竖向渐变做出体积感；
+   远山有雪线，中景是柔和丘陵，近景是偏暗的草坡，三层拉开空间。 */
 const ridgeGroup = new THREE.Group();
 const ridgeMats = [];
-function makeRidge(radius, baseY, height, seed, color, opacity) {
-  const seg = 192;
+function makeRidge(radius, baseY, height, seed, colors, opacity, snowStrength) {
+  const seg = 256;
+  const rows = 7;
   const rand = mulberry32(seed);
   const off = rand() * 100;
   const pos = [], idx = [];
@@ -800,29 +803,78 @@ function makeRidge(radius, baseY, height, seed, color, opacity) {
     const a = (j / seg) * Math.PI * 2;
     const x = Math.cos(a) * radius;
     const z = Math.sin(a) * radius;
-    const n1 = fbm(Math.cos(a) * 2.4 + off, Math.sin(a) * 2.4 + off * 0.7);
-    const n2 = fbm(Math.cos(a) * 6.8 + off * 2.0, Math.sin(a) * 6.8);
-    const h = baseY + height * (0.22 + 0.78 * Math.pow(n1 * 0.72 + n2 * 0.28, 1.6));
-    pos.push(x, -9, z, x, h, z);
+    const n1 = fbm(Math.cos(a) * 3.3 + off, Math.sin(a) * 3.3 + off * 0.7);
+    const n2 = fbm(Math.cos(a) * 8.6 + off * 2.0, Math.sin(a) * 8.6);
+    const ridge = 1 - Math.abs(2 * n1 - 1);      // 1 - |2n-1| 产生尖一点的脊线
+    const h = baseY + height * (0.10 + 0.90 * Math.pow(ridge * 0.72 + n2 * 0.28, 1.55));
+    for (let r = 0; r <= rows; r++) {
+      const f = r / rows;
+      const y = -9 + (h + 9) * f;
+      pos.push(x, y, z);
+    }
   }
   for (let j = 0; j < seg; j++) {
-    const a = j * 2;
-    idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+    const a = j * (rows + 1);
+    const b = (j + 1) * (rows + 1);
+    for (let r = 0; r < rows; r++) {
+      idx.push(a + r, a + r + 1, b + r, a + r + 1, b + r + 1, b + r);
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setIndex(idx);
-  const mat = new THREE.MeshBasicMaterial({
-    color, fog: false, transparent: opacity < 1, opacity, depthWrite: true, side: THREE.DoubleSide,
+  const mat = new THREE.ShaderMaterial({
+    uniforms: {
+      uBottomColor: { value: new THREE.Color(colors.bottom) },
+      uTopColor: { value: new THREE.Color(colors.top) },
+      uSnowColor: { value: new THREE.Color(colors.snow || 0xf4fbff) },
+      uBaseY: { value: baseY },
+      uHeight: { value: height },
+      uSnowLine: { value: baseY + height * (colors.snowLine ?? 0.55) },
+      uSnowStrength: { value: snowStrength || 0 },
+      uOpacity: { value: opacity },
+    },
+    vertexShader: /* glsl */`
+      varying float vT;
+      varying float vY;
+      uniform float uBaseY;
+      uniform float uHeight;
+      void main() {
+        vY = position.y;
+        vT = clamp((position.y - uBaseY) / max(0.001, uHeight), 0.0, 1.0);
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */`
+      uniform vec3 uBottomColor;
+      uniform vec3 uTopColor;
+      uniform vec3 uSnowColor;
+      uniform float uSnowLine;
+      uniform float uSnowStrength;
+      uniform float uOpacity;
+      varying float vT;
+      varying float vY;
+      void main() {
+        vec3 col = mix(uBottomColor, uTopColor, smoothstep(0.0, 1.0, vT));
+        float snow = smoothstep(uSnowLine - 1.0, uSnowLine + 2.5, vY) * uSnowStrength;
+        col = mix(col, uSnowColor, snow);
+        gl_FragColor = vec4(col, uOpacity);
+      }
+    `,
+    transparent: opacity < 0.99,
+    depthWrite: opacity >= 0.99,
+    side: THREE.DoubleSide,
+    fog: false,
   });
   ridgeMats.push(mat);
   const m = new THREE.Mesh(g, mat);
   m.frustumCulled = false;
   ridgeGroup.add(m);
 }
-makeRidge(138, 0.2, 17, 1919, 0xcfe0e8, 1.0);   // 远山：几乎融进雾里
-makeRidge(96, 0.1, 8.5, 2027, 0xaac7ba, 1.0);   // 中景丘陵
-makeRidge(61, -0.2, 3.4, 3121, 0x7fa06d, 1.0);  // 近处草坡
+// 远山：高一点、蓝灰一点，顶部混雪；中景丘陵：低饱和青绿；近景草坡：偏暗的草色
+makeRidge(172, -1.4, 24, 1919, { bottom: 0xc5d9e6, top: 0x7e9fb8, snow: 0xf4fbff, snowLine: 0.54 }, 0.90, 0.62);
+makeRidge(124, -1.1, 12.5, 2027, { bottom: 0xbdd6c6, top: 0x789b83 }, 1.0, 0);
+makeRidge(82, -0.9, 5.2, 3121, { bottom: 0x9fbd8b, top: 0x6f9470 }, 1.0, 0);
 scene.add(ridgeGroup);
 
 /* 晨雾：三层贴地雾带，给地平线和树根之间留出空气 */
@@ -2069,6 +2121,8 @@ const partDescEl = document.getElementById('partDesc');
 const partCloseEl = document.getElementById('partClose');
 const findBannerEl = document.getElementById('findBanner');
 const findTextEl = document.getElementById('findText');
+const findProgressEl = document.getElementById('findProgress');
+const findNextEl = document.getElementById('findNext');
 const findCloseEl = document.getElementById('findClose');
 const pausePromptEl = document.getElementById('pausePrompt');
 const classToastEl = document.getElementById('classToast');
@@ -2089,6 +2143,10 @@ let startScreenVisible = false;
 let autoPausePending = false;
 let findTarget = null;
 let findActive = false;
+let findBag = [];
+let findBagIndex = 0;
+let findBagKey = '';
+let findRound = 1;
 let lastSpokenChapter = -1;
 let speechVoice = null;
 let wakeLock = null;
@@ -2203,6 +2261,7 @@ function updateChapterUI(t) {
   const idx = chapterIndexAt(t);
   if (idx === currentChapter) return;
   currentChapter = idx;
+  resetFindBag();
   const c = CHAPTERS[idx];
   chapterIndexEl.textContent = '第 ' + (idx + 1) + ' 章 / 共 ' + CHAPTERS.length + ' 章';
   chapterTitleEl.textContent = c.title;
@@ -2239,12 +2298,13 @@ function setStoryTime(t, pause = true) {
   hidePausePrompt();
   cancelSpeech();
   if (findActive) stopFindGame();
+  resetFindBag();
   updateChapterUI(storyTime);
   syncPlayer();
 }
 function togglePlay() {
   if (storyTime >= STORY_END - 0.01) { storyTime = 0; prevT = 0; autoPausePending = false; quartetAutoDone = false; updateChapterUI(0); }
-  if (findActive) stopFindGame();
+  if (findActive) { stopFindGame(); resetFindBag(); }
   playing = !playing;
   autoPausePending = false;
   hidePausePrompt();
@@ -2522,6 +2582,7 @@ function enterClassroomMode(opts = {}) {
   refreshViewport();
   closeAllModals();
   stopFindGame();
+  resetFindBag();
   hidePartCard();
   if (reset) {
     storyTime = 0; prevT = 0; currentChapter = -1; quartetAutoDone = false;
@@ -2546,6 +2607,7 @@ function exitClassroomMode() {
   playing = false;
   cancelSpeech();
   stopFindGame();
+  resetFindBag();
   hidePartCard();
   hidePausePrompt();
   touchLocked = false;
@@ -2713,22 +2775,57 @@ function partMatches(target, actual) {
   if (target === 'leaf' && actual === 'cotyledon') return true;
   return false;
 }
-function startFindGame() {
-  if (!classroomMode) { showToast('请先进入课堂模式'); return; }
-  if (findActive) { stopFindGame(); return; }
-  const list = findablePartsAt(storyTime);
-  if (!list.length) {
+function resetFindBag() {
+  findBag = [];
+  findBagIndex = 0;
+  findBagKey = '';
+  findRound = 1;
+}
+function prepareFindBag() {
+  const available = findablePartsAt(storyTime);
+  if (!available.length) return false;
+  const chapter = chapterIndexAt(storyTime);
+  const order = ['seed', 'root', 'trunk', 'branch', 'leaf', 'cotyledon', 'flower', 'fruit', 'snow'];
+  const key = chapter + '|' + available.join(',');
+  if (key !== findBagKey) {
+    const bag = order.filter((p) => available.includes(p));
+    // 每个章节从不同部位开始，避免连续几章都先问“根在哪里”
+    const shift = bag.length ? (chapter * 2 + 1) % bag.length : 0;
+    findBag = bag.slice(shift).concat(bag.slice(0, shift));
+    findBagIndex = 0;
+    findRound = 1;
+    findBagKey = key;
+  }
+  return findBag.length > 0;
+}
+function nextFindQuestion() {
+  if (!prepareFindBag()) {
     showToast('这一章暂时没有可找的部位，换个章节试试');
+    stopFindGame();
     return;
   }
-  // 优先选画面里投影点更多的部位，但种子/花/果这类小目标也保留
-  findTarget = list[Math.floor(Math.random() * list.length)];
+  if (findBagIndex >= findBag.length) {
+    findBagIndex = 0;
+    findRound++;
+  }
+  const no = findBagIndex + 1;
+  const total = findBag.length;
+  findTarget = findBag[findBagIndex];
+  findBagIndex++;
   findActive = true;
   findTextEl.innerHTML = '找一找：<b>' + PART_INFO[findTarget].name + '</b>在哪里？';
+  if (findProgressEl) findProgressEl.textContent = '第 ' + findRound + ' 轮 · ' + no + '/' + total;
+  if (findNextEl) findNextEl.style.display = total > 1 ? '' : 'none';
   findBannerEl.classList.add('show');
+  findBannerEl.classList.remove('shake');
   hidePausePrompt();
   hidePartCard();
   if (playing) { playing = false; cancelSpeech(); syncPlayer(); }
+}
+function startFindGame() {
+  if (!classroomMode) { showToast('请先进入课堂模式'); return; }
+  // 已经打开时，再点“找一找”就是下一个问题，不再突然关掉
+  nextFindQuestion();
 }
 function stopFindGame() {
   findActive = false;
@@ -2857,6 +2954,7 @@ chapterBtnNormal.addEventListener('click', () => openModal(chapterDrawerEl));
 quartetBtnNormal.addEventListener('click', captureQuartet);
 classEnterBtn.addEventListener('click', () => enterClassroomMode({ reset: false, fullscreen: true, autoplay: true }));
 partCloseEl.addEventListener('click', hidePartCard);
+findNextEl.addEventListener('click', nextFindQuestion);
 findCloseEl.addEventListener('click', stopFindGame);
 chapterGridEl.addEventListener('click', (e) => {
   const btn = e.target.closest('.chapter-item');
@@ -3046,11 +3144,18 @@ function animate() {
   skyUniforms.sunDir.value.copy(sunDir);
 
   groundMat.color.copy(pal.ground).multiplyScalar(1 - 0.16 * rainA);
-  // 远山：取地表色的暗版，再往雾色里拉，形成柔和的空气透视
+  // 远山：底部接近雾色，顶部保留山体色；远山雪线随季节保持冷白
   if (ridgeMats.length === 3) {
-    ridgeMats[0].color.copy(pal.fog).lerp(pal.skyTop, 0.10).multiplyScalar(0.98);
-    ridgeMats[1].color.copy(pal.ground).lerp(pal.fog, 0.58).multiplyScalar(0.92);
-    ridgeMats[2].color.copy(pal.ground).lerp(pal.fog, 0.30).multiplyScalar(0.80);
+    const far = ridgeMats[0].uniforms;
+    far.uBottomColor.value.copy(pal.fog).lerp(pal.skyTop, 0.05);
+    far.uTopColor.value.copy(pal.fog).lerp(pal.skyTop, 0.38).multiplyScalar(0.90);
+    far.uSnowColor.value.setHex(0xf1f8ff);
+    const mid = ridgeMats[1].uniforms;
+    mid.uBottomColor.value.copy(pal.fog).lerp(pal.ground, 0.12);
+    mid.uTopColor.value.copy(pal.ground).lerp(pal.fog, 0.52).multiplyScalar(0.92);
+    const near = ridgeMats[2].uniforms;
+    near.uBottomColor.value.copy(pal.ground).lerp(pal.fog, 0.36);
+    near.uTopColor.value.copy(pal.ground).lerp(pal.fog, 0.24).multiplyScalar(0.88);
   }
   // 秋天草也枯黄一点
   const grassAutumn = smoothstep(0.44, 0.56, p) * (1 - smoothstep(0.76, 0.84, p));
@@ -3433,7 +3538,7 @@ window.__classroom = {
   state: () => ({ classroomMode, autoPauseAtChapter, voiceOn, projectorBright, touchLocked, storyTime, playing, currentChapter }),
   pickPartAt,
   partVisibleAt,
-  findState: () => ({ findActive, findTarget }),
+  findState: () => ({ findActive, findTarget, findBag: findBag.slice(), findBagIndex, findRound }),
   findablePartsAt,
   partScreenPoints,
   handleCanvasTap,

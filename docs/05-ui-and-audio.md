@@ -222,6 +222,7 @@ if (classroomMode && autoPauseAtChapter && nextIdx !== currentIdx) {
 - `pickPartAt()` 用 `THREE.Raycaster` 从 canvas 坐标拾取；`partVisibleAt()` + `partHasVisibleState()` 过滤透明但仍在场景里的春花、果实、积雪，以及尚未长出的细芽；
 - `findablePartsAt(t)` 从 `CHAPTER_PARTS` 里再按当前时刻的**实际可见状态 + 屏幕投影点**过滤候选，避免把还没长出来/在画面外的部位选成目标；
 - `partScreenPoints()` 把目标部位的世界坐标投影到当前 canvas；`isNearFindTarget()` 允许点击目标附近（桌面约 40–80px 的宽容半径），解决小花、果实、种子太小、精确射线打不中的问题；
+- 找一找按章节生成**不重复的部位队列**（顺序随章节偏移，不会连续几章都先问「根」），`#findProgress` 显示「第几轮 · 第几个/共几个」，点「下一个」或再次点顶栏「找一找」会推进到下一个问题；
 - 点击显示 `#partCard`，内容来自 `PART_INFO`；卡片固定在舞台左下角安全区，不压树；
 - 课堂模式下点树会自动暂停，方便老师讲解；
 - `#findBanner` 显示目标部位，正确后提示「找到啦」，错误时抖动并提示再找。
