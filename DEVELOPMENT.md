@@ -20,7 +20,7 @@
 | 3D 资源 | 全部程序化生成；没有外部模型、图片或字体依赖 |
 | 音乐 | Yoiyami《The Budding of Consciousness》，CC0，见 `assets/MUSIC-LICENSE.md` |
 
-当前版本是“课堂版”：桌面端采用「左侧讲解栏 + 右侧 3D 舞台 + 底部播放条」布局；手机端是「顶部旁白 + 中间画面 + 底部播放条」。
+当前版本包含两种观看方式：默认是「左侧讲解栏 + 右侧 3D 舞台 + 底部播放条」的自由观看布局；点「开始上课」或访问 `?class` 后进入**幼儿园课堂模式**（全屏、大字幕、每章自动暂停、章节卡片、点认/找一找、四季转盘与四季合影、故事姐姐朗读、投影增亮、屏幕锁定）。
 
 ---
 
@@ -38,6 +38,11 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 ```
 `app.js` 是打包产物，**不要手工编辑 `app.js`**；改 `src/main.js` 后重新打包。
 
+### 回退点（Git）
+- `pre-classroom-mode` 标签：课堂模式改造前的稳定回退点；
+- `classroom-mode` 分支：课堂模式开发分支；
+- 如果后续改坏了，可以 `git switch main` 回到稳定版本，或 `git checkout pre-classroom-mode` 查看改造前状态。
+
 ### 开发调试 URL
 | 参数 | 作用 |
 |---|---|
@@ -46,6 +51,9 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 | `?debug` | 在浏览器控制台打印时间轴日志 |
 | `?dbg` | 暴露 `window.__scene`、`window.__sky`、`window.__camera`、`window.__renderer`、`window.__probe` |
 | `?video` | 外部逐帧喂时间，给离线渲染用；播放器/旁白隐藏 |
+| `?class` | 直接进入课堂模式 |
+| `?class&t0=128&freeze` | 课堂模式定帧截图 |
+| `?stage` | 只保留 3D 舞台，给章节缩略图/素材截图用 |
 
 ---
 
@@ -54,7 +62,7 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 ### 3.1 代码与资源
 
 ```text
-index.html                 页面结构、课堂布局、旁白 DOM、播放器 DOM、BGM <audio>
+index.html                 页面结构、课堂布局、课堂模式 DOM、旁白/播放器 DOM、BGM <audio>
 app.js                     esbuild 打包后的运行时（生成物）
 src/main.js                全部 3D 场景/时间轴/UI 播放逻辑（主源码）
 src/bgm.js                 背景音乐播放同步（独立普通脚本，不进 app.js bundle）
@@ -137,6 +145,7 @@ STORY_END = 259.9;
 | 改树形、枝干、根、叶 | [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md)；`buildTree()` / `spawn()` / `rootChain()` |
 | 改天气、雪、雨、雾、土壤 | [`docs/04-environment.md`](docs/04-environment.md)；`RAIN_WINDOWS`、`SNOW_COUNT`、`soilTexture()` |
 | 改旁白、播放器、键盘 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`src/main.js` 状态区 + `index.html` |
+| 改课堂模式、章节卡片、点认、四季合影 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`src/main.js` 的「课堂模式」段 + `index.html` 的 `#startScreen` / `#classroomTop` / `#classroomBar` |
 | 改背景音乐 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`assets/`、`src/bgm.js`、`index.html` 的 `<audio>` |
 | 重新打包 / 发布 GitHub Pages | [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) |
 | 截图 / 定位视觉回归 | [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) |
@@ -152,3 +161,4 @@ STORY_END = 259.9;
 5. **叶片仍是带纹理的小卡片**：远处层次已经足够，极端近景（<0.5m）还能看出平面；要再升级见 `docs/03` 的“后续方向”。
 6. **性能基线**：桌面约 450–500 draw calls、约 0.6M triangles（随随机种子/季节浮动）；手机通过相机拉远和降低像素比保持可看。改树/根/粒子后一定要用 `renderer.info` 复测。
 7. **章节时间必须和视觉事件同源**：改 `CHAPTERS` 时，雨窗、种子阶段、根/枝生长、镜头关键帧、季节换色都会受影响；核对清单见 `docs/07`。
+8. **故事姐姐朗读依赖系统语音**：`speechSynthesis` 的可用声音因操作系统/浏览器而异；没有中文声音时会退回默认语音。朗读期间 BGM 通过 `tree:voice` 事件自动 duck 到 18%。

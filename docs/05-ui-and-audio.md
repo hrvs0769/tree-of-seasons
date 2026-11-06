@@ -79,6 +79,13 @@ UI 引用：
 | `空格` | 播放/暂停 |
 | `←` / `→` | 后退/前进 5 秒 |
 | `Home` / `End` | 跳到开头/结尾 |
+| `PageUp` / `PageDown` | 上一章 / 下一章（课堂模式重点支持翻页笔） |
+| `F` | 全屏 / 退出全屏 |
+| `C` | 打开章节选择 |
+| `T` | 打开教师提示 |
+| `Q` | 生成四季合影 |
+| `P` | 投影增亮 |
+| `L` | 锁定 / 解锁屏幕 |
 | `R` | 再种一棵 |
 | `M` | 音乐开关 |
 
@@ -87,7 +94,7 @@ UI 引用：
 - `storyTime` 是页面故事时间；播放时按真实时间增量推进，`storyTime >= STORY_END` 自动暂停。
 - `?freeze`：`storyTime = FREEZE_T`，`playing=false`；`#player`、`#narration`、`#tips` 隐藏（截图用）。
 - `?video`：外部通过 `window.__setVideoT(v)` 喂时间；`#player` 隐藏。
-- `?t0=N`：初始时间 N；默认继续播放。
+- `?t0=N`：初始时间 N，自动跳过开场页；默认继续播放。
 - `syncPlayer()` 每帧同步滑块、进度色、时间码、播放图标。
 
 ### 3.4 进度条细节
@@ -140,3 +147,100 @@ UI 引用：
 | 加按钮 | `index.html #player .row`，事件绑在 `src/main.js` 状态区 |
 | 改 BGM 音量/默认开关 | `src/bgm.js` 的 `volume` / `saved` 默认值 |
 | 移动端布局 | `@media (max-width:700px)` |
+
+
+## 6. 课堂模式（幼儿园课堂版）
+
+入口：
+
+- 默认打开页面：先显示 `#startScreen` 开场页，点「开始上课」进入；
+- 直接入口：`index.html?class`（可以配合 `?t0=N` 从某一秒开始）；
+- 自由观看：开场页点「自由观看」，或者普通模式侧栏里的「▣ 课堂模式」随时切入。
+
+### 6.1 布局
+
+课堂模式通过 `body.classroom-mode` 切换布局，**所有课堂控件都在 3D 舞台之外**，不压住树和根：
+
+```text
+#classroomTop     顶部 68px：章节标题 + 课堂工具
+#app              中间 3D 舞台（top:68px; bottom:calc(底栏+字幕栏)）
+#seasonWheel      舞台右上角季节转盘
+#subtitleBar      舞台下方独立大字幕带
+#classroomBar     最底部大控制条（上一章 / 暂停 / 下一章）
+```
+
+CSS 变量：
+
+- `--class-top: 68px`（手机 82px，顶部工具分两行）
+- `--class-bar-h: 86px`
+- `--class-sub-h: 80px`
+- `--class-bottom: calc(var(--class-bar-h) + var(--class-sub-h))`
+
+进入/退出课堂模式时调用 `refreshViewport()`，因为 `#app` 尺寸变化不会自动触发 `window.resize`。
+
+### 6.2 课堂控件
+
+| 控件 | 行为 |
+|---|---|
+| `#classChapterBtn` | 打开章节抽屉（14 张卡片） |
+| `#classTeacherBtn` | 打开当前章节的「可以问 / 可以动」教师提示，不投影给小朋友 |
+| `#classFindBtn` | 开始「找一找」小游戏，随机选当前章节可见部位 |
+| `#classQuartetBtn` | 运行时截取同一棵树的夏/秋/冬/春四张画面，生成「四季合影」 |
+| `#classAutoBtn` | 每章结束自动暂停开关，默认开启 |
+| `#classProjectorBtn` | 投影增亮（canvas 提亮/增强对比） |
+| `#classLockBtn` | 锁定屏幕，长按 2 秒解锁，防小朋友误触 |
+| `#classExitBtn` | 退出课堂模式，回到开场页 |
+| `#classVoiceBtn` | 故事姐姐朗读开关（Web Speech API） |
+| `#classMusicBtn` | 背景音乐开关（与普通播放器同步） |
+
+### 6.3 章节自动暂停
+
+`animate()` 的推进逻辑：
+
+```js
+const currentIdx = chapterIndexAt(storyTime);
+const nextIdx = chapterIndexAt(storyTime + realDt);
+if (classroomMode && autoPauseAtChapter && nextIdx !== currentIdx) {
+  storyTime = CHAPTERS[currentIdx].end; // 正好停在下一章开始
+  playing = false;
+  showPausePrompt('第 X 章结束 · 下一章：……');
+}
+```
+
+停在边界后 `chapterIndexAt` 会自然返回下一章，因此点「播放」或空格会从下一章继续，不会卡在同一章末尾。
+
+### 6.4 大字幕
+
+- `updateChapterUI()` 同时更新左侧旁白和课堂大字幕；
+- `subtitleHTML()` 用 `<em>` 高亮关键词（种子、根、芽、叶、花、果等）；
+- 字幕位于 `#subtitleBar` 独立区域，不覆盖 3D 舞台；
+- 字号 `clamp(21px, 2.35vw, 38px)`，手机 `clamp(16px, 4.3vw, 20px)`。
+
+### 6.5 点认与找一找
+
+- `buildTree()` 给每个 mesh 写 `userData.part`：`seed / root / trunk / branch / leaf / cotyledon / flower / fruit / snow`；
+- `pickPartAt()` 用 `THREE.Raycaster` 从 canvas 坐标拾取；`partVisibleAt()` 过滤透明但仍在场景里的春花、果实、积雪，避免夏天点到「雪」；
+- 点击显示 `#partCard`，内容来自 `PART_INFO`；卡片固定在舞台左下角安全区，不压树；
+- 课堂模式下点树会自动暂停，方便老师讲解；
+- `#findBanner` 显示目标部位，正确后提示「找到啦」，错误时抖动并提示再找。
+
+### 6.6 四季合影
+
+`captureQuartet()` 按 `QUARTET_TIMES` 依次设置 `storyTime`（130/150/170/190 秒），等待两帧后用 `renderer.domElement` 画到临时 canvas，生成 4 张 JPEG 放入 `#quartetGrid`。截图期间暂停播放、临时覆盖 `freezeOverride`，结束后恢复原时间、相机角度和播放状态。课堂模式播到结尾会自动生成一次。
+
+### 6.7 朗读与 BGM ducking
+
+- 使用浏览器 `speechSynthesis`，优先选择 `zh-CN` 中文声音（macOS 上是「婷婷」）；
+- 朗读开关 `#classVoiceBtn`，默认开启（浏览器不支持时自然降级）；
+- 每章切换时朗读该章正文；暂停/拖动/退出时取消；
+- 朗读通过 `window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: true } }))` 通知 `src/bgm.js`；
+- `bgm.js` 在朗读期间把 BGM 音量压到 18%，结束后恢复。
+
+### 6.8 课堂模式调试参数
+
+| 参数 | 作用 |
+|---|---|
+| `?class` | 直接进入课堂模式（不显示开场页） |
+| `?class&t0=128` | 从第 128 秒开始进入课堂模式 |
+| `?class&t0=128&freeze` | 课堂模式 + 定帧截图 |
+| `?stage` | 只保留 3D 舞台（给章节缩略图/素材截图用） |
