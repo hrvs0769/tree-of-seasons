@@ -12,8 +12,16 @@
     --ink: #f7f0e3;
     --side: clamp(320px, 27vw, 400px);
     --player-h: 76px;
+    --ui-surface: rgba(255,255,255,.065);
+    --ui-surface-hover: rgba(255,255,255,.14);
+    --ui-stroke: rgba(255,255,255,.13);
+    --ui-radius: 11px;
   }
   * { box-sizing: border-box; }
+  button:focus-visible, input:focus-visible {
+    outline: 2px solid #ffd77e; outline-offset: 3px;
+  }
+  button:active { transform: translateY(1px); }
   html, body {
     margin: 0; padding: 0; height: 100%; overflow: hidden;
     background: #0d1b13;
@@ -97,8 +105,10 @@
     position: fixed; left: var(--side); right: 0; bottom: 0; height: var(--player-h);
     padding: 10px 18px 12px;
     display: flex; align-items: center;
-    background: linear-gradient(180deg, rgba(9, 22, 15, .92), rgba(7, 17, 12, .98));
-    border-top: 1px solid rgba(255, 255, 255, .13);
+    background: linear-gradient(180deg, rgba(12, 27, 18, .88), rgba(5, 14, 9, .97));
+    border-top: 1px solid rgba(255, 255, 255, .12);
+    box-shadow: 0 -10px 30px rgba(0,0,0,.12);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
     color: var(--ink); z-index: 5;
   }
   #player .row { display: flex; align-items: center; gap: 12px; width: 100%; }
@@ -134,16 +144,17 @@
   #marks span { position: absolute; top: 0; width: 2px; height: 7px; border-radius: 2px; background: rgba(255,255,255,.36); transform: translateX(-1px); }
   #marks span.chapter-major { background: rgba(232,196,122,.86); height: 9px; }
   #replayBtn {
-    flex: none; padding: 7px 10px; border-radius: 8px; font-size: 11px;
-    color: rgba(247,240,227,.82); background: rgba(255,255,255,.10);
+    flex: none; padding: 8px 12px; border-radius: 999px; font-size: 11px;
+    color: rgba(247,240,227,.84); background: var(--ui-surface);
+    border: 1px solid var(--ui-stroke);
   }
   #replayBtn:hover, #replant:hover, #musicBtn:hover { background: rgba(255,255,255,.20); }
   /* 背景音乐开关 + 音量：课堂上念旁白时方便随时压低或关掉 */
   #musicBtn {
-    flex: none; padding: 7px 10px; border-radius: 8px; font-size: 11px;
-    border: 0; cursor: pointer; white-space: nowrap; font-family: inherit;
-    color: rgba(247,240,227,.82); background: rgba(255,255,255,.10);
-    transition: background .16s ease, color .16s ease;
+    flex: none; padding: 8px 12px; border-radius: 999px; font-size: 11px;
+    border: 1px solid var(--ui-stroke); cursor: pointer; white-space: nowrap; font-family: inherit;
+    color: rgba(247,240,227,.84); background: var(--ui-surface);
+    transition: background .16s ease, color .16s ease, transform .16s ease;
   }
   #musicBtn.off { color: rgba(247,240,227,.42); background: rgba(255,255,255,.05); }
   #volume {
@@ -160,8 +171,9 @@
     border: 0; box-shadow: 0 1px 6px rgba(0,0,0,.3);
   }
   #replant {
-    flex: none; padding: 8px 13px; border-radius: 8px; font-size: 11px;
-    color: #223a26; background: var(--gold);
+    flex: none; padding: 9px 15px; border-radius: 999px; font-size: 11px;
+    color: #223a26; background: var(--gold); font-weight: 600;
+    box-shadow: 0 3px 12px rgba(232,196,122,.18);
   }
 
   #vignette {
@@ -283,8 +295,9 @@
     position: fixed; left: 0; right: 0; top: 0; height: var(--class-top); z-index: 9;
     display: none; align-items: center; justify-content: space-between; gap: 12px;
     padding: 0 16px;
-    background: linear-gradient(180deg, rgba(6,18,12,.99), rgba(6,18,12,.90));
-    border-bottom: 1px solid rgba(255,255,255,.09);
+    background: linear-gradient(180deg, rgba(6,18,12,.94), rgba(6,18,12,.86));
+    border-bottom: 1px solid rgba(255,255,255,.10);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   }
   body.classroom-mode #classroomTop { display: flex; }
   .class-title-wrap { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
@@ -297,12 +310,13 @@
   #classSeason { flex: none; font-size: 10px; letter-spacing: .16em; color: rgba(247,240,227,.48); }
   .class-top-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex: none; }
   .class-top-actions button {
-    height: 32px; padding: 0 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,.11);
-    background: rgba(255,255,255,.06); color: rgba(247,240,227,.82);
-    font-family: inherit; font-size: 11px; letter-spacing: .04em; cursor: pointer; white-space: nowrap;
-    transition: background .15s ease, color .15s ease, border-color .15s ease;
+    height: 34px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--ui-stroke);
+    background: var(--ui-surface); color: rgba(247,240,227,.84);
+    font-family: inherit; font-size: 11px; font-weight: 500; letter-spacing: .03em; cursor: pointer; white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .15s ease;
   }
-  .class-top-actions button:hover { background: rgba(255,255,255,.14); color: #fff; }
+  .class-top-actions button:hover { background: var(--ui-surface-hover); color: #fff; transform: translateY(-1px); }
   .class-top-actions button.on { background: var(--gold); color: #1d2b1e; border-color: var(--gold); font-weight: 600; }
 
   /* 季节转盘：让孩子看见“四季是一个圆圈” */
@@ -364,8 +378,9 @@
   #classroomBar {
     position: fixed; left: 0; right: 0; bottom: 0; height: var(--class-bar-h); z-index: 9;
     display: none; align-items: center; justify-content: space-between; gap: 14px; padding: 0 22px;
-    background: linear-gradient(180deg, #091810, #050f0a);
-    border-top: 1px solid rgba(255,255,255,.09);
+    background: linear-gradient(180deg, rgba(10,24,16,.94), rgba(4,11,7,.99));
+    border-top: 1px solid rgba(255,255,255,.10);
+    backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
   }
   body.classroom-mode #classroomBar { display: flex; }
   .class-bar-side { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 12px; }
@@ -385,11 +400,12 @@
   }
   #classPlayBtn:hover { transform: scale(1.06); }
   .class-small-btn {
-    height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12);
-    background: rgba(255,255,255,.06); color: rgba(247,240,227,.78);
-    font-family: inherit; font-size: 11px; cursor: pointer; white-space: nowrap;
+    height: 34px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--ui-stroke);
+    background: var(--ui-surface); color: rgba(247,240,227,.80);
+    font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap;
+    transition: background .15s ease, color .15s ease, transform .15s ease;
   }
-  .class-small-btn:hover { background: rgba(255,255,255,.14); color: #fff; }
+  .class-small-btn:hover { background: var(--ui-surface-hover); color: #fff; transform: translateY(-1px); }
   .class-small-btn.on { background: var(--gold); color: #1d2b1e; border-color: var(--gold); font-weight: 600; }
 
   /* 章节抽屉 */
@@ -547,11 +563,12 @@
   /* 侧栏里的章节/四季入口 */
   #sidebarTools { display: flex; gap: 8px; margin-top: 13px; flex-wrap: wrap; }
   #sidebarTools button {
-    padding: 6px 10px; border-radius: 7px; border: 1px solid rgba(255,255,255,.13);
-    background: rgba(255,255,255,.05); color: rgba(247,240,227,.62);
-    font-family: inherit; font-size: 10px; letter-spacing: .06em; cursor: pointer;
+    padding: 7px 11px; border-radius: 999px; border: 1px solid var(--ui-stroke);
+    background: var(--ui-surface); color: rgba(247,240,227,.68);
+    font-family: inherit; font-size: 10px; font-weight: 500; letter-spacing: .04em; cursor: pointer;
+    transition: background .15s ease, color .15s ease, transform .15s ease;
   }
-  #sidebarTools button:hover { background: rgba(255,255,255,.13); color: #fff; }
+  #sidebarTools button:hover { background: var(--ui-surface-hover); color: #fff; transform: translateY(-1px); }
 
   @media (max-width: 1100px) {
     #chapterGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
