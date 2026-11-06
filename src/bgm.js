@@ -22,6 +22,7 @@
   var playBtn = document.getElementById('playBtn');
   var playerEl = document.getElementById('player');
   var musicBtn = document.getElementById('musicBtn');
+  var classMusicBtn = document.getElementById('classMusicBtn');
   var volumeEl = document.getElementById('volume');
   var audio = document.getElementById('bgm');
   if (!timeline || !playBtn || !playerEl || !audio) return;
@@ -32,7 +33,9 @@
   var on = saved && typeof saved.on === 'boolean' ? saved.on : true;
   var volume = saved && typeof saved.volume === 'number' ? saved.volume : 0.85;
   volume = Math.max(0, Math.min(1, volume));
-  audio.volume = volume;
+  var ducked = false;                       // 故事姐姐朗读时自动压低背景音乐
+  function applyVolume() { audio.volume = volume * (ducked ? 0.18 : 1); }
+  applyVolume();
   audio.loop = false;                       // 故事播完就停，不循环
   if (volumeEl) volumeEl.value = String(Math.round(volume * 100));
 
@@ -51,6 +54,11 @@
     musicBtn.setAttribute('aria-label', audible ? '关闭背景音乐' : '开启背景音乐');
     musicBtn.title = (audible ? '关闭背景音乐（M）' : '开启背景音乐（M）');
     if (musicBtn.classList) musicBtn.classList.toggle('off', !on);
+    if (classMusicBtn) {
+      classMusicBtn.textContent = audible ? '♫ 音乐' : (on ? '♫ 开启' : '♪ 静音');
+      classMusicBtn.classList.toggle('on', audible);
+      classMusicBtn.setAttribute('aria-label', audible ? '关闭背景音乐' : '开启背景音乐');
+    }
   }
   function seekToStory() {
     try { audio.currentTime = Math.max(0, Math.min(now(), audio.duration || 260)); } catch (e) {}
@@ -101,10 +109,15 @@
     musicBtn.addEventListener('touchstart', function (e) { e.stopPropagation(); });
     musicBtn.addEventListener('click', toggleMusic);
   }
+  if (classMusicBtn) {
+    classMusicBtn.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+    classMusicBtn.addEventListener('touchstart', function (e) { e.stopPropagation(); });
+    classMusicBtn.addEventListener('click', toggleMusic);
+  }
   if (volumeEl) {
     volumeEl.addEventListener('input', function () {
       volume = Math.max(0, Math.min(1, (parseFloat(volumeEl.value) || 0) / 100));
-      audio.volume = volume;
+      applyVolume();
       persist();
     });
   }
@@ -132,6 +145,7 @@
   // 画面时间是唯一基准。事件即时同步 + 每 200ms 漂移校正：
   // 小偏差用播放速度平滑追（不打断乐句），大偏差直接 seek（拖动、重播、严重掉帧）。
   function syncPlayState() {
+    label();
     var t = now();
     var playing = playBtn.textContent.trim() === '⏸';
     var end = parseFloat(timeline.max) || 259.9;
@@ -154,6 +168,12 @@
     }
     tryPlay();
   }
+
+  // 故事姐姐开口时压低 BGM，读完恢复；由 src/main.js 通过自定义事件通知。
+  window.addEventListener('tree:voice', function (e) {
+    ducked = !!(e && e.detail && e.detail.speaking);
+    applyVolume();
+  });
 
   label();
   if (on) {

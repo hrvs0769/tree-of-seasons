@@ -1333,6 +1333,7 @@ function buildTree(seed) {
     geos.push(geo);
     const mesh = new THREE.Mesh(geo, barkMat);
     mesh.name = 'branch-d' + depth + '#' + branches.length;
+    mesh.userData.part = depth === 0 ? 'trunk' : 'branch';
     mesh.castShadow = true;
     mesh.receiveShadow = false;   // 细长管子接收阴影容易出现自阴影噪点，只投不接
     mesh.frustumCulled = false;
@@ -1525,6 +1526,7 @@ function buildTree(seed) {
     const geo = sweepGeometry(pts, radii, radial);
     geos.push(geo);
     const mesh = new THREE.Mesh(geo, depth <= 1 ? rootMatA : rootMatB);
+    mesh.userData.part = 'root';
     mesh.receiveShadow = false;
     mesh.castShadow = false;
     mesh.frustumCulled = false;
@@ -1599,6 +1601,7 @@ function buildTree(seed) {
     roughness: 0.98, metalness: 0,
   });
   const flare = new THREE.Mesh(flareGeo, flareMat);
+  flare.userData.part = 'root';
   flare.position.set(0, -0.015, 0);
   flare.scale.setScalar(0.001);
   flare.castShadow = true;
@@ -1608,6 +1611,7 @@ function buildTree(seed) {
   /* 叶子实例化网格 */
   const count = Math.min(leafSites.length, 40000);
   const leaves = new THREE.InstancedMesh(LEAF_GEO, leafMat, count);
+  leaves.userData.part = 'leaf';
   leaves.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   leaves.castShadow = true;
   leaves.frustumCulled = false;
@@ -1646,6 +1650,7 @@ function buildTree(seed) {
   const fruitGeo = new THREE.SphereGeometry(1, 14, 11);
   const fruitMat = new THREE.MeshStandardMaterial({ roughness: 0.38, metalness: 0.0 });
   const fruits = new THREE.InstancedMesh(fruitGeo, fruitMat, FRUIT_COUNT);
+  fruits.userData.part = 'fruit';
   fruits.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   fruits.castShadow = true;
   fruits.frustumCulled = false;
@@ -1655,6 +1660,7 @@ function buildTree(seed) {
   stemGeo.translate(0, 0.037, 0);
   const stemMat = new THREE.MeshStandardMaterial({ color: 0x5b4227, roughness: 1, metalness: 0 });
   const stems = new THREE.InstancedMesh(stemGeo, stemMat, FRUIT_COUNT);
+  stems.userData.part = 'fruit';
   stems.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   stems.frustumCulled = false;
   group.add(stems);
@@ -1693,6 +1699,7 @@ function buildTree(seed) {
     transparent: true, opacity: 0,
   });
   const blossoms = new THREE.InstancedMesh(blossomGeo, blossomMat, BLOSSOM_COUNT);
+  blossoms.userData.part = 'flower';
   blossoms.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   blossoms.frustumCulled = false;
   group.add(blossoms);
@@ -1727,6 +1734,7 @@ function buildTree(seed) {
   const snowCapGeo = new THREE.SphereGeometry(1, 6, 4);
   const snowCapMat = new THREE.MeshStandardMaterial({ color: 0xf7fcff, roughness: 0.82, metalness: 0, transparent: true, opacity: 0 });
   const snowCaps = new THREE.InstancedMesh(snowCapGeo, snowCapMat, snowPts.length);
+  snowCaps.userData.part = 'snow';
   snowCaps.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   snowCaps.frustumCulled = false;
   group.add(snowCaps);
@@ -1743,6 +1751,7 @@ function buildTree(seed) {
   /* 种子 & 子叶：种皮做成上下两半，吸水后从中间裂开，比一颗实心球真实 */
   const seedMat = new THREE.MeshStandardMaterial({ map: seedTexture(), roughness: 0.52, metalness: 0.02 });
   const seedMesh = new THREE.Group();
+  seedMesh.userData.part = 'seed';
   seedMesh.position.set(0, 0.055, 0.07);
   seedMesh.rotation.set(0.42, 0.6, 0.15);
   const seedTop = new THREE.Mesh(
@@ -1770,6 +1779,7 @@ function buildTree(seed) {
   const cotyledons = [];
   for (let i = 0; i < 2; i++) {
     const m = new THREE.Mesh(LEAF_GEO, cotyledonMat);
+    m.userData.part = 'cotyledon';
     m.scale.setScalar(0.001);
     m.position.set(i === 0 ? -0.035 : 0.035, 0.10, 0.03);
     m.rotation.set(i === 0 ? 0.35 : -0.35, i === 0 ? -1.15 : 1.15, i === 0 ? 0.85 : -0.85);
@@ -1963,7 +1973,7 @@ const dom = renderer.domElement;
 dom.style.touchAction = 'none';
 
 dom.addEventListener('pointerdown', (e) => {
-  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, moved: false });
   lastInteract = performance.now();
   dom.setPointerCapture(e.pointerId);
 });
@@ -1972,6 +1982,7 @@ dom.addEventListener('pointermove', (e) => {
   if (!prev) return;
   const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
   prev.x = e.clientX; prev.y = e.clientY;
+  if (Math.hypot(e.clientX - prev.sx, e.clientY - prev.sy) > 6) prev.moved = true;
   lastInteract = performance.now();
   if (pointers.size === 1) {
     cam.theta = clamp(cam.theta - dx * 0.006, THETA_MIN, THETA_MAX);
@@ -1985,11 +1996,17 @@ dom.addEventListener('pointermove', (e) => {
   }
 });
 function endPointer(e) {
+  const p = pointers.get(e.pointerId);
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinchStart = 0;
+  if (p && !p.moved && pointers.size === 0) handleCanvasTap(e.clientX, e.clientY);
+}
+function cancelPointer(e) {
   pointers.delete(e.pointerId);
   if (pointers.size < 2) pinchStart = 0;
 }
 dom.addEventListener('pointerup', endPointer);
-dom.addEventListener('pointercancel', endPointer);
+dom.addEventListener('pointercancel', cancelPointer);
 dom.addEventListener('wheel', (e) => {
   e.preventDefault();
   cam.radius = clamp(cam.radius * Math.exp(e.deltaY * 0.0012), 5.5, 30);
@@ -2010,8 +2027,76 @@ const timelineEl = document.getElementById('timeline');
 const timecodeEl = document.getElementById('timecode');
 const marksEl = document.getElementById('marks');
 const narrationEl = document.getElementById('narration');
+
+const startScreenEl = document.getElementById('startScreen');
+const startClassBtn = document.getElementById('startClassBtn');
+const freeViewBtn = document.getElementById('freeViewBtn');
+const classroomTopEl = document.getElementById('classroomTop');
+const classChapterIndexEl = document.getElementById('classChapterIndex');
+const classChapterTitleEl = document.getElementById('classChapterTitle');
+const classSeasonEl = document.getElementById('classSeason');
+const classChapterBtn = document.getElementById('classChapterBtn');
+const classTeacherBtn = document.getElementById('classTeacherBtn');
+const classFindBtn = document.getElementById('classFindBtn');
+const classQuartetBtn = document.getElementById('classQuartetBtn');
+const classAutoBtn = document.getElementById('classAutoBtn');
+const classProjectorBtn = document.getElementById('classProjectorBtn');
+const classLockBtn = document.getElementById('classLockBtn');
+const classExitBtn = document.getElementById('classExitBtn');
+const seasonWheelEl = document.getElementById('seasonWheel');
+const wheelNeedleEl = document.getElementById('wheelNeedle');
+const wheelYearEl = document.getElementById('wheelYear');
+const subtitleTextEl = document.getElementById('subtitleText');
+const subtitleMetaEl = document.getElementById('subtitleMeta');
+const classTimecodeEl = document.getElementById('classTimecode');
+const classPrevBtn = document.getElementById('classPrevBtn');
+const classPlayBtn = document.getElementById('classPlayBtn');
+const classNextBtn = document.getElementById('classNextBtn');
+const classVoiceBtn = document.getElementById('classVoiceBtn');
+const classReplayBtn = document.getElementById('classReplayBtn');
+const chapterDrawerEl = document.getElementById('chapterDrawer');
+const chapterGridEl = document.getElementById('chapterGrid');
+const teacherPanelEl = document.getElementById('teacherPanel');
+const teacherTitleEl = document.getElementById('teacherTitle');
+const teacherBodyEl = document.getElementById('teacherBody');
+const quartetOverlayEl = document.getElementById('quartetOverlay');
+const quartetGridEl = document.getElementById('quartetGrid');
+const partCardEl = document.getElementById('partCard');
+const partGlyphEl = document.getElementById('partGlyph');
+const partNameEl = document.getElementById('partName');
+const partPinyinEl = document.getElementById('partPinyin');
+const partDescEl = document.getElementById('partDesc');
+const partCloseEl = document.getElementById('partClose');
+const findBannerEl = document.getElementById('findBanner');
+const findTextEl = document.getElementById('findText');
+const findCloseEl = document.getElementById('findClose');
+const pausePromptEl = document.getElementById('pausePrompt');
+const classToastEl = document.getElementById('classToast');
+const lockOverlayEl = document.getElementById('lockOverlay');
+const chapterBtnNormal = document.getElementById('chapterBtnNormal');
+const quartetBtnNormal = document.getElementById('quartetBtnNormal');
+const classEnterBtn = document.getElementById('classEnterBtn');
+
 let currentSeasonLabel = '';
 let currentChapter = -1;
+let classroomMode = false;
+let autoPauseAtChapter = true;
+let speechSupported = 'speechSynthesis' in window;
+let voiceOn = speechSupported;
+let projectorBright = false;
+let touchLocked = false;
+let startScreenVisible = false;
+let autoPausePending = false;
+let findTarget = null;
+let findActive = false;
+let lastSpokenChapter = -1;
+let speechVoice = null;
+let wakeLock = null;
+let idleTimer = 0;
+let lockPressTimer = 0;
+let quartetBusy = false;
+let quartetAutoDone = false;
+
 
 const CHAPTERS = [
   { start: 0, end: 16, title: '种子入土', text: '一颗小小的种子落进松软的泥土里。它安静地躺着，等待水分和温暖把它唤醒。' },
@@ -2030,16 +2115,77 @@ const CHAPTERS = [
   { start: 240, end: 260, title: '第二年 · 冬', text: '冬天又来了，一年结束，新的轮回又要开始。' },
 ];
 
-const T0 = (() => { const v = parseFloat(new URLSearchParams(location.search).get('t0')); return isNaN(v) ? 0 : v; })();
+// 教师提示卡：只在老师点开时显示，不投影到小朋友的画面
+const TEACHER_TIPS = [
+  { q: '种子住在哪里？它要喝什么才能醒来？', a: '抱膝蹲下，假装自己是一颗小种子。' },
+  { q: '种子喝饱水以后，外面的壳会怎么样？', a: '手指轻轻点膝盖，模仿春雨一滴一滴落下来。' },
+  { q: '先钻出来的是叶子，还是根？', a: '双手向下伸，学根往泥土深处钻。' },
+  { q: '嫩芽顶开泥土的时候，用了多大的力气？', a: '慢慢站起来，双手向上举，学嫩芽顶开泥土。' },
+  { q: '第一片真叶是什么颜色？它为什么需要阳光？', a: '手掌摊开，当一片小叶子晒晒太阳。' },
+  { q: '小树被风吹得摇来摇去，为什么没有倒？', a: '左右轻轻摇摆，像一棵小树在风里。' },
+  { q: '大树有多大？我们一起来抱一抱。', a: '张开双臂，围成一个大圆圈。' },
+  { q: '夏天站在树下，为什么觉得凉快？', a: '双手搭在头顶，做一个小凉棚。' },
+  { q: '落叶飘下来以后，去了哪里？', a: '手指转圈，慢慢落到地上，再变成泥土的养分。' },
+  { q: '冬天大树睡着了吗？雪落在哪里？', a: '抱起手臂轻轻摇晃，学大树在雪里休息。' },
+  { q: '第二年春天，树上先开出什么？', a: '双手从下巴向外打开，学一朵花慢慢开放。' },
+  { q: '夏天谁会在树荫下休息？', a: '学小鸟飞一飞，再找个树荫停下来。' },
+  { q: '果实里面藏着什么？', a: '双手捧成一个小果子，里面藏着新的种子。' },
+  { q: '一年结束了，明年还会发生什么？', a: '用手画一个大圆圈：春夏秋冬，又回来了。' },
+];
+
+// 每个章节里适合“找一找”的部位
+const CHAPTER_PARTS = [
+  ['seed'],
+  ['seed'],
+  ['root', 'seed'],
+  ['root', 'trunk', 'cotyledon'],
+  ['leaf', 'trunk', 'root'],
+  ['leaf', 'branch', 'trunk', 'root'],
+  ['leaf', 'branch', 'trunk', 'root'],
+  ['leaf', 'branch', 'trunk', 'root'],
+  ['leaf', 'branch', 'trunk', 'root'],
+  ['branch', 'trunk', 'snow'],
+  ['flower', 'leaf', 'branch', 'trunk'],
+  ['leaf', 'branch', 'trunk', 'root'],
+  ['fruit', 'leaf', 'branch', 'trunk'],
+  ['snow', 'branch', 'trunk'],
+];
+
+const PART_INFO = {
+  seed: { name: '种子', pinyin: 'zhǒng zi', desc: '种子睡在泥土里，喝饱雨水就会慢慢醒来。' },
+  root: { name: '根', pinyin: 'gēn', desc: '根把树牢牢抓住，还帮大树喝水。' },
+  trunk: { name: '树干', pinyin: 'shù gàn', desc: '树干又粗又结实，把水和养分送到树枝上。' },
+  branch: { name: '树枝', pinyin: 'shù zhī', desc: '树枝向四周伸开，给叶子安家。' },
+  leaf: { name: '叶', pinyin: 'yè', desc: '叶子晒着太阳，为大树制造养分。' },
+  cotyledon: { name: '子叶', pinyin: 'zǐ yè', desc: '子叶是种子先长出的两片小叶子，帮嫩芽见阳光。' },
+  flower: { name: '花', pinyin: 'huā', desc: '花开的时候，蜜蜂和小鸟都来了。' },
+  fruit: { name: '果', pinyin: 'guǒ', desc: '果实里有新的种子，生命就这样传下去。' },
+  snow: { name: '雪', pinyin: 'xuě', desc: '雪花落在树枝上，大树在冬天安静地休息。' },
+};
+
+const SUBTITLE_KEYWORDS = /(种子|泥土|水分|温暖|春雨|外壳|侧根|主根|根|嫩芽|种壳|子叶|真叶|阳光|养分|枝丫|树干|树冠|叶子|树荫|落叶|白雪|新芽|花朵|果实|小鸟|昆虫|轮回)/g;
+
+function subtitleHTML(text) {
+  return text.replace(SUBTITLE_KEYWORDS, '<em>$1</em>');
+}
+
+
+const T0_QUERY = new URLSearchParams(location.search).get('t0');
+const T0 = (() => { const v = parseFloat(T0_QUERY); return isNaN(v) ? 0 : v; })();
 const FREEZE_T = /(^|[?&])freeze(=|&|$)/.test(location.search) ? T0 : null;
 const VIDEO = /(^|[?&])video(=|&|$)/.test(location.search);
+const CLASSROOM_PARAM = /(^|[?&])class(=|&|$)/.test(location.search);
+const STAGE_PARAM = /(^|[?&])stage(=|&|$)/.test(location.search);
+const START_SCREEN = !VIDEO && FREEZE_T === null && !CLASSROOM_PARAM && !STAGE_PARAM && T0_QUERY === null;
 let videoT = 0;
 if (VIDEO) {
   window.__setVideoT = (v) => { videoT = v; };
   window.__videoReady = true;
 }
+if (STAGE_PARAM) document.body.classList.add('stage-only');
 let storyTime = clamp(T0, 0, STORY_END);
-let playing = !VIDEO && FREEZE_T === null;
+let freezeOverride = null;
+let playing = !VIDEO && FREEZE_T === null && !START_SCREEN;
 let scrubbing = false;
 let prevT = storyTime;
 let lastReal = performance.now();
@@ -2064,6 +2210,13 @@ function updateChapterUI(t) {
   chapterTitleEl.style.animation = 'none';
   void chapterTitleEl.offsetWidth;
   chapterTitleEl.style.animation = 'seasonIn .5s ease both';
+  if (classChapterIndexEl) classChapterIndexEl.textContent = '第 ' + (idx + 1) + ' 章 / 共 ' + CHAPTERS.length + ' 章';
+  if (classChapterTitleEl) classChapterTitleEl.textContent = c.title;
+  if (subtitleTextEl) subtitleTextEl.innerHTML = subtitleHTML(c.text);
+  if (subtitleMetaEl) subtitleMetaEl.textContent = '第 ' + (idx + 1) + ' 章 · ' + c.title;
+  updateTeacherCard(idx);
+  hidePartCard();
+  if (classroomMode && playing && voiceOn) speakCurrentChapter();
 }
 function syncPlayer() {
   if (!timelineEl) return;
@@ -2072,17 +2225,29 @@ function syncPlayer() {
   timecodeEl.textContent = fmtTime(storyTime) + ' / ' + fmtTime(STORY_END);
   playBtn.textContent = playing ? '⏸' : '▶';
   playBtn.setAttribute('aria-label', playing ? '暂停' : '播放');
+  if (classPlayBtn) {
+    classPlayBtn.textContent = playing ? '⏸' : '▶';
+    classPlayBtn.setAttribute('aria-label', playing ? '暂停' : '播放');
+  }
+  if (classTimecodeEl) classTimecodeEl.textContent = fmtTime(storyTime) + ' / ' + fmtTime(STORY_END);
 }
 function setStoryTime(t, pause = true) {
   storyTime = clamp(t, 0, STORY_END);
   if (pause) playing = false;
   prevT = storyTime;
+  autoPausePending = false;
+  hidePausePrompt();
+  cancelSpeech();
   updateChapterUI(storyTime);
   syncPlayer();
 }
 function togglePlay() {
-  if (storyTime >= STORY_END - 0.01) { storyTime = 0; prevT = 0; updateChapterUI(0); }
+  if (storyTime >= STORY_END - 0.01) { storyTime = 0; prevT = 0; autoPausePending = false; quartetAutoDone = false; updateChapterUI(0); }
   playing = !playing;
+  autoPausePending = false;
+  hidePausePrompt();
+  if (playing && classroomMode && voiceOn) speakCurrentChapter();
+  if (!playing) cancelSpeech();
   syncPlayer();
 }
 
@@ -2105,6 +2270,15 @@ if (FREEZE_T !== null || VIDEO) {
   narrationEl.style.display = 'none';
   document.getElementById('tips').style.display = 'none';
   document.getElementById('replant').style.display = 'none';
+}
+if (START_SCREEN) {
+  startScreenVisible = true;
+} else {
+  startScreenEl.classList.add('hidden');
+}
+if (STAGE_PARAM) {
+  startScreenEl.classList.add('hidden');
+  startScreenVisible = false;
 }
 
 function disposeEnvironment() {
@@ -2137,10 +2311,404 @@ function plant(seed) {
 let seedCounter = Math.floor(Math.random() * 100000);
 plant(seedCounter);
 
+/* ---------------- 课堂模式：UI、章节、朗读、互动 ---------------- */
+const QUARTET_TIMES = [
+  [130, '夏', '第 1 年'],
+  [150, '秋', '第 1 年'],
+  [170, '冬', '第 1 年'],
+  [190, '春', '第 2 年'],
+];
+const raycaster = new THREE.Raycaster();
+const pointerNdc = new THREE.Vector2();
+
+function showToast(message, ms = 1800) {
+  if (!classToastEl) return;
+  classToastEl.textContent = message;
+  classToastEl.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => classToastEl.classList.remove('show'), ms);
+}
+function openModal(el) {
+  if (!el) return;
+  if (el === chapterDrawerEl) buildChapterGrid();
+  if (el === teacherPanelEl) updateTeacherCard(chapterIndexAt(storyTime));
+  el.classList.add('show');
+}
+function closeModal(el) { if (el) el.classList.remove('show'); }
+function closeAllModals() { document.querySelectorAll('.modal.show').forEach((m) => m.classList.remove('show')); }
+function hasOpenModal() { return !!document.querySelector('.modal.show'); }
+
+function seasonForTime(t) {
+  const p = ((storySeason(t) % 1) + 1) % 1;
+  return SEASONS[Math.floor(p * 4) % 4].name;
+}
+function buildChapterGrid() {
+  if (!chapterGridEl) return;
+  const current = chapterIndexAt(storyTime);
+  chapterGridEl.innerHTML = CHAPTERS.map((c, i) => {
+    const season = seasonForTime((c.start + Math.min(c.end, STORY_END)) / 2);
+    return '<button class="chapter-item' + (i === current ? ' current' : '') + '" data-index="' + i + '">' +
+      '<div class="chapter-thumb" data-season="' + season + '"></div>' +
+      '<div class="chapter-num">第 ' + (i + 1) + ' 章</div>' +
+      '<div class="chapter-name">' + c.title + '</div>' +
+      '<div class="chapter-time">' + fmtTime(c.start) + '–' + fmtTime(Math.min(c.end, STORY_END)) + '</div>' +
+      '</button>';
+  }).join('');
+}
+function updateTeacherCard(idx) {
+  if (!teacherBodyEl) return;
+  const tip = TEACHER_TIPS[clamp(idx, 0, TEACHER_TIPS.length - 1)];
+  if (!tip) return;
+  teacherTitleEl.textContent = '第 ' + (idx + 1) + ' 章 · ' + CHAPTERS[idx].title;
+  teacherBodyEl.innerHTML =
+    '<div class="teacher-block"><b>可以问</b><p>' + tip.q + '</p></div>' +
+    '<div class="teacher-block"><b>可以动</b><p>' + tip.a + '</p></div>';
+}
+function goToChapter(idx, pause = true) {
+  idx = clamp(idx, 0, CHAPTERS.length - 1);
+  const t = Math.max(0.01, CHAPTERS[idx].start + 0.01);
+  setStoryTime(t, pause);
+  if (!pause) { playing = true; syncPlayer(); }
+}
+function nextChapter() {
+  const idx = chapterIndexAt(storyTime);
+  if (idx >= CHAPTERS.length - 1) { setStoryTime(STORY_END, true); return; }
+  goToChapter(idx + 1, true);
+}
+function prevChapter() {
+  const idx = chapterIndexAt(storyTime);
+  const atStart = storyTime <= CHAPTERS[idx].start + 1.4;
+  goToChapter(atStart ? Math.max(0, idx - 1) : idx, true);
+}
+function updateClassroomButtons() {
+  if (classAutoBtn) {
+    classAutoBtn.classList.toggle('on', autoPauseAtChapter);
+    classAutoBtn.textContent = autoPauseAtChapter ? '每章停 ✓' : '每章停';
+  }
+  if (classVoiceBtn) classVoiceBtn.classList.toggle('on', voiceOn);
+  if (classProjectorBtn) classProjectorBtn.classList.toggle('on', projectorBright);
+  if (classLockBtn) classLockBtn.classList.toggle('on', touchLocked);
+}
+function setAutoPause(v) {
+  autoPauseAtChapter = !!v;
+  updateClassroomButtons();
+}
+function toggleAutoPause() {
+  setAutoPause(!autoPauseAtChapter);
+  if (!autoPauseAtChapter) hidePausePrompt();
+  showToast(autoPauseAtChapter ? '每章结束会自动暂停' : '已关闭自动暂停');
+}
+function setProjector(v) {
+  projectorBright = !!v;
+  document.body.classList.toggle('projector', projectorBright);
+  updateClassroomButtons();
+}
+function toggleProjector() {
+  setProjector(!projectorBright);
+  showToast(projectorBright ? '投影增亮已开启' : '投影增亮已关闭');
+}
+
+/* ---- 故事姐姐朗读（Web Speech API；有中文声音时优先用中文） ---- */
+function pickSpeechVoice() {
+  if (!speechSupported) return;
+  const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+  speechVoice = voices.find((v) => /zh[-_]?CN|cmn|Chinese|Tingting|Xiaoxiao|Meijia|Huihui/i.test((v.lang || '') + ' ' + (v.name || ''))) || null;
+}
+if (speechSupported) {
+  pickSpeechVoice();
+  if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', pickSpeechVoice);
+}
+function cancelSpeech() {
+  if (!speechSupported) return;
+  try { speechSynthesis.cancel(); } catch (e) {}
+  lastSpokenChapter = -1;
+  window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: false } }));
+}
+function speakCurrentChapter() {
+  if (!voiceOn || !speechSupported || FREEZE_T !== null || VIDEO) return;
+  const idx = chapterIndexAt(storyTime);
+  if (lastSpokenChapter === idx && speechSynthesis.speaking) return;
+  try { speechSynthesis.cancel(); } catch (e) {}
+  if (!speechVoice) pickSpeechVoice();
+  const u = new SpeechSynthesisUtterance(CHAPTERS[idx].text);
+  if (speechVoice) u.voice = speechVoice;
+  u.lang = 'zh-CN';
+  u.rate = 0.92;
+  u.pitch = 1.04;
+  u.volume = 1;
+  u.onstart = () => window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: true } }));
+  u.onend = () => window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: false } }));
+  u.onerror = () => window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: false } }));
+  lastSpokenChapter = idx;
+  window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: true } }));
+  try { speechSynthesis.speak(u); } catch (e) {
+    window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: false } }));
+  }
+}
+function toggleVoice() {
+  voiceOn = !voiceOn;
+  updateClassroomButtons();
+  if (!voiceOn) cancelSpeech();
+  else if (classroomMode && playing) speakCurrentChapter();
+  showToast(voiceOn ? '故事姐姐朗读已开启' : '朗读已关闭');
+}
+
+/* ---- 屏幕锁定 / 光标隐藏 / 屏幕常亮 ---- */
+function lockScreen() {
+  touchLocked = true;
+  hidePartCard();
+  stopFindGame();
+  lockOverlayEl.classList.add('show');
+  updateClassroomButtons();
+}
+function unlockScreen() {
+  touchLocked = false;
+  lockOverlayEl.classList.remove('show', 'holding');
+  clearTimeout(lockPressTimer);
+  updateClassroomButtons();
+  showToast('屏幕已解锁');
+}
+function toggleLock() {
+  if (touchLocked) unlockScreen(); else lockScreen();
+}
+function resetIdle() {
+  document.body.classList.remove('idle');
+  clearTimeout(idleTimer);
+  if (!classroomMode) return;
+  idleTimer = setTimeout(() => {
+    if (!hasOpenModal() && !startScreenVisible && !touchLocked) document.body.classList.add('idle');
+  }, 2600);
+}
+async function requestWakeLock() {
+  if (!classroomMode || !('wakeLock' in navigator)) return;
+  try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) { wakeLock = null; }
+}
+function releaseWakeLock() {
+  try { if (wakeLock) wakeLock.release(); } catch (e) {}
+  wakeLock = null;
+}
+
+/* ---- 进入 / 退出课堂模式 ---- */
+function refreshViewport() {
+  const vp = appViewportSize();
+  camera.aspect = vp.w / vp.h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(vp.w, vp.h);
+}
+function requestFullscreenSafe() {
+  if (document.fullscreenElement) return;
+  const el = document.documentElement;
+  if (!el.requestFullscreen) { showToast('当前浏览器不支持全屏，按 F11 也可以'); return; }
+  const p = el.requestFullscreen();
+  if (p && p.catch) p.catch(() => showToast('全屏请求被浏览器拦住了，按 F11 也可以'));
+}
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    const p = document.exitFullscreen();
+    if (p && p.catch) p.catch(() => {});
+  } else {
+    requestFullscreenSafe();
+  }
+}
+function enterClassroomMode(opts = {}) {
+  const reset = opts.reset !== false;
+  classroomMode = true;
+  startScreenVisible = false;
+  startScreenEl.classList.add('hidden');
+  document.body.classList.add('classroom-mode');
+  document.body.classList.remove('idle');
+  refreshViewport();
+  closeAllModals();
+  stopFindGame();
+  hidePartCard();
+  if (reset) {
+    storyTime = 0; prevT = 0; currentChapter = -1; quartetAutoDone = false;
+  }
+  playing = false;
+  setAutoPause(true);
+  setProjector(false);
+  updateClassroomButtons();
+  updateChapterUI(storyTime);
+  syncPlayer();
+  const canPlay = !VIDEO && FREEZE_T === null;
+  if (canPlay && opts.autoplay !== false) {
+    playing = true;
+    syncPlayer();
+    if (voiceOn) speakCurrentChapter();
+  }
+  if (opts.fullscreen) requestFullscreenSafe();
+  requestWakeLock();
+  resetIdle();
+}
+function exitClassroomMode() {
+  playing = false;
+  cancelSpeech();
+  stopFindGame();
+  hidePartCard();
+  hidePausePrompt();
+  touchLocked = false;
+  lockOverlayEl.classList.remove('show', 'holding');
+  releaseWakeLock();
+  classroomMode = false;
+  document.body.classList.remove('classroom-mode', 'idle', 'projector');
+  setProjector(false);
+  refreshViewport();
+  if (document.fullscreenElement) {
+    const p = document.exitFullscreen();
+    if (p && p.catch) p.catch(() => {});
+  }
+  startScreenVisible = true;
+  startScreenEl.classList.remove('hidden');
+  storyTime = 0; prevT = 0; currentChapter = -1;
+  updateChapterUI(0);
+  syncPlayer();
+}
+
+/* ---- 点一点，认一认 ---- */
+function partFromObject(obj) {
+  let o = obj;
+  while (o) {
+    if (o.userData && o.userData.part) return o.userData.part;
+    o = o.parent;
+  }
+  return null;
+}
+function partVisibleAt(part, t) {
+  // 透明但仍在场景里的实例（春花、果实、积雪）不能参与拾取，否则夏天会点到“雪”。
+  if (part === 'seed') return t < 80;
+  if (part === 'cotyledon') return t >= 54 && t <= 82;
+  if (part === 'root') return t >= 30;
+  if (part === 'trunk') return t >= 52;
+  if (part === 'branch') return t >= 90;
+  if (part === 'leaf') return t >= 54;
+  if (part === 'flower') return t >= 178 && t <= 206;
+  if (part === 'fruit') return t >= 216 && t <= 252;
+  if (part === 'snow') return (t >= 156 && t <= 184) || t >= 236;
+  return true;
+}
+function pickPartAt(clientX, clientY) {
+  if (!tree || !tree.group) return null;
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointerNdc.x = ((clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1;
+  pointerNdc.y = -((clientY - rect.top) / Math.max(1, rect.height)) * 2 + 1;
+  raycaster.setFromCamera(pointerNdc, camera);
+  const hits = raycaster.intersectObject(tree.group, true);
+  for (const h of hits) {
+    const part = partFromObject(h.object);
+    if (part && partVisibleAt(part, storyTime)) return part;
+  }
+  return null;
+}
+function showPartCard(part, clientX, clientY) {
+  const info = PART_INFO[part];
+  if (!info || !partCardEl) return;
+  partGlyphEl.textContent = info.name.slice(-1);
+  partNameEl.textContent = info.name;
+  partPinyinEl.textContent = info.pinyin;
+  partDescEl.textContent = info.desc;
+  partCardEl.classList.add('show');
+}
+function hidePartCard() { if (partCardEl) partCardEl.classList.remove('show'); }
+function partMatches(target, actual) {
+  if (target === actual) return true;
+  if (target === 'leaf' && actual === 'cotyledon') return true;
+  return false;
+}
+function startFindGame() {
+  if (!classroomMode) { showToast('请先进入课堂模式'); return; }
+  if (findActive) { stopFindGame(); return; }
+  const list = CHAPTER_PARTS[chapterIndexAt(storyTime)] || ['leaf', 'root', 'trunk'];
+  findTarget = list[Math.floor(Math.random() * list.length)];
+  findActive = true;
+  findTextEl.innerHTML = '找一找：<b>' + PART_INFO[findTarget].name + '</b>在哪里？';
+  findBannerEl.classList.add('show');
+  hidePausePrompt();
+  hidePartCard();
+  if (playing) { playing = false; cancelSpeech(); syncPlayer(); }
+}
+function stopFindGame() {
+  findActive = false;
+  findTarget = null;
+  if (findBannerEl) findBannerEl.classList.remove('show', 'shake');
+}
+function handleCanvasTap(clientX, clientY) {
+  if (startScreenVisible || touchLocked) return;
+  const part = pickPartAt(clientX, clientY);
+  if (findActive) {
+    if (!part) { showToast('再仔细看看，找找画面里的部位'); return; }
+    if (partMatches(findTarget, part)) {
+      showPartCard(part, clientX, clientY);
+      stopFindGame();
+      showToast('找到啦！这是' + PART_INFO[part].name);
+    } else {
+      findBannerEl.classList.remove('shake');
+      void findBannerEl.offsetWidth;
+      findBannerEl.classList.add('shake');
+      showToast('这里不是' + PART_INFO[findTarget].name + '，再找找看');
+    }
+    return;
+  }
+  if (part) {
+    if (classroomMode && playing) { playing = false; cancelSpeech(); syncPlayer(); }
+    showPartCard(part, clientX, clientY);
+  } else hidePartCard();
+}
+
+/* ---- 四季合影 ---- */
+function snapshotCanvas() {
+  const src = renderer.domElement;
+  const c = document.createElement('canvas');
+  const w = Math.min(720, src.width);
+  const h = Math.max(1, Math.round(w * src.height / Math.max(1, src.width)));
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(src, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', 0.86);
+}
+async function captureQuartet() {
+  if (quartetBusy) return;
+  quartetBusy = true;
+  const old = { t: storyTime, prevT, playing, theta: cam.theta, radius: cam.radius, phi: cam.phi };
+  const frames = [];
+  try {
+    for (const [tt, label, year] of QUARTET_TIMES) {
+      storyTime = tt; prevT = tt; freezeOverride = tt; playing = false;
+      cam.theta = 1.46; cam.radius = 12.5; cam.phi = 1.46;
+      syncPlayer(); updateChapterUI(tt);
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      renderer.render(scene, camera);
+      frames.push({ label, year, url: snapshotCanvas() });
+    }
+    if (quartetGridEl) {
+      quartetGridEl.innerHTML = frames.map((f) =>
+        '<figure class="quartet-item"><img src="' + f.url + '" alt="' + f.label + '"><figcaption><b>' + f.label + '</b><span>' + f.year + '</span></figcaption></figure>'
+      ).join('');
+    }
+    openModal(quartetOverlayEl);
+  } finally {
+    freezeOverride = null;
+    storyTime = old.t; prevT = old.prevT; playing = old.playing;
+    cam.theta = old.theta; cam.radius = old.radius; cam.phi = old.phi;
+    syncPlayer(); updateChapterUI(storyTime);
+    quartetBusy = false;
+  }
+}
+
+/* ---- 自动暂停提示 ---- */
+function showPausePrompt(text) {
+  if (!pausePromptEl) return;
+  pausePromptEl.innerHTML = text;
+  pausePromptEl.classList.add('show');
+}
+function hidePausePrompt() {
+  if (pausePromptEl) pausePromptEl.classList.remove('show');
+}
+
+/* ---- 事件绑定 ---- */
 playBtn.addEventListener('click', togglePlay);
 replayBtn.addEventListener('click', () => {
-  storyTime = 0; prevT = 0; playing = true;
-  updateChapterUI(0); syncPlayer();
+  storyTime = 0; prevT = 0; playing = true; autoPausePending = false; quartetAutoDone = false;
+  currentChapter = -1; updateChapterUI(0); syncPlayer();
 });
 timelineEl.addEventListener('pointerdown', () => { scrubbing = true; });
 timelineEl.addEventListener('input', (e) => { setStoryTime(parseFloat(e.target.value), true); });
@@ -2149,20 +2717,96 @@ window.addEventListener('pointerup', () => { if (scrubbing) { scrubbing = false;
 document.getElementById('replant').addEventListener('click', () => {
   seedCounter = Math.floor(Math.random() * 100000);
   plant(seedCounter);
-  storyTime = 0; prevT = 0; playing = true;
-  updateChapterUI(0); syncPlayer();
+  storyTime = 0; prevT = 0; playing = true; autoPausePending = false; quartetAutoDone = false;
+  currentChapter = -1; updateChapterUI(0); syncPlayer();
 });
+
+startClassBtn.addEventListener('click', () => enterClassroomMode({ reset: true, fullscreen: true, autoplay: true }));
+freeViewBtn.addEventListener('click', () => {
+  startScreenVisible = false;
+  startScreenEl.classList.add('hidden');
+  hidePausePrompt();
+  playing = true;
+  syncPlayer();
+});
+classPlayBtn.addEventListener('click', togglePlay);
+classPrevBtn.addEventListener('click', prevChapter);
+classNextBtn.addEventListener('click', nextChapter);
+classReplayBtn.addEventListener('click', () => {
+  storyTime = 0; prevT = 0; playing = true; autoPausePending = false; quartetAutoDone = false;
+  currentChapter = -1; updateChapterUI(0); syncPlayer();
+  if (voiceOn) speakCurrentChapter();
+});
+classChapterBtn.addEventListener('click', () => openModal(chapterDrawerEl));
+classTeacherBtn.addEventListener('click', () => openModal(teacherPanelEl));
+classFindBtn.addEventListener('click', startFindGame);
+classQuartetBtn.addEventListener('click', captureQuartet);
+classAutoBtn.addEventListener('click', toggleAutoPause);
+classProjectorBtn.addEventListener('click', toggleProjector);
+classLockBtn.addEventListener('click', toggleLock);
+classExitBtn.addEventListener('click', exitClassroomMode);
+classVoiceBtn.addEventListener('click', toggleVoice);
+chapterBtnNormal.addEventListener('click', () => openModal(chapterDrawerEl));
+quartetBtnNormal.addEventListener('click', captureQuartet);
+classEnterBtn.addEventListener('click', () => enterClassroomMode({ reset: false, fullscreen: true, autoplay: true }));
+partCloseEl.addEventListener('click', hidePartCard);
+findCloseEl.addEventListener('click', stopFindGame);
+chapterGridEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.chapter-item');
+  if (!btn) return;
+  goToChapter(parseInt(btn.dataset.index, 10), true);
+  closeModal(chapterDrawerEl);
+});
+document.querySelectorAll('.modal').forEach((m) => {
+  m.addEventListener('pointerdown', (e) => { if (e.target === m) m.classList.remove('show'); });
+});
+document.querySelectorAll('[data-close]').forEach((b) => {
+  b.addEventListener('click', () => closeModal(document.getElementById(b.dataset.close)));
+});
+lockOverlayEl.addEventListener('pointerdown', (e) => {
+  e.preventDefault();
+  lockOverlayEl.classList.add('holding');
+  clearTimeout(lockPressTimer);
+  lockPressTimer = setTimeout(unlockScreen, 2000);
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => {
+  lockOverlayEl.addEventListener(ev, () => {
+    lockOverlayEl.classList.remove('holding');
+    clearTimeout(lockPressTimer);
+  });
+});
+window.addEventListener('pointermove', resetIdle, { passive: true });
+window.addEventListener('pointerdown', resetIdle, { passive: true });
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && classroomMode) requestWakeLock();
+});
+
 window.addEventListener('keydown', (e) => {
+  if (touchLocked) {
+    if (e.key === 'Escape') { e.preventDefault(); unlockScreen(); }
+    return;
+  }
   if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
   else if (e.key === 'ArrowLeft') { e.preventDefault(); setStoryTime(storyTime - 5, true); }
   else if (e.key === 'ArrowRight') { e.preventDefault(); setStoryTime(storyTime + 5, true); }
   else if (e.key === 'Home') { e.preventDefault(); setStoryTime(0, true); }
   else if (e.key === 'End') { e.preventDefault(); setStoryTime(STORY_END, true); }
+  else if (e.key === 'PageUp') { e.preventDefault(); prevChapter(); }
+  else if (e.key === 'PageDown') { e.preventDefault(); nextChapter(); }
+  else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
+  else if (e.key === 'c' || e.key === 'C') { e.preventDefault(); openModal(chapterDrawerEl); }
+  else if (e.key === 't' || e.key === 'T') { e.preventDefault(); openModal(teacherPanelEl); }
+  else if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); captureQuartet(); }
+  else if (e.key === 'p' || e.key === 'P') { e.preventDefault(); toggleProjector(); }
+  else if (e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleLock(); }
+  else if (e.key === 'Escape') {
+    if (hasOpenModal()) { e.preventDefault(); closeAllModals(); }
+  }
   else if (e.key === 'r' || e.key === 'R') {
     seedCounter = Math.floor(Math.random() * 100000);
     plant(seedCounter);
-    storyTime = 0; prevT = 0; playing = true;
-    updateChapterUI(0); syncPlayer();
+    storyTime = 0; prevT = 0; playing = true; autoPausePending = false; quartetAutoDone = false;
+    currentChapter = -1; updateChapterUI(0); syncPlayer();
   }
 });
 
@@ -2226,14 +2870,31 @@ function animate() {
   const realDt = Math.min(0.10, Math.max(0.001, (now - lastReal) / 1000));
   lastReal = now;
   if (!VIDEO && FREEZE_T === null && playing) {
-    storyTime = Math.min(STORY_END, storyTime + realDt);
-    if (storyTime >= STORY_END - 0.001) {
-      storyTime = STORY_END;
+    const nextT = Math.min(STORY_END, storyTime + realDt);
+    const currentIdx = chapterIndexAt(storyTime);
+    const nextIdx = chapterIndexAt(nextT);
+    if (classroomMode && autoPauseAtChapter && nextT < STORY_END - 0.001 && nextIdx !== currentIdx) {
+      // 停在章节边界：storyTime 正好等于下一章开始，画面/字幕先切到下一章，但保持暂停
+      storyTime = Math.min(CHAPTERS[currentIdx].end, STORY_END);
       playing = false;
+      autoPausePending = true;
+      const nextTitle = CHAPTERS[Math.min(CHAPTERS.length - 1, currentIdx + 1)].title;
+      showPausePrompt('第 ' + (currentIdx + 1) + ' 章结束 · 下一章：<b>' + nextTitle + '</b>');
+      cancelSpeech();
+    } else {
+      storyTime = nextT;
+      if (storyTime >= STORY_END - 0.001) {
+        storyTime = STORY_END;
+        playing = false;
+        if (classroomMode && !quartetAutoDone) {
+          quartetAutoDone = true;
+          setTimeout(() => { if (classroomMode) captureQuartet(); }, 900);
+        }
+      }
     }
   }
   // 定帧模式（?t0=N&freeze）：时间钉死在 N 秒；视频模式由外部喂时间
-  const t = VIDEO ? videoT : (FREEZE_T !== null ? FREEZE_T : storyTime);
+  const t = VIDEO ? videoT : (freezeOverride !== null ? freezeOverride : (FREEZE_T !== null ? FREEZE_T : storyTime));
   const dt = VIDEO ? 1 / 60 : Math.min(0.05, Math.max(0.0001, t - prevT));
   prevT = t;
   updateChapterUI(t);
@@ -2604,6 +3265,13 @@ function animate() {
   yearEl.textContent = '第 ' + yearIndex + ' 年';
   const subText = (sIdx === 2 && fruitMature > 0.45) ? '果实熟了' : SEASONS[sIdx].sub;
   if (subEl.textContent !== subText) subEl.textContent = subText;
+  const seasonProgress = ((p % 1) + 1) % 1;
+  if (wheelNeedleEl) wheelNeedleEl.style.transform = 'translate(-50%, -100%) rotate(' + (seasonProgress * 360).toFixed(2) + 'deg)';
+  if (wheelYearEl) wheelYearEl.textContent = '第 ' + yearIndex + ' 年';
+  if (classSeasonEl) {
+    const seasonLine = SEASONS[sIdx].name + ' · 第 ' + yearIndex + ' 年';
+    if (classSeasonEl.textContent !== seasonLine) classSeasonEl.textContent = seasonLine;
+  }
 
   if (DEBUG && Math.floor(t * 2) !== Math.floor((t - dt) * 2)) {
     console.log('[debug]', 't=' + t.toFixed(1), 'p=' + p.toFixed(3), 'g=' + g.toFixed(3),
@@ -2648,4 +3316,13 @@ if (/(^|[?&])dbg(=|&|$)/.test(location.search)) {
     }));
   };
 }
+
+if (CLASSROOM_PARAM) {
+  enterClassroomMode({ reset: false, fullscreen: false, autoplay: FREEZE_T === null });
+}
+window.__classroom = {
+  enter: enterClassroomMode,
+  exit: exitClassroomMode,
+  state: () => ({ classroomMode, autoPauseAtChapter, voiceOn, projectorBright, touchLocked, storyTime, playing, currentChapter }),
+};
 animate();
