@@ -1790,7 +1790,7 @@ function buildTree(seed) {
   const result = {
     group, branches, leaves, leafData, roots, flare, flareMat, rootMats: [rootMatA, rootMatB], seedMesh, seedTop, seedBottom, seedCrack, seedMat, cotyledons, cotyledonMat, geos,
     fruits, stems, fruitData, fruitGeo, fruitMat, stemGeo, stemMat,
-    blossoms, blossomMat, blossomGeo, snowCaps, snowCapGeo, snowCapMat,
+    blossoms, blossomMat, blossomGeo, blossomData, snowCaps, snowCapGeo, snowCapMat, snowCapData,
     radius: 0,
   };
   treeRoot.add(group);
@@ -2238,11 +2238,13 @@ function setStoryTime(t, pause = true) {
   autoPausePending = false;
   hidePausePrompt();
   cancelSpeech();
+  if (findActive) stopFindGame();
   updateChapterUI(storyTime);
   syncPlayer();
 }
 function togglePlay() {
   if (storyTime >= STORY_END - 0.01) { storyTime = 0; prevT = 0; autoPausePending = false; quartetAutoDone = false; updateChapterUI(0); }
+  if (findActive) stopFindGame();
   playing = !playing;
   autoPausePending = false;
   hidePausePrompt();
@@ -2586,6 +2588,103 @@ function partVisibleAt(part, t) {
   if (part === 'snow') return (t >= 156 && t <= 184) || t >= 236;
   return true;
 }
+function partHasVisibleState(part) {
+  if (!tree) return false;
+  const g = growthAt(storyTime);
+  if (part === 'seed') return !!(tree.seedMesh && tree.seedMesh.visible && tree.seedMesh.scale.x > 0.008);
+  if (part === 'root') return tree.roots.some((r) => r.mesh.visible);
+  if (part === 'trunk') return !!(tree.branches[0] && tree.branches[0].mesh.visible && g > 0.11);
+  if (part === 'branch') return tree.branches.some((b, i) => i > 0 && b.mesh.visible) && g > 0.24;
+  if (part === 'leaf') return g > 0.13;
+  if (part === 'cotyledon') return tree.cotyledons.some((m) => m.visible && m.scale.x > 0.04);
+  if (part === 'flower') return !!(tree.blossoms && tree.blossoms.visible && tree.blossomMat.opacity > 0.05);
+  if (part === 'fruit') {
+    const p = ((storySeason(storyTime) % 1) + 1) % 1;
+    const grow = storyYear(storyTime) >= 2 ? smoothstep(0.40, 0.52, p) : 0;
+    return grow > 0.02 && p < 0.82;
+  }
+  if (part === 'snow') return !!(tree.snowCaps && tree.snowCaps.visible && tree.snowCapMat.opacity > 0.05);
+  return false;
+}
+function partWorldPoints(part) {
+  if (!tree || !tree.group) return [];
+  const pts = [];
+  const addLocal = (v) => {
+    if (!v) return;
+    const p = v.clone();
+    tree.group.localToWorld(p);
+    pts.push(p);
+  };
+  const addWorld = (v) => { if (v) pts.push(v.clone()); };
+  if (part === 'seed') {
+    if (tree.seedMesh) addWorld(tree.seedMesh.getWorldPosition(new THREE.Vector3()));
+  } else if (part === 'root') {
+    for (const r of tree.roots) {
+      if (!r.mesh.visible) continue;
+      for (let i = 0; i < r.pts.length; i += 2) addLocal(r.pts[i]);
+    }
+  } else if (part === 'trunk') {
+    const b = tree.branches[0];
+    if (b && b.mesh.visible) for (let i = 0; i < b.pts.length; i += 2) addLocal(b.pts[i]);
+  } else if (part === 'branch') {
+    for (let bi = 0; bi < tree.branches.length; bi++) {
+      const b = tree.branches[bi];
+      if (bi === 0 || !b.mesh.visible) continue;
+      for (let i = 0; i < b.pts.length; i += 2) addLocal(b.pts[i]);
+    }
+  } else if (part === 'leaf') {
+    const g = growthAt(storyTime);
+    for (let i = 0; i < tree.leafData.length; i += 25) {
+      const d = tree.leafData[i];
+      if (d.grow != null && d.grow > g + 0.02) continue;
+      addLocal(d.pos);
+    }
+  } else if (part === 'cotyledon') {
+    for (const m of tree.cotyledons) if (m.visible && m.scale.x > 0.04) addWorld(m.getWorldPosition(new THREE.Vector3()));
+  } else if (part === 'flower') {
+    if (tree.blossomData) for (let i = 0; i < tree.blossomData.length; i += 8) addLocal(tree.blossomData[i].pos);
+  } else if (part === 'fruit') {
+    if (tree.fruitData) for (let i = 0; i < tree.fruitData.length; i += 2) addLocal(tree.fruitData[i].pos);
+  } else if (part === 'snow') {
+    if (tree.snowCapData) for (const d of tree.snowCapData) addLocal(d.pos);
+  }
+  return pts;
+}
+function partScreenPoints(part) {
+  if (!tree || !tree.group) return [];
+  const rect = renderer.domElement.getBoundingClientRect();
+  const out = [];
+  const v = new THREE.Vector3();
+  for (const p of partWorldPoints(part)) {
+    v.copy(p).project(camera);
+    if (v.z < -1 || v.z > 1) continue;
+    const x = rect.left + (v.x * 0.5 + 0.5) * rect.width;
+    const y = rect.top + (-v.y * 0.5 + 0.5) * rect.height;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) continue;
+    out.push({ x, y });
+  }
+  return out;
+}
+function findablePartsAt(t) {
+  const preferred = CHAPTER_PARTS[chapterIndexAt(t)] || [];
+  return preferred.filter((p) => {
+    if (!partVisibleAt(p, t) || !partHasVisibleState(p)) return false;
+    const count = partScreenPoints(p).length;
+    // 种子很小但它是核心观察对象，允许 1 个投影点；其他部位至少 2 个点，避免选到几乎看不见的目标
+    return count >= (p === 'seed' ? 1 : 2);
+  });
+}
+function isNearFindTarget(clientX, clientY) {
+  if (!findTarget) return false;
+  const rect = renderer.domElement.getBoundingClientRect();
+  const radius = Math.max(40, Math.min(80, rect.width * 0.055));
+  const rr = radius * radius;
+  for (const p of partScreenPoints(findTarget)) {
+    const dx = p.x - clientX, dy = p.y - clientY;
+    if (dx * dx + dy * dy <= rr) return true;
+  }
+  return false;
+}
 function pickPartAt(clientX, clientY) {
   if (!tree || !tree.group) return null;
   const rect = renderer.domElement.getBoundingClientRect();
@@ -2595,7 +2694,7 @@ function pickPartAt(clientX, clientY) {
   const hits = raycaster.intersectObject(tree.group, true);
   for (const h of hits) {
     const part = partFromObject(h.object);
-    if (part && partVisibleAt(part, storyTime)) return part;
+    if (part && partVisibleAt(part, storyTime) && partHasVisibleState(part)) return part;
   }
   return null;
 }
@@ -2617,7 +2716,12 @@ function partMatches(target, actual) {
 function startFindGame() {
   if (!classroomMode) { showToast('请先进入课堂模式'); return; }
   if (findActive) { stopFindGame(); return; }
-  const list = CHAPTER_PARTS[chapterIndexAt(storyTime)] || ['leaf', 'root', 'trunk'];
+  const list = findablePartsAt(storyTime);
+  if (!list.length) {
+    showToast('这一章暂时没有可找的部位，换个章节试试');
+    return;
+  }
+  // 优先选画面里投影点更多的部位，但种子/花/果这类小目标也保留
   findTarget = list[Math.floor(Math.random() * list.length)];
   findActive = true;
   findTextEl.innerHTML = '找一找：<b>' + PART_INFO[findTarget].name + '</b>在哪里？';
@@ -2635,11 +2739,14 @@ function handleCanvasTap(clientX, clientY) {
   if (startScreenVisible || touchLocked) return;
   const part = pickPartAt(clientX, clientY);
   if (findActive) {
-    if (!part) { showToast('再仔细看看，找找画面里的部位'); return; }
-    if (partMatches(findTarget, part)) {
-      showPartCard(part, clientX, clientY);
+    const nearTarget = isNearFindTarget(clientX, clientY);
+    if (nearTarget || (part && partMatches(findTarget, part))) {
+      const found = findTarget;
+      showPartCard(found, clientX, clientY);
       stopFindGame();
-      showToast('找到啦！这是' + PART_INFO[part].name);
+      showToast('找到啦！这是' + PART_INFO[found].name);
+    } else if (!part) {
+      showToast('再仔细看看，找找画面里的' + PART_INFO[findTarget].name);
     } else {
       findBannerEl.classList.remove('shake');
       void findBannerEl.offsetWidth;
@@ -3324,5 +3431,14 @@ window.__classroom = {
   enter: enterClassroomMode,
   exit: exitClassroomMode,
   state: () => ({ classroomMode, autoPauseAtChapter, voiceOn, projectorBright, touchLocked, storyTime, playing, currentChapter }),
+  pickPartAt,
+  partVisibleAt,
+  findState: () => ({ findActive, findTarget }),
+  findablePartsAt,
+  partScreenPoints,
+  handleCanvasTap,
+  startFindGame,
+  stopFindGame,
+  seekForTest: (t) => { freezeOverride = t; storyTime = t; prevT = t; playing = false; updateChapterUI(t); syncPlayer(); },
 };
 animate();
