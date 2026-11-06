@@ -43,6 +43,8 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 - `classroom-mode` 分支：课堂模式开发分支；
 - `pre-find-game-fix` 标签：修复“找一找”前的回退点；
 - `find-game-fix-v1` 标签：找一找修复完成点；
+- `pre-visual-refresh` 标签：远山视觉与找一找队列改版前；
+- `visual-refresh-v1` 标签：远山视觉与找一找队列改版完成点；
 - 如果后续改坏了，可以 `git switch main` 回到稳定版本，或 `git checkout pre-classroom-mode` 查看改造前状态。
 
 ### 开发调试 URL
