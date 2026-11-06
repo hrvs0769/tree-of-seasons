@@ -134,7 +134,11 @@
   if (volumeEl) volumeEl.addEventListener('input', onVolumeInput);
   if (classVolumeEl) classVolumeEl.addEventListener('input', onVolumeInput);
   document.addEventListener('keydown', function (e) {
-    if (e.key === 'm' || e.key === 'M') { e.preventDefault(); toggleMusic(); return; }
+    if (e.key === 'm' || e.key === 'M') {
+      // 弹层打开时 M 被挂起，避免在章节弹层里误开/关音乐
+      if (document.querySelector('.modal.show')) return;
+      e.preventDefault(); toggleMusic(); return;
+    }
     // 空格 / ←→ / Home / End / R 都会改变时间轴，等 app.js 处理完再对齐
     setTimeout(syncPlayState, 0);
   });
