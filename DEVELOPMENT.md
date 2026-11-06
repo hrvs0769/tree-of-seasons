@@ -2,6 +2,7 @@
 
 > **给新会话的 AI / 新开发者：先读这份主文档。**
 > 这里只放项目概况、架构、文件索引、关键约定和常见任务。需要改某个模块时，再按下方文档索引进入对应子文档，不要先通读整个 `src/main.js`。
+> **最后更新：2026-11-06 · 对应代码：`55ec5d5`（课堂模式 · 找一找队列 · 远山改版）**
 
 ---
 
@@ -15,6 +16,7 @@
 | 默认故事时长 | `STORY_END ≈ 259.9 秒`，播放器显示 **04:20**，结尾自动停止 |
 | 本地入口 | 双击 `index.html`，无需本地服务器、无需联网 |
 | 线上入口 | https://hrvs0769.github.io/tree-of-seasons/ |
+| 线上课堂入口 | https://hrvs0769.github.io/tree-of-seasons/?class |
 | GitHub 仓库 | https://github.com/hrvs0769/tree-of-seasons |
 | 技术栈 | Three.js r170（本地 `lib/three.module.min.js`）、原生 JavaScript、HTML/CSS、Canvas 程序化贴图、esbuild |
 | 3D 资源 | 全部程序化生成；没有外部模型、图片或字体依赖 |
@@ -94,6 +96,23 @@ tools/                     截图、渲染、探测、BGM 生成等工具
 | [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | URL 调试参数、截图流水线、章节/画面核对清单、性能检查 | 验证改动、找视觉回归、定位怪东西 |
 
 `ITERATIONS.md` 是历史记录，不是运行文档；当需要知道“为什么上一版这样做”时再查。
+
+### 3.3 文档更新时间
+
+| 文档 | 最后更新 | 对应代码 / 说明 |
+|---|---|---|
+| [`README.md`](README.md) | 2026-11-06 | `55ec5d5` · 用户使用说明、课堂模式入口 |
+| `DEVELOPMENT.md` | 2026-11-06 | `55ec5d5` · 本文件：主索引 |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-06 | `55ec5d5` · 系统架构与课堂 UI 分层 |
+| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-06 | `55ec5d5` · 时间轴与课堂自动暂停 |
+| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-06 | `55ec5d5` · 树体/根系与部位拾取标记 |
+| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-06 | `55ec5d5` · 远山渐变 shader 与四季环境 |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-06 | `55ec5d5` · 课堂模式、找一找队列、朗读与 BGM |
+| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-06 | `55ec5d5` · 构建与 GitHub Pages 发布 |
+| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-06 | `55ec5d5` · 课堂/远山/找一找回归检查 |
+| [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-05 | 历史视觉迭代记录，功能说明以本文件为准 |
+
+维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。
 
 ---
 

@@ -2,6 +2,7 @@
 
 > 本文解决：页面如何加载、由哪些层组成、每帧按什么顺序更新，以及新增模块应该插在哪里。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
+> 最后更新：2026-11-06 · 对应代码：`55ec5d5`（课堂模式 · 找一找队列 · 远山改版）
 
 ## 1. 加载链路
 
@@ -22,9 +23,9 @@
 
 | 文件 | 职责 | 是否直接编辑 |
 |---|---|---|
-| `index.html` | DOM、CSS、课堂布局、旁白容器、播放器、`<audio>` | 是 |
-| `src/main.js` | 3D 场景、生成器、时间轴、镜头、粒子、UI 状态、渲染循环 | 是（主入口） |
-| `src/bgm.js` | 背景音乐播放/暂停/跳转同步、音量、本地偏好 | 是 |
+| `index.html` | DOM、CSS、课堂布局、课堂模式 DOM（开始页/章节抽屉/大字幕/控制条）、旁白容器、播放器、`<audio>` | 是 |
+| `src/main.js` | 3D 场景、生成器、时间轴、镜头、粒子、UI 状态、课堂模式、找一找/点认、渲染循环 | 是（主入口） |
+| `src/bgm.js` | 背景音乐播放/暂停/跳转同步、音量、本地偏好、朗读时 ducking | 是 |
 | `app.js` | esbuild 打包产物 | 否，编辑后重新生成 |
 | `lib/three.module.min.js` | Three.js r170 核心包（无 addons、无 EffectComposer） | 否 |
 | `assets/tree-of-seasons-bgm-v3.mp3` | 网页背景音乐 | 替换时同步授权文件 |
@@ -46,7 +47,8 @@
 9. **粒子**：雪、雨、飘落花瓣/落叶。
 10. **镜头与交互**：`cam` 状态、指针/滚轮/双指、`CAM_KEYS` 脚本。
 11. **旁白/播放器状态**：`CHAPTERS`、`storyTime`、播放/暂停、进度条、`plant()`。
-12. **主循环**：`growBranch()`、`animate()`。
+12. **课堂模式**：`#startScreen`、`#classroomTop`、`#subtitleBar`、`#classroomBar`、章节队列、找一找队列、教师提示、四季合影、故事朗读、投影/锁定。
+13. **主循环**：`growBranch()`、`animate()`。
 
 新增功能时，优先找到对应阶段插入；不要在 `animate()` 末尾堆一个独立的 `setInterval`，所有随时间变化的内容应统一走 `t` 和 `dt`。
 
@@ -59,7 +61,7 @@ scene
 ├─ hemi / ambient / sun / rim / frontFill / fillUnder (灯光)
 ├─ ground (半圆地势，MeshStandardMaterial)
 ├─ soilWall / soilFace / turf / 断面石子/团粒
-├─ ridgeGroup (三层远山剪影)
+├─ ridgeGroup (三层渐变远山 + 雪线)
 ├─ mistGroup (3 层雾片)
 ├─ dust / rain / snow (Points)
 ├─ treeRoot (Group，整棵树/根可被风吹动)
@@ -83,7 +85,7 @@ scene
 
 1. **计算故事时间**：如果 `playing` 且不是 `freeze/video`，`storyTime += realDt`；超过 `STORY_END` 自动暂停。
 2. **计算 `t / dt`**：`t` 为当前帧故事时间；`dt` 用于粒子/风等增量运动。
-3. **章节/UI 更新**：`updateChapterUI(t)`、`syncPlayer()`。
+3. **章节/UI 更新**：`updateChapterUI(t)`（左侧旁白、课堂大字幕、教师提示、找一找队列重置）、`syncPlayer()`（含课堂控制条）。
 4. **时间派生量**：`pRaw = storySeason(t)`、`p = wrap(pRaw)`、`yearIndex = storyYear(t)`、`g = growthAt(t)`。
 5. **四季调色板**：`samplePalette(p, palette)`。
 6. **天空与光照**：更新 sky uniforms、太阳位置、灯光颜色/强度、远山颜色。
@@ -107,6 +109,8 @@ scene
   - 手机：`left:0; bottom:112px`
 - `renderer.setSize()` 和相机 `aspect` 使用 `appViewportSize()`（`#app.clientWidth/clientHeight`），不是 `window.innerWidth/innerHeight`。
 - 左栏/播放条是独立 fixed 元素，不会覆盖 canvas；修改布局时必须保持这一点。
+- 课堂模式通过 `body.classroom-mode` 切换：`#sidebar` 隐藏，`#app` 顶部让出 `--class-top`、底部让出 `--class-bar-h + --class-sub-h`；所有字幕/按钮都在舞台之外，不压树。
+- 进入/退出课堂模式必须调用 `refreshViewport()`；`#app` 尺寸变化不会自动触发 `window.resize`。
 
 ## 7. 扩展原则
 
