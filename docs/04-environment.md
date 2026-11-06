@@ -2,7 +2,7 @@
 
 > 本文解决：天空/太阳/光照、地面、草花、土壤剖面、远山、雾、雨、雪、浮尘这些环境元素在哪里生成、参数是什么，以及怎么改四季氛围。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-06 · 对应代码：`55ec5d5`（课堂模式 · 找一找队列 · 远山改版）
+> 最后更新：2026-11-06 · 对应代码：`349d91f`（课堂模式 · 找一找队列 · 远山改版 · 视觉审查 r1）
 
 ## 1. 天空与太阳
 
@@ -75,8 +75,8 @@ const sunAz = cam.theta - Math.PI - 0.28 + Math.sin(t * 0.03) * 0.04;
 ### 3.2 土壤剖面
 
 - `ISLAND_R = 25`，`SOIL_DEPTH = 9`，`FACE_H = 11.5`。
-- `soilTexture()`：1024×512，四层土层（表土/心土/底土/深土），9600 团粒、620 石子、26000 砂粒、裂缝、有机质斑块；`flipY=false` 让表土在上。
-- `SOIL_TEX` 同时作为 `bumpMap`，`bumpScale 0.12`。
+- `soilTexture()`：1024×512，四层土层（表土/心土/底土/深土），用多频噪声做起伏层界、透镜体/侵蚀袋和断续层界；9600 团粒、620 石子、26000 砂粒、裂缝、有机质斑块；`flipY=true` 让表土在上。
+- `SOIL_TEX` 同时作为 `bumpMap`，`bumpScale 0.18`。
 - 断面里 420 个 3D 土团粒 InstancedMesh + 70 个石子 InstancedMesh；`soilFace.receiveShadow=false`（避免树冠投影变成脏斑）。
 - `turfGeo`：240 段不规则草皮 ribbon，替代原来的直 Box。
 - `soilWall`：半圆柱外壁。

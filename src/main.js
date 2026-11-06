@@ -457,38 +457,77 @@ function soilTexture() {
   ctx.fillStyle = 'rgb(58,42,30)';
   ctx.fillRect(0, 0, w, h);
 
-  // ---- 四个土层：表土（深黑褐）→ 心土（黄褐）→ 底土（灰黄、多石） ----
+  // ---- 四层土壤：用多频噪声做起伏层界，避免“四条平行色带” ----
+  const boundary = (x, idx) => {
+    const baseY = [0, 0.10, 0.42, 0.70, 1][idx] * h;
+    const n1 = fbm(x * 0.00135 + idx * 23.7, idx * 5.3) - 0.5;
+    const n2 = fbm(x * 0.0052 + idx * 11.1, idx * 8.9) - 0.5;
+    const n3 = fbm(x * 0.016 + idx * 37.1, idx * 2.7) - 0.5;
+    return baseY + n1 * 58 + n2 * 20 + n3 * 6;
+  };
   const horizons = [
-    { y0: 0.00, y1: 0.11, col: [30, 21, 14], amp: 10 },
-    { y0: 0.11, y1: 0.44, col: [92, 66, 42], amp: 16 },
-    { y0: 0.44, y1: 0.72, col: [112, 88, 56], amp: 14 },
-    { y0: 0.72, y1: 1.00, col: [104, 86, 62], amp: 12 },
+    { top: -4, bottom: 1, col: 'rgb(58,40,26)' },
+    { top: 1, bottom: 2, col: 'rgb(92,66,42)' },
+    { top: 2, bottom: 3, col: 'rgb(112,88,56)' },
+    { top: 3, bottom: 4, col: 'rgb(104,86,62)' },
   ];
   for (const hz of horizons) {
-    ctx.fillStyle = `rgb(${hz.col[0]},${hz.col[1]},${hz.col[2]})`;
+    ctx.fillStyle = hz.col;
     ctx.beginPath();
-    const top = hz.y0 * h, bot = hz.y1 * h;
-    ctx.moveTo(0, top);
-    for (let x = 0; x <= w; x += 32) {
-      ctx.lineTo(x, top + Math.sin(x * 0.004 + rnd() * 0.2) * hz.amp * 0.5 + Math.sin(x * 0.013) * hz.amp * 0.3);
+    const topBase = hz.top === -4 ? -4 : hz.top;
+    if (topBase === -4) {
+      ctx.moveTo(0, -4);
+    } else {
+      ctx.moveTo(0, boundary(0, topBase));
     }
-    for (let x = w; x >= 0; x -= 32) {
-      ctx.lineTo(x, bot + Math.sin(x * 0.0035 + 2.1) * hz.amp * 0.6 + Math.sin(x * 0.011 + 1.1) * hz.amp * 0.35);
+    for (let x = 0; x <= w; x += 16) {
+      ctx.lineTo(x, topBase === -4 ? -4 : boundary(x, topBase));
+    }
+    const bottomIndex = hz.bottom;
+    for (let x = w; x >= 0; x -= 16) {
+      ctx.lineTo(x, bottomIndex >= 4 ? h : boundary(x, bottomIndex));
     }
     ctx.closePath();
     ctx.fill();
   }
 
-  // 层界压一道深色线，让"一层一层"读得出来
-  for (const yb of [0.11, 0.44, 0.72]) {
-    ctx.strokeStyle = 'rgba(12,7,4,0.6)';
-    ctx.lineWidth = 4;
+  // ---- 透镜体 / 侵蚀袋：让层与层之间不是一条干净的分割线 ----
+  for (let i = 0; i < 34; i++) {
+    const x = rnd() * w;
+    const layer = 1 + Math.floor(rnd() * 3);
+    const base = boundary(x, layer);
+    const y = base + (rnd() - 0.5) * 28;
+    const rx = 22 + rnd() * 100;
+    const ry = 4 + rnd() * 18;
+    const warm = rnd() > 0.5;
+    ctx.fillStyle = warm ? 'rgba(142,108,68,0.16)' : 'rgba(43,29,18,0.18)';
     ctx.beginPath();
-    for (let x = 0; x <= w; x += 24) {
-      const yy = yb * h + Math.sin(x * 0.006 + yb * 9) * 7 + Math.sin(x * 0.017) * 3;
-      if (x === 0) ctx.moveTo(x, yy); else ctx.lineTo(x, yy);
+    ctx.ellipse(x, y, rx, ry, (rnd() - 0.5) * 0.14, 0, 6.283);
+    ctx.fill();
+  }
+
+  // ---- 层界：做旧、断续的深色线，不再是规则正弦 ----
+  for (const yb of [1, 2, 3]) {
+    ctx.strokeStyle = 'rgba(12,7,4,0.42)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    let started = false;
+    for (let x = 0; x <= w; x += 8) {
+      const yy = boundary(x, yb);
+      if (!started) { ctx.moveTo(x, yy); started = true; } else ctx.lineTo(x, yy);
     }
     ctx.stroke();
+    // 局部断层：让某些位置看起来有土块塌落/侵蚀
+    for (let k = 0; k < 7; k++) {
+      const x0 = rnd() * w;
+      const y0 = boundary(x0, yb) + (rnd() - 0.5) * 7;
+      ctx.strokeStyle = `rgba(12,7,4,${0.12 + rnd() * 0.20})`;
+      ctx.lineWidth = 2 + rnd() * 3;
+      ctx.beginPath();
+      ctx.moveTo(x0, y0);
+      ctx.quadraticCurveTo(x0 + 8 + rnd() * 28, y0 + (rnd() - 0.5) * 20, x0 + 30 + rnd() * 70, y0 + (rnd() - 0.5) * 24);
+      ctx.stroke();
+    }
   }
 
   // ---- 土块结构：不规则的团粒，靠明暗两层叠加做出体积 ----
@@ -562,26 +601,35 @@ function soilTexture() {
     ctx.fillRect(x, y, 1 + rnd() * 2, 1 + rnd() * 2);
   }
 
-  // ---- 表土最上面一层：更黑更细的腐殖质 ----
-  const top = ctx.createLinearGradient(0, 0, 0, h * 0.06);
-  top.addColorStop(0, 'rgba(16,10,5,0.85)');
-  top.addColorStop(1, 'rgba(26,17,9,0)');
+  // ---- 表土最上面一层：更黑更细的腐殖质，厚度有变化 ----
+  const top = ctx.createLinearGradient(0, 0, 0, h * 0.10);
+  top.addColorStop(0, 'rgba(18,12,7,0.58)');
+  top.addColorStop(0.55, 'rgba(30,20,12,0.22)');
+  top.addColorStop(1, 'rgba(30,20,12,0)');
   ctx.fillStyle = top;
-  ctx.fillRect(0, 0, w, h * 0.06);
+  ctx.fillRect(0, 0, w, h * 0.10);
+  for (let i = 0; i < 160; i++) {
+    const x = rnd() * w;
+    const y = rnd() * h * 0.07;
+    ctx.fillStyle = `rgba(190,160,116,${0.02 + rnd() * 0.05})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 1 + rnd() * 4, 1 + rnd() * 2, rnd() * 3.14, 0, 6.283);
+    ctx.fill();
+  }
 
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.ClampToEdgeWrapping;
-  tex.flipY = false;      // 让画布的第一行对应断面的最上面（表土）
-  tex.repeat.set(4.0, 1);
+  tex.flipY = true;       // 画布第一行对应 UV 顶部，表土在最上面
+  tex.repeat.set(2.5, 1);
   tex.anisotropy = 8;
   return tex;
 }
 
 const SOIL_TEX = soilTexture();
 const soilFaceMat = new THREE.MeshStandardMaterial({
-  map: SOIL_TEX, bumpMap: SOIL_TEX, bumpScale: 0.12, roughness: 1, metalness: 0,
+  map: SOIL_TEX, bumpMap: SOIL_TEX, bumpScale: 0.18, roughness: 1, metalness: 0,
   color: 0xffffff, emissive: 0x2a1a0e, emissiveIntensity: 0.25,
 });
 const soilWallMat = new THREE.MeshStandardMaterial({ color: 0x3d2a1c, roughness: 1, metalness: 0, flatShading: true });
@@ -1330,7 +1378,10 @@ function buildTree(seed) {
         const nx = normal.x * ca + binormal.x * sa;
         const ny = normal.y * ca + binormal.y * sa;
         const nz = normal.z * ca + binormal.z * sa;
-        pos.push(points[i].x + nx * radii[i], points[i].y + ny * radii[i], points[i].z + nz * radii[i]);
+        // 极轻的径向起伏：让树皮/根皮有手工木质的不规则感，而不是光滑塑料管
+        const surface = 1 + 0.018 * Math.sin(j * 3.2 + i * 0.9) + 0.009 * Math.sin(j * 7.1 + i * 1.7);
+        const rr = radii[i] * surface;
+        pos.push(points[i].x + nx * rr, points[i].y + ny * rr, points[i].z + nz * rr);
         nrm.push(nx, ny, nz);
         uv.push(j / radial, (i / (n - 1)) * 2);
       }
@@ -1354,7 +1405,7 @@ function buildTree(seed) {
   }
 
   function makeBranch(start, dir, len, r0, depth, g0, g1) {
-    const rings = depth === 0 ? 13 : depth === 1 ? 10 : 6;
+    const rings = depth === 0 ? 16 : depth === 1 ? 11 : 7;
     const radial = depth === 0 ? 16 : depth === 1 ? 10 : 7;
     const pts = [start.clone()];
     const radii = [r0];
@@ -1364,7 +1415,7 @@ function buildTree(seed) {
     const bendAxis = new THREE.Vector3().crossVectors(dir, UP);
     if (bendAxis.lengthSq() < 1e-6) bendAxis.set(1, 0, 0);
     bendAxis.normalize().applyAxisAngle(dir, rand() * Math.PI * 2);
-    const bend = randRange(rand, 0.12, 0.4) * (depth === 0 ? 0.55 : 1);
+    const bend = depth === 0 ? randRange(rand, 0.24, 0.52) : randRange(rand, 0.22, 0.62);
     const step = len / (rings - 1);
 
     for (let i = 1; i < rings; i++) {
@@ -1496,7 +1547,7 @@ function buildTree(seed) {
       const azim = depth <= 1
         ? (i / sides) * Math.PI * 2 + randRange(rand, -0.42, 0.42)
         : rand() * Math.PI * 2;
-      const tilt = randRange(rand, 0.68, 1.05);
+      const tilt = randRange(rand, 0.60, 1.14);
       const at = depth === 0 ? randRange(rand, 0.3, 0.85) : randRange(rand, 0.22, 0.94);
       const { p, tangent } = pointAt(pts, at);
       const ri = Math.min(radii.length - 1, Math.max(0, Math.round(at * (radii.length - 1))));
@@ -1538,17 +1589,19 @@ function buildTree(seed) {
 
   // 树干
   const trunkLen = randRange(rand, 3.15, 3.60);
-  spawn(new THREE.Vector3(0, 0, 0), new THREE.Vector3(randRange(rand, -0.06, 0.06), 1, randRange(rand, -0.06, 0.06)).normalize(),
+  spawn(new THREE.Vector3(0, 0, 0), new THREE.Vector3(randRange(rand, -0.10, 0.10), 1, randRange(rand, -0.10, 0.10)).normalize(),
     trunkLen, randRange(rand, 0.17, 0.21), 0, 0.06);
 
   /* ---------------- 根系：折线扫掠 + 分级，能弯曲、能收细 ---------------- */
   const roots = [];
   // 老根颜色深、新根浅，和真实根系一样有深浅差
   const rootMatA = new THREE.MeshStandardMaterial({
-    color: 0x7b5a3e, roughness: 0.95, metalness: 0, flatShading: true,
+    color: 0x6f5138, map: BARK_TEX, bumpMap: BARK_TEX, bumpScale: 0.035,
+    roughness: 0.94, metalness: 0, flatShading: false,
   });
   const rootMatB = new THREE.MeshStandardMaterial({
-    color: 0x9c7d59, roughness: 0.9, metalness: 0, flatShading: true,
+    color: 0x8d6c4d, map: BARK_TEX, bumpMap: BARK_TEX, bumpScale: 0.03,
+    roughness: 0.90, metalness: 0, flatShading: false,
   });
 
   // 一条根的骨架：从 start 出发，越走越细、越走越向下垂，并被夹在剖面里
@@ -1557,10 +1610,13 @@ function buildTree(seed) {
     const radii = [r0];
     const d = dir.clone().normalize();
     const step = len / segs;
+    const waveA = rand() * Math.PI * 2;
+    const waveB = rand() * Math.PI * 2;
     for (let i = 1; i <= segs; i++) {
       const t = i / segs;
-      d.x += randRange(rand, -wander, wander);
-      d.z += randRange(rand, -wander * 0.55, wander * 0.55);
+      // 低频正弦 + 随机游走：根不是折线，也不是一根直线
+      d.x += randRange(rand, -wander, wander) + Math.sin(i * 0.72 + waveA) * wander * 0.62;
+      d.z += randRange(rand, -wander * 0.55, wander * 0.55) + Math.cos(i * 0.55 + waveB) * wander * 0.38;
       d.y -= 0.015 + 0.075 * t;            // 末梢明显往下垂
       d.normalize();
       const p = pts[i - 1].clone().addScaledVector(d, step);
@@ -1659,6 +1715,34 @@ function buildTree(seed) {
   flare.castShadow = true;
   flare.receiveShadow = true;
   group.add(flare);
+
+  /* 细根毛：沿根系采样一圈极细的分叉，近景让根部不再像光滑管子 */
+  const rootHairPos = [];
+  const rootHairRand = mulberry32(Math.floor(rand() * 1e9) ^ 0x51ed270b);
+  for (const r of roots) {
+    for (let i = 2; i < r.pts.length - 1; i += 2) {
+      const p0 = r.pts[i];
+      const tangent = new THREE.Vector3().subVectors(r.pts[i + 1], r.pts[i - 1]).normalize();
+      const side = new THREE.Vector3().crossVectors(tangent, UP);
+      if (side.lengthSq() < 1e-5) side.set(1, 0, 0);
+      side.normalize();
+      for (let k = 0; k < 2; k++) {
+        const dir = side.clone().applyAxisAngle(tangent, rootHairRand() * Math.PI * 2);
+        const len = 0.010 + rootHairRand() * 0.028;
+        const q = p0.clone().addScaledVector(dir, len);
+        rootHairPos.push(p0.x, p0.y, p0.z, q.x, q.y, q.z);
+      }
+    }
+  }
+  const rootHairGeo = new THREE.BufferGeometry();
+  rootHairGeo.setAttribute('position', new THREE.Float32BufferAttribute(rootHairPos, 3));
+  const rootHairMat = new THREE.LineBasicMaterial({
+    color: 0x896b4b, transparent: true, opacity: 0.30, depthWrite: false,
+  });
+  const rootHairs = new THREE.LineSegments(rootHairGeo, rootHairMat);
+  rootHairs.userData.part = 'root';
+  group.add(rootHairs);
+  geos.push(rootHairGeo);
 
   /* 叶子实例化网格 */
   const count = Math.min(leafSites.length, 40000);
@@ -1840,7 +1924,7 @@ function buildTree(seed) {
   }
 
   const result = {
-    group, branches, leaves, leafData, roots, flare, flareMat, rootMats: [rootMatA, rootMatB], seedMesh, seedTop, seedBottom, seedCrack, seedMat, cotyledons, cotyledonMat, geos,
+    group, branches, leaves, leafData, roots, flare, flareMat, rootMats: [rootMatA, rootMatB], rootHairMat, seedMesh, seedTop, seedBottom, seedCrack, seedMat, cotyledons, cotyledonMat, geos,
     fruits, stems, fruitData, fruitGeo, fruitMat, stemGeo, stemMat,
     blossoms, blossomMat, blossomGeo, blossomData, snowCaps, snowCapGeo, snowCapMat, snowCapData,
     radius: 0,
@@ -1865,6 +1949,7 @@ function disposeTree(t) {
   });
   t.cotyledonMat.dispose();
   for (const m of t.rootMats) m.dispose();
+  if (t.rootHairMat) t.rootHairMat.dispose();
   if (t.flareMat) t.flareMat.dispose();
   t.fruitGeo.dispose(); t.fruitMat.dispose();
   t.stemGeo.dispose(); t.stemMat.dispose();
@@ -2240,7 +2325,10 @@ if (VIDEO) {
   window.__setVideoT = (v) => { videoT = v; };
   window.__videoReady = true;
 }
-if (STAGE_PARAM) document.body.classList.add('stage-only');
+if (STAGE_PARAM) {
+  document.body.classList.add('stage-only');
+  refreshViewport();
+}
 let storyTime = clamp(T0, 0, STORY_END);
 let freezeOverride = null;
 let playing = !VIDEO && FREEZE_T === null && !START_SCREEN;

@@ -2,7 +2,7 @@
 
 > **给新会话的 AI / 新开发者：先读这份主文档。**
 > 这里只放项目概况、架构、文件索引、关键约定和常见任务。需要改某个模块时，再按下方文档索引进入对应子文档，不要先通读整个 `src/main.js`。
-> **最后更新：2026-11-06 · 对应代码：`55ec5d5`（课堂模式 · 找一找队列 · 远山改版）**
+> **最后更新：2026-11-06 · 对应代码：`349d91f`（课堂模式 · 找一找队列 · 远山改版 · 视觉审查 r1）**
 
 ---
 
@@ -80,7 +80,7 @@ README.md                  面向使用者的简要说明
 DEVELOPMENT.md             本文件：开发者主文档 / 索引
 ITERATIONS.md              长期视觉与功能迭代记录（按轮次）
 docs/                      开发者子文档（本文件下方索引）
-tools/                     截图、渲染、探测、BGM 生成等工具
+tools/                     截图、视觉审查、渲染、探测、BGM 生成等工具（`visual-audit.sh`）
 ```
 
 ### 3.2 子文档索引（改哪里读哪里）
@@ -94,6 +94,7 @@ tools/                     截图、渲染、探测、BGM 生成等工具
 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 左侧讲解栏、旁白章节、播放器控件、键盘、BGM 同步与授权 | 改 UI、交互、旁白、背景音乐 |
 | [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 构建命令、离线模式、GitHub Pages 部署、缓存、资源清单 | 打包、发布、换部署地址 |
 | [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | URL 调试参数、截图流水线、章节/画面核对清单、性能检查 | 验证改动、找视觉回归、定位怪东西 |
+| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 视觉标准、八维评分、自动截图与视觉审查流程 | 做视觉升级、评审截图、判断是否达到标准 |
 
 `ITERATIONS.md` 是历史记录，不是运行文档；当需要知道“为什么上一版这样做”时再查。
 
@@ -101,15 +102,16 @@ tools/                     截图、渲染、探测、BGM 生成等工具
 
 | 文档 | 最后更新 | 对应代码 / 说明 |
 |---|---|---|
-| [`README.md`](README.md) | 2026-11-06 | `55ec5d5` · 用户使用说明、课堂模式入口 |
-| `DEVELOPMENT.md` | 2026-11-06 | `55ec5d5` · 本文件：主索引 |
-| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-06 | `55ec5d5` · 系统架构与课堂 UI 分层 |
-| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-06 | `55ec5d5` · 时间轴与课堂自动暂停 |
-| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-06 | `55ec5d5` · 树体/根系与部位拾取标记 |
-| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-06 | `55ec5d5` · 远山渐变 shader 与四季环境 |
-| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-06 | `55ec5d5` · 课堂模式、找一找队列、朗读与 BGM |
-| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-06 | `55ec5d5` · 构建与 GitHub Pages 发布 |
-| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-06 | `55ec5d5` · 课堂/远山/找一找回归检查 |
+| [`README.md`](README.md) | 2026-11-06 | `349d91f` · 用户使用说明、课堂模式入口 |
+| `DEVELOPMENT.md` | 2026-11-06 | `349d91f` · 本文件：主索引 |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-06 | `349d91f` · 系统架构与课堂 UI 分层 |
+| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-06 | `349d91f` · 时间轴与课堂自动暂停 |
+| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-06 | `349d91f` · 树体/根系与部位拾取标记 |
+| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-06 | `349d91f` · 远山渐变 shader 与四季环境 |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-06 | `349d91f` · 课堂模式、找一找队列、朗读与 BGM |
+| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-06 | `349d91f` · 构建与 GitHub Pages 发布 |
+| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-06 | `349d91f` · 课堂/远山/找一找回归检查 |
+| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-06 | `349d91f` · 视觉标准与视觉审查机制 |
 | [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-05 | 历史视觉迭代记录，功能说明以本文件为准 |
 
 维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。
@@ -169,6 +171,7 @@ STORY_END = 259.9;
 | 改天气、雪、雨、雾、土壤 | [`docs/04-environment.md`](docs/04-environment.md)；`RAIN_WINDOWS`、`SNOW_COUNT`、`soilTexture()` |
 | 改旁白、播放器、键盘 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`src/main.js` 状态区 + `index.html` |
 | 改课堂模式、章节卡片、点认、四季合影 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`src/main.js` 的「课堂模式」段 + `index.html` 的 `#startScreen` / `#classroomTop` / `#classroomBar` |
+| 做视觉审查、对齐画面标准 | [`docs/08-visual-standard.md`](docs/08-visual-standard.md)；运行 `./tools/visual-audit.sh audit-rN` |
 | 改背景音乐 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`assets/`、`src/bgm.js`、`index.html` 的 `<audio>` |
 | 重新打包 / 发布 GitHub Pages | [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) |
 | 截图 / 定位视觉回归 | [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) |

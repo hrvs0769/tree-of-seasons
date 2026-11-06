@@ -2,7 +2,7 @@
 
 > 本文解决：改动后怎么快速验证、怎么用 URL 参数定帧、怎么定位画面上的“怪东西”，以及章节/画面错位的核对方法。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-06 · 对应代码：`55ec5d5`（课堂模式 · 找一找队列 · 远山改版）
+> 最后更新：2026-11-06 · 对应代码：`349d91f`（课堂模式 · 找一找队列 · 远山改版 · 视觉审查 r1）
 
 ## 1. URL 调试参数
 
@@ -19,10 +19,20 @@
 
 ## 2. 快速截图
 
+常规章节截图：
+
 ```bash
 cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 ./tools/shoot.sh rN
 ```
+
+完整视觉审查（固定时间点 + 课堂 UI + 拼图 + 评分报告骨架）：
+
+```bash
+./tools/visual-audit.sh audit-rN
+```
+
+视觉标准与评分细则见 [`08-visual-standard.md`](08-visual-standard.md)。
 
 `tools/shoot.sh` 当前流程：
 
