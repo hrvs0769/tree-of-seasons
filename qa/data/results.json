@@ -3,16 +3,18 @@
   "runId": "20261108-004",
   "version": "v4.0.0",
   "label": "第四轮 · 可视化测试看板",
-  "commit": "deadf85",
+  "commit": "e065665",
   "status": "passed",
   "startedAt": "2026-11-08T02:06:20+08:00",
   "finishedAt": "2026-11-08T03:17:29+08:00",
   "durationMs": 1982005,
   "environment": {
-    "baseUrl": "http://127.0.0.1:55298",
+    "baseUrl": "https://hrvs0769.github.io/tree-of-seasons/",
     "browser": "Chromium 1208 (145.0.7632.6)",
     "platform": "macOS",
-    "viewport": "1440x900"
+    "viewport": "1440x900",
+    "testedBaseUrl": "http://127.0.0.1:55298",
+    "note": "正式发布目标地址；自动化在本地同一份文件上执行"
   },
   "progress": {
     "done": 100,
