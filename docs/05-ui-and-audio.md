@@ -3,9 +3,9 @@
 > 本文解决：新版界面（v3 现代设计系统）由哪些 DOM 与组件组成、每个交互背后是哪个事件与函数、快捷键/课堂流程怎么走，以及背景音乐 `src/bgm.js` 如何与画面时间同步。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
 > 设计 token、组件清单、动效规范、交互映射与验收结果见 [`11-round3-ui-system.md`](11-round3-ui-system.md)；整改前的问题清单见 [`10-round3-ui-plan.md`](10-round3-ui-plan.md)。
-> 最后更新：2026-11-07 · 对应代码：`17c3454`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-07 · 对应代码：`54137d0`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
 
-> **本轮变更摘要**：第三轮彻底重做了界面语言与交互层。去掉宋体、金棕、深绿渐变、点状纹理、装饰光晕、胶囊按钮与 emoji 图标；改为暖纸色 + 墨色 + 单一森林绿 + 全站无衬线 + 1px 细线 + 统一圆角与轻投影。3D 舞台变成浮动圆角画框，课堂模式改为浅色顶栏 / 白色字幕带 / 白色控制条。播放器、镜头、弹层、点认卡、找一找、自动暂停、快捷键面板全部补齐状态语义与键盘可达性。**3D 场景、14 章文案、章节时序、BGM 音频文件均未改动。**
+> **本轮变更摘要**：第三轮彻底重做了界面语言与交互层。去掉宋体、金棕、深绿渐变、点状纹理、装饰光晕、胶囊按钮与 emoji 图标；改为深炭黑 + 雾白 + 单一薄荷绿 + 全站无衬线 + 1px 细线 + 统一圆角与轻投影。3D 舞台变成浮动圆角画框，课堂模式改为深色顶栏 / 深色字幕带 / 深色控制条。播放器、镜头、弹层、点认卡、找一找、自动暂停、快捷键面板全部补齐状态语义与键盘可达性。**3D 场景、14 章文案、章节时序、BGM 音频文件均未改动。**
 
 ## 1. 设计语言速查
 
@@ -13,18 +13,18 @@
 
 | 类别 | 变量 / 值 | 用途 |
 |---|---|---|
-| 背景 | `--paper #F4F2ED` / `--surface #FBFAF7` | 页面纸面 / 卡片与浮层 |
-| 文字 | `--ink #14181A` / `--ink-2 #5D635E` / `--ink-3 #6A706A` | 主文 / 次文 / 辅助文（`--ink-3` 已提到 AA 对比度） |
-| 强调 | `--accent #246B4E` / `--accent-2 #1B5540` / `--accent-soft #E3EEE7` | 单一森林绿：进度、当前章、按钮 |
-| 危险 | `--danger #A9513C` | 退出课堂确认按钮 |
-| 线 / 圆角 | `--line rgba(20,24,26,.09)`、`--line-2 .16`；`--radius-s 9` / `--radius 14` / `--radius-lg 20` / `--stage-radius 18` | 统一细线与圆角 |
+| 背景 | `--paper #0C100E` / `--surface #151B18` | 深炭黑页面 / 卡片与浮层 |
+| 文字 | `--ink #F2F4F0` / `--ink-2 #AEB6AF` / `--ink-3 #8A928B` | 雾白主文 / 次文 / 辅助文（`--ink-3` 5.0–6.0:1，满足 AA） |
+| 强调 | `--accent #7BD6A6` / `--accent-2 #A9E8C7` / `--accent-soft rgba(123,214,166,.14)` | 单一薄荷绿：进度、当前章、按钮 |
+| 危险 | `--danger #E17A63` | 退出课堂确认按钮 |
+| 线 / 圆角 | `--line rgba(255,255,255,.08)`、`--line-2 .16`；`--radius-s 9` / `--radius 14` / `--radius-lg 20` / `--stage-radius 18` | 统一细线与圆角 |
 | 阴影 | `--shadow-sm/md/lg` | 卡片、浮层、舞台画框 |
 | 动效 | `--ease cubic-bezier(.22,.9,.28,1)`、`--ease-out cubic-bezier(.16,1,.3,1)` | 所有过渡共用 |
 | 字体 | `--font`：`-apple-system / SF Pro SC / PingFang SC / HarmonyOS Sans SC / MiSans / Noto Sans SC / Microsoft YaHei / system-ui` | 全站无衬线，无宋体、无网络字体 |
 | 布局 | `--side clamp(300px,24vw,356px)`、`--gutter 18px`、`--player-h 78px` | 讲解栏 / 画框留白 / 播放条 |
 | 课堂 | `--class-top 64px`、`--class-bar-h 84px`、`--class-sub-h 88px`（移动端 `134 / 72 / 82`） | 顶栏 / 控制条 / 字幕带 |
 
-`body[data-season]` 取 `春/夏/秋/冬`，切换 `--season`（春 `#4E9E62` / 夏 `#2F7D45` / 秋 `#B4762C` / 冬 `#5B7C93`），驱动 `#hud::before` 小色条、`#season` 大字与转盘四角标签颜色。
+`body[data-season]` 取 `春/夏/秋/冬`，切换 `--season`（春 `#7BCB8E` / 夏 `#5FBF7C` / 秋 `#E0A45C` / 冬 `#8FB7D8`），驱动 `#hud::before` 小色条、`#season` 大字与转盘四角标签颜色。
 
 所有图标来自 `index.html` 顶部的内联 SVG sprite（`aria-hidden="true"`），共 15 个 symbol：`#i-logo / #i-play / #i-pause / #i-replay / #i-music / #i-volume / #i-chapters / #i-grid / #i-present / #i-close / #i-chevron-left / #i-chevron-right / #i-lock / #i-arrow-right / #i-keyboard`。按钮用 `<svg class="icon"><use href="#i-…"/></svg>`，**不要写回 emoji 或文字符号图标**。
 
@@ -49,15 +49,15 @@
 ├─ #classroomTop / #seasonWheel / #subtitleBar / #classroomBar   课堂层
 ├─ .modal ×5: #chapterDrawer / #teacherPanel / #quartetOverlay / #shortcutPanel / #exitConfirm
 ├─ #partCard / #findBanner / #pausePrompt / #classToast / #lockOverlay
-└─ #loading                               加载层（纸色 logo + 生长进度线）
+└─ #loading                               加载层（深色 logo + 生长进度线）
 <audio id="bgm"> + app.js + src/bgm.js
 ```
 
 ## 3. 桌面布局
 
-- **左侧讲解栏 `#sidebar`**：固定宽 `--side`，纸色底、右侧 1px `--line`。结构是「品牌 → 季节 HUD（54–70px 大字）→ 14 段 `#chapterRail` → 章节标题/正文/提示 → 底部工具列表 → 两行 `#tips`」。`#chapterRail` 由 `buildChapterRail()` 生成 14 个 `<span>`，`updateChapterRail(idx)` 打 `done / current` 类，切章时只改 class 不重建 DOM。
+- **左侧讲解栏 `#sidebar`**：固定宽 `--side`，深炭黑底、右侧 1px `--line`。结构是「品牌 → 季节 HUD（54–70px 大字）→ 14 段 `#chapterRail` → 章节标题/正文/提示 → 底部工具列表 → 两行 `#tips`」。`#chapterRail` 由 `buildChapterRail()` 生成 14 个 `<span>`，`updateChapterRail(idx)` 打 `done / current` 类，切章时只改 class 不重建 DOM。
 - **右侧 3D 舞台 `#app`**：不再是贴边铺满的画布，而是 `left: var(--side) + var(--gutter)`、`top/bottom` 各留 `--gutter`、圆角 `--stage-radius`、柔和 `--shadow-md` 的浮动画框。`appViewportSize()` 仍读 `#app.clientWidth/clientHeight`，`refreshViewport()` 同步 `renderer.setSize()` 与 `camera.aspect`，**左侧栏/播放条不覆盖 canvas** 的原则不变。
-- **底部播放条 `#player`**：浮在纸面上，圆角 `--radius-lg`、浅色底 + 细线 + 轻投影；`#app` 的 `bottom` 让出 `--player-h`。
+- **底部播放条 `#player`**：浮在深色纸面上，圆角 `--radius-lg`、深色底 + 细线 + 轻投影；`#app` 的 `bottom` 让出 `--player-h`。
 - **文本可选中**：`#chapterText, .teacher-block p, .modal-card, .start-sub, .quartet-note` 显式 `user-select:text`；按钮与画布仍不可选，避免拖动选中文字。
 
 ## 4. 开场页 `#startScreen`
@@ -163,7 +163,7 @@
 入口：默认开场页点「开始上课」、侧栏 `#classEnterBtn`、或 `index.html?class`（可配合 `?t0=N`）。`body.classroom-mode` 切换布局，所有控件都在 3D 舞台之外。
 
 ```
-#classroomTop     浅色顶栏 64px：#classChapterIndex / #classChapterTitle / #classSeason + 8 个工具按钮
+#classroomTop     深色顶栏 64px：#classChapterIndex / #classChapterTitle / #classSeason + 8 个工具按钮
 #app              中间浮动 3D 画框（top: --class-top；bottom: --class-bottom）
 #seasonWheel      右上细环季节转盘
 #subtitleBar      白色大字幕带（88px）：#subtitleText（aria-live=polite aria-atomic）+ #subtitleMeta
@@ -230,14 +230,14 @@
 
 ## 17. 加载层 `#loading`
 
-`role="status" aria-live="polite" aria-label="正在加载"`，纸色底 + `.loading-mark`（墨色圆角方块 + `#i-logo`）+「正在生长…」+ `.loading-line`（120×2px，内部 `loadSlide 1.1s` 往返的生长进度线）。加载完成后 `requestAnimationFrame` 加 `.hidden`（`opacity .5s` 淡出），`setTimeout(..., 620)` 后 `display:none`；与最终纸色主题一致，不再有浅蓝闪屏。
+`role="status" aria-live="polite" aria-label="正在加载"`，深炭黑底 + `.loading-mark`（薄荷绿圆角方块 + `#i-logo`）+「正在生长…」+ `.loading-line`（120×2px，内部 `loadSlide 1.1s` 往返的生长进度线）。加载完成后 `requestAnimationFrame` 加 `.hidden`（`opacity .5s` 淡出），`setTimeout(..., 620)` 后 `display:none`；与最终深色主题一致，不再有浅蓝闪屏。
 
 ## 18. 状态、可访问性与对比度
 
 - **开场页也是模态层**：`#startScreen` 有 `role="dialog" aria-modal="true" aria-labelledby="startTitle"`；启动时对 `#app/#sidebar/#player/#vignette` 设 `inert`，焦点进入 `#startClassBtn`，Tab 只在开场页内循环；开始上课 / 自由观看 / 退出课堂后解除 `inert`，焦点回到 `body`。开场页可见期间全局快捷键全部挂起。
 - `button:focus-visible, input:focus-visible, [tabindex]:focus-visible` 统一 2px accent 描边 + offset；`button:active { transform: scale(.97) !important }` 显式覆盖 hover；`button:disabled { opacity:.38; cursor:not-allowed }`；`button.busy` 带旋转圆点 + `aria-busy`。
 - `meta viewport` 只有 `width=device-width, initial-scale=1, viewport-fit=cover`，**去掉了 `maximum-scale=1 / user-scalable=no`**，移动端允许双指缩放页面；画布手势靠 `touch-action:none` 控制。
-- `--ink-3` 提到 `#6A706A`（WCAG AA 小字对比度）；`:root color-scheme: light` 与浅色主题一致。
+- `--ink-3 #8A928B`（5.0–6.0:1，WCAG AA 小字对比度）；`:root color-scheme: dark` 与深色主题一致。
 - `@media (prefers-reduced-motion: reduce)` 把所有 animation / transition 时长压到 `.001ms`；JS 侧 `REDUCED_MOTION` 关闭自动环绕。
 - 文本选择、dialog 语义、`aria-pressed`、`aria-live`、`aria-busy`、canvas 的 `role/aria-label/tabindex` 见上文各节。
 

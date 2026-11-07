@@ -2,22 +2,22 @@
 
 > 本文解决：v3 界面用哪套设计 token、由哪些组件构成、动效时长与 easing 如何统一、pointer/keyboard/touch 如何映射、无障碍做到了什么程度，以及 `docs/10` 的 P0/P1/P2 清单逐条整改到什么状态。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)；组件与事件细节见 [`05-ui-and-audio.md`](05-ui-and-audio.md)；整改前的问题清单见 [`10-round3-ui-plan.md`](10-round3-ui-plan.md)。
-> 最后更新：2026-11-07 · 对应代码：`17c3454`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-07 · 对应代码：`54137d0`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
 
 ## 1. 设计语言
 
-一句话：**现代自然志 / 暖纸色 + 墨色 + 单一森林绿**。3D 树不是铺满屏幕的「网页背景」，而是嵌在纸面里的一件展品。
+一句话：**现代深夜自然志 / 炭黑 + 雾白 + 单一薄荷绿**。3D 树不是铺满屏幕的「网页背景」，而是嵌在深色展厅里的一件发光展品。
 
 第三轮明确删除的东西（不要再带回来）：
 
 | 删除项 | 旧版表现 | v3 替代 |
 |---|---|---|
 | 宋体 / 衬线 | 标题与季节用宋体 | 全站 `--font` 无衬线系统字体栈 |
-| 金棕 / 深绿渐变 | 侧栏、按钮、开场页深绿 + 金色 | 纸色 + 墨色 + `--accent #246B4E` 单强调色 |
+| 金棕 / 深绿渐变 | 侧栏、按钮、开场页深绿 + 金色 | 炭黑 + 雾白 + `--accent #7BD6A6` 单强调色 |
 | 点状纹理 / 装饰光晕 | `.start-orb`、卡片底纹 | 纯色 + 1px 细线 + 轻投影 |
 | 胶囊按钮 | pill 圆角、emoji 图标 | 9/14/20px 圆角 + 内联 SVG sprite |
 | emoji / 字符图标 | `⏸ ▶ ↻ ♫ ▣ ☰ ▦ 🔒 ✓` | 15 个 `#i-*` symbol，状态用 `data-*` / `aria-pressed` |
-| 深色课堂 UI | 深绿顶栏 + 深绿控制条 | 浅色顶栏 + 白色字幕带 + 白色控制条 |
+| 古风深色课堂 UI | 深绿顶栏 + 金棕控制条 | 中性炭黑顶栏 + 深色字幕带 + 深色控制条（影院感，不抢画面） |
 
 不变的是：3D 场景（`src/main.js` 的场景层）、14 章文案与时序、`CHAPTERS/CHAPTER_PARTS/TEACHER_TIPS`、BGM 音频与授权、单页原生 JS + CSS（不引入框架/npm 依赖）、`?class / ?t0 / ?freeze / ?stage / ?dbg` 调试参数。
 
@@ -27,25 +27,27 @@
 
 | Token | 值 | 用途 |
 |---|---|---|
-| `--paper` | `#F4F2ED` | 页面底色（暖纸色） |
-| `--paper-2` | `#EEECE5` | 纸面次级 |
-| `--surface` | `#FBFAF7` | 卡片 / 浮层 / 播放条 |
-| `--surface-2` | `#F0EEE8` | 次级面 / 移动端按钮底 |
-| `--surface-3` | `#E8E5DE` | 三级面 |
-| `--ink` | `#14181A` | 主文字、主按钮底、toast 底 |
-| `--ink-2` | `#5D635E` | 次级文字 |
-| `--ink-3` | `#6A706A` | 辅助文字（**提到 AA 对比度**） |
-| `--line` | `rgba(20,24,26,.09)` | 统一 1px 细线 |
-| `--line-2` | `rgba(20,24,26,.16)` | 稍强分隔线 / 轨道底 |
-| `--accent` | `#246B4E` | 唯一强调色：进度、当前章、焦点环 |
-| `--accent-2` | `#1B5540` | 强调色深态（hover / 激活文字） |
-| `--accent-soft` | `#E3EEE7` | 强调色浅底（`#findNext` 等） |
-| `--danger` | `#A9513C` | 退出课堂确认按钮、退出 hover |
-| `--sun` | `#C07A2B` | 暖色点缀 |
-| `--spring / --summer / --autumn / --winter` | `#4E9E62 / #2F7D45 / #B4762C / #5B7C93` | 四季色，由 `body[data-season]` 写入 `--season` |
+| `--paper` | `#0C100E` | 页面底色（深炭黑，带一点绿调） |
+| `--paper-2` | `#111614` | 纸面次级 |
+| `--surface` | `#151B18` | 卡片 / 浮层 / 播放条 |
+| `--surface-2` | `#1B2320` | 次级面 / 移动端按钮底 |
+| `--surface-3` | `#232C28` | 三级面 / toast / tooltip |
+| `--ink` | `#F2F4F0` | 主文字（雾白） |
+| `--ink-2` | `#AEB6AF` | 次级文字 |
+| `--ink-3` | `#8A928B` | 辅助文字（5.0–6.0:1，满足 AA） |
+| `--line` | `rgba(255,255,255,.08)` | 统一 1px 细线 |
+| `--line-2` | `rgba(255,255,255,.16)` | 稍强分隔线 |
+| `--track` | `#6E766F` | 滑块未填充轨道（≥3:1 非文本对比度） |
+| `--accent` | `#7BD6A6` | 唯一强调色：进度、当前章、焦点环（薄荷绿） |
+| `--accent-2` | `#A9E8C7` | 强调色亮态（激活文字） |
+| `--accent-soft` | `rgba(123,214,166,.14)` | 强调色深底（`#findNext` 等） |
+| `--danger` | `#E17A63` | 退出课堂确认按钮、退出 hover |
+| `--sun` | `#E5B36A` | 暖色点缀 |
+| `--btn-bg / --btn-ink` | `#F2F4F0 / #0C100E` | 主按钮（播放 / 开始上课）：雾白底 + 炭黑图标 |
+| `--spring / --summer / --autumn / --winter` | `#7BCB8E / #5FBF7C / #E0A45C / #8FB7D8` | 四季色（提亮版），由 `body[data-season]` 写入 `--season` |
 | `--season` | `var(--spring)` 默认 | 当前季色：`#hud::before` 小色条、`#season` 大字、转盘标签 |
 
-`color-scheme: light` 与整体浅色主题一致；`theme-color #F4F2ED`；`::selection` 用 `rgba(36,107,78,.18)`。
+`color-scheme: dark` 与整体深色主题一致；`theme-color #0C100E`；`::selection` 用 `rgba(123,214,166,.22)`。深色下关键对比度：`--ink` 17.3:1、`--ink-2` 9.2:1、`--ink-3` 6.0:1、`--accent` 11.0:1、`--track` 4.1:1（paper）/3.7:1（surface），均满足 WCAG AA 与非文本 3:1。
 
 ### 2.2 字体
 
@@ -101,7 +103,7 @@
 | 自动暂停 | `#pausePrompt`（`role=status`）→ `.pause-text` + `#pauseContinue` | `.show` 时 `pointer-events:auto` |
 | 轻提示 | `#classToast`（`role=status aria-live=polite`） | 底部，课堂模式抬到 `--class-bottom + 18px` |
 | 锁定层 | `#lockOverlay` → `.lock-inner / .lock-icon / .lock-progress` | 长按 2s 解锁进度 |
-| 加载层 | `#loading`（`role=status aria-live=polite`）→ `.loading-mark / .loading-text / .loading-line` | 纸色 logo + 生长进度线，500ms 级淡出 |
+| 加载层 | `#loading`（`role=status aria-live=polite`）→ `.loading-mark / .loading-text / .loading-line` | 深色 logo + 生长进度线，500ms 级淡出 |
 | 快捷键面板 | `#shortcutPanel` → `.shortcut-grid`（12 行 `<kbd>`） | `?` 打开 |
 
 ## 4. 动效时长与 easing 规范
@@ -223,8 +225,8 @@
 | P2-8 合影 16:9 裁切 | **已修复** | `.quartet-item img { width:100%; height:auto; object-fit:contain }` |
 | P2-9 结束自动弹合影 | **已修复** | 到 `STORY_END` 只 `showToast('本课播放结束 · 可点「四季合影」回顾四季')`，不自动开 modal |
 | P2-10 章节缩略图伪截图 | **部分** | `.chapter-thumb` 改为抽象季节色块 + `data-num` 编号（不再像「棒棒糖树」伪截图），但仍非真实画面截图 |
-| P2-11 加载层浅蓝闪屏 | **已修复** | 纸色 `#loading` + 墨色 `#i-logo` + `.loading-line` 生长进度线，`.hidden opacity .5s` 淡出 |
-| P2-12 `color-scheme` 与主题矛盾 | **已修复** | 全站浅色主题，`color-scheme: light` 一致；无白底滚动条冲突 |
+| P2-11 加载层浅蓝闪屏 | **已修复** | 深炭黑 `#loading` + 薄荷绿 `.loading-mark` + `.loading-line` 生长进度线，`.hidden opacity .5s` 淡出 |
+| P2-12 `color-scheme` 与主题矛盾 | **已修复** | 全站深色主题，`color-scheme: dark` 一致；无白底滚动条冲突 |
 | P2-13 全局 `user-select:none` | **已修复** | 正文/弹层/开场副标/合影说明显式 `user-select:text`，按钮画布仍禁选 |
 | P2-14 8–11px 小字 | **部分** | 主信息字号提升（季节 54–70px、字幕 21–36px、正文 14px）；转盘标签 8–9px、顶栏按钮 10.5–11.5px 等辅助字仍 <12px |
 | P2-15 `#tips` 单字孤行 | **已修复** | 显式 `<br>` 两行：「拖动环顾 · 滚轮缩放 · 双击复位」/「空格暂停 · ← → 快进 · F 全屏 · M 音乐 · ? 快捷键」 |
@@ -244,7 +246,7 @@
 | 2 | 不改 14 章文案 / 时序 / 旁白 / BGM 音频 | **不做**（保持） |
 | 3 | 不重写播放内核，只解耦 UI 对 `textContent` 的依赖 | **不做**（仅按 P1-17 解耦） |
 | 4 | 不引入框架 / 构建链 / npm 依赖 | **不做**（保持） |
-| 5 | 不做账号 / 后端 / 多语言 / 深浅色主题切换 | **不做**（保持单套浅色） |
+| 5 | 不做账号 / 后端 / 多语言 / 深浅色主题切换 | **不做**（保持单套深色） |
 | 6 | 不重做「找一找」玩法与「四季合影」内容 | **不做**（只改呈现、反馈、a11y） |
 | 7 | 不新增复杂手势 | **部分**：未加三指/路径手势，但按 P0/P1 需求补了双击复位（属于点按级复位，非缩放手势） |
 | 8 | 不重做课堂业务流程 | **不做**（自动暂停、每章停、锁定、增亮、朗读逻辑保留；只补确认与焦点） |
@@ -271,7 +273,7 @@
 | A-P1-2 | P1 | 桌面/平板多个按钮 30–42px，低于 44×44 | **已修复**：课堂顶栏/底栏、桌面播放器全部 44px；`#classProgress` 44px 命中区；`#findNext` / `.pause-btn` / 弹层关闭 / 退出确认按钮 44px |
 | A-P2-1 | P2 | `#classExitBtn` 11.5px 文字对比度 4.39:1 | **已修复**：改用 `--ink-2`（5.3:1） |
 | A-P2-2 | P2 | 季节转盘活动标签 9px 低对比度 | **已修复**：标签文字改 `--ink`、季节色移到圆点 |
-| A-P2-3 | P2 | 滑块未填充轨道 1.39:1 | **已修复**：新增 `--track #8C8A83`（paper 3.09:1 / surface 3.31:1） |
+| A-P2-3 | P2 | 滑块未填充轨道 1.39:1 | **已修复**：新增 `--track #6E766F`（深色 paper 4.09:1 / surface 3.73:1） |
 | A-P2-4 | P2 | 当前章节无 `aria-current` | **已修复**：`aria-current="step"` |
 | A-P2-5 | P2 | 点认卡不聚焦、锁屏无 role | **已修复**：`#partCard tabindex=-1` + focus；`#lockOverlay role=dialog aria-label` |
 | A-P2-6 | P2 | 弹层打开时 `M` 仍切换音乐 | **已修复**：`bgm.js` 检测 `.modal.show` 后忽略 M |
@@ -285,17 +287,17 @@
 
 | 文件 | 看什么 |
 |---|---|
-| `shots/round3/v24-start.png` | 开场页：左右分栏、大标题、右下「年轮四季」SVG 插画、纸色/墨色/森林绿 |
-| `shots/round3/v26-normal.png` | 自由观看：编辑式讲解栏 + 浮动圆角 3D 画框 + 底部播放条 |
-| `shots/round3/v26-class.png` | 桌面课堂：浅色顶栏 8 按钮（分组分隔）、细环季节转盘、白色字幕带与底栏细进度条 |
-| `shots/round3/v25-mobile-class.png` | 390×844 课堂：顶栏两行 4+4 的 44px 按钮、字幕与控制条、音量/进度可达 |
-| `shots/round3/v14-quartet.png` | 四季合影弹层：`object-fit:contain` 完整四图、dialog 语义 |
-| `shots/round3/v8-chapters.png` | 章节弹层：14 卡、当前章高亮并滚到视口中央、抽象编号缩略图 |
-| `shots/round3/v8-teacher.png` | 教师提示弹层：「可以问 / 可以动」、文本可选中 |
-| `shots/round3/v4-partcard.png` | 点认卡：锚定点击位置、专用 glyph 字、翻转不出界 |
-| `shots/round3/v4-find.png` | 找一找任务条：`role=status`、进度「第几轮 · 第几个」、底部 toast 不遮挡 |
-| `shots/round3/v4-pause.png` | 自动暂停提示：「继续播放」按钮可点、不吃画布事件 |
-| `shots/round3/v12-exit.png` | 退出课堂确认弹层：保留进度说明、取消 / 退出两个动作 |
+| `shots/round3/dark-start.png` | 开场页：左右分栏、大标题、右下「年轮四季」SVG 插画、炭黑/雾白/薄荷绿 |
+| `shots/round3/dark-normal.png` | 自由观看：编辑式讲解栏 + 浮动圆角 3D 画框 + 底部播放条 |
+| `shots/round3/dark-class.png` | 桌面课堂：深色顶栏 8 按钮（分组分隔）、细环季节转盘、深色字幕带与底栏细进度条 |
+| `shots/round3/dark-mobile-class.png` | 390×844 课堂：顶栏两行 4+4 的 44px 按钮、字幕与控制条、音量/进度可达 |
+| `shots/round3/dark-quartet.png` | 四季合影弹层：`object-fit:contain` 完整四图、dialog 语义 |
+| `shots/round3/dark-chapters.png` | 章节弹层：14 卡、当前章高亮并滚到视口中央、抽象编号缩略图 |
+| `shots/round3/dark-teacher.png` | 教师提示弹层：「可以问 / 可以动」、文本可选中 |
+| `shots/round3/dark-partcard.png` | 点认卡：锚定点击位置、专用 glyph 字、翻转不出界 |
+| `shots/round3/dark-find.png` | 找一找任务条：`role=status`、进度「第几轮 · 第几个」、底部 toast 不遮挡 |
+| `shots/round3/dark-pause.png` | 自动暂停提示：「继续播放」按钮可点、不吃画布事件 |
+| `shots/round3/dark-exit.png` | 退出课堂确认弹层：保留进度说明、取消 / 退出两个动作 |
 
 同目录下还有 `a11y-*-{start,free,class,chapter}.png`（1024×768 / 1280×800 / 1440×900 / 390×844 / 768×1024 五种尺寸的无障碍回归）、`a11y-reduced-motion-1280x800.png`，以及 `audit-*.png`（`docs/10` 的旧版基线截图，仅作对照）。
 
