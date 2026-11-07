@@ -2,7 +2,7 @@
 
 > **给新会话的 AI / 新开发者：先读这份主文档。**
 > 这里只放项目概况、架构、文件索引、关键约定和常见任务。需要改某个模块时，再按下方文档索引进入对应子文档，不要先通读整个 `src/main.js`。
-> 最后更新：2026-11-08 · 对应代码：`e065665`（第四轮 · 可视化测试看板）
+> 最后更新：2026-11-08 · 对应代码：`6518080`（第四轮 · 可视化测试看板）
 
 ---
 
@@ -139,24 +139,24 @@ tools/
 
 | 文档 | 最后更新 | 对应代码 / 说明 |
 |---|---|---|
-| [`README.md`](README.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 界面与交互段落、本轮新增 |
-| `DEVELOPMENT.md` | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 主索引、文件表与文档表 |
-| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 架构（确定性 / rootAge / 水层 / 静态对象） |
-| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 时间表与镜头（第二轮结论保留） |
-| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 树体与根系（第二轮结论保留） |
-| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 环境（第二轮结论保留） |
-| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · **整篇重写**：布局 / 组件 / 事件表 / 快捷键 / 课堂流程 / BGM |
-| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 构建与部署（结论保留） |
-| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 测试与调试（结论保留） |
-| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
-| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 第二轮问题清单（历史） |
-| [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
-| [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · **新建**：设计 token / 组件 / 动效 / 交互映射 / a11y / 逐条验收 |
+| [`README.md`](README.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 界面与交互段落、本轮新增 |
+| `DEVELOPMENT.md` | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 主索引、文件表与文档表 |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 架构（确定性 / rootAge / 水层 / 静态对象） |
+| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 时间表与镜头（第二轮结论保留） |
+| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 树体与根系（第二轮结论保留） |
+| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 环境（第二轮结论保留） |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · **整篇重写**：布局 / 组件 / 事件表 / 快捷键 / 课堂流程 / BGM |
+| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 构建与部署（结论保留） |
+| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 测试与调试（结论保留） |
+| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
+| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 第二轮问题清单（历史） |
+| [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
+| [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · **新建**：设计 token / 组件 / 动效 / 交互映射 / a11y / 逐条验收 |
 | [`docs/12-test-points.md`](docs/12-test-points.md) | 2026-11-08 | v4.0.0 · 第四轮 · **新建**：108 条测试点总表 |
 | [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 2026-11-08 | v4.0.0 · 第四轮 · **新建**：测试看板使用手册与发布流程 |
 | [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-08 | 历史记录追加 r33（第四轮测试看板）；功能说明以本文件为准 |
 
-维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `e065665` 占位符，提交后由维护者全局替换为真实哈希。
+维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `6518080` 占位符，提交后由维护者全局替换为真实哈希。
 
 ---
 
