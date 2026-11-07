@@ -2,7 +2,7 @@
 
 > **给新会话的 AI / 新开发者：先读这份主文档。**
 > 这里只放项目概况、架构、文件索引、关键约定和常见任务。需要改某个模块时，再按下方文档索引进入对应子文档，不要先通读整个 `src/main.js`。
-> 最后更新：2026-11-07 · 对应代码：`54137d0`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-08 · 对应代码：`e065665`（第四轮 · 可视化测试看板）
 
 ---
 
@@ -17,6 +17,7 @@
 | 本地入口 | 双击 `index.html`，无需本地服务器、无需联网 |
 | 线上入口 | https://hrvs0769.github.io/tree-of-seasons/ |
 | 线上课堂入口 | https://hrvs0769.github.io/tree-of-seasons/?class |
+| 质量看板（独立入口） | https://hrvs0769.github.io/tree-of-seasons/qa/（测试点目录 / 自动化运行结果 / 历史趋势） |
 | GitHub 仓库 | https://github.com/hrvs0769/tree-of-seasons |
 | 技术栈 | Three.js r170（本地 `lib/three.module.min.js`）、原生 JavaScript、HTML/CSS、Canvas 程序化贴图、esbuild |
 | 3D 资源 | 全部程序化生成；没有外部模型、图片或字体依赖 |
@@ -46,6 +47,19 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 ```
 `app.js` 是打包产物，**不要手工编辑 `app.js`**；改 `src/main.js` 后必须重新打包，否则本地和线上看到的还是旧 build。
 
+### 跑自动化测试 / 发布前检查
+```bash
+# 全量自动化：100 条 auto，逐条写 qa/data/results.json
+node tools/qa-run.js --version v4.0.0 --label "第四轮 · 可视化测试看板"
+
+# 构建 + 全量 + P0/P1 失败即非 0（推荐发布前用）
+./tools/qa-release.sh v4.1.0 "第五轮 · 本轮主题"
+
+# 打开看板（本地 8777）
+open http://127.0.0.1:8777/qa/
+```
+测试点总表：`qa/data/catalog.json`（108 条，10 模块）；使用手册：[`docs/13-test-dashboard.md`](docs/13-test-dashboard.md)。
+
 ### 回退点（Git）
 - `pre-classroom-mode` 标签：课堂模式改造前的稳定回退点；
 - `classroom-mode` 分支：课堂模式开发分支；
@@ -55,6 +69,9 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 - `visual-refresh-v1` 标签：远山视觉与找一找队列改版完成点；
 - **`pre-round2` 标签：第二轮优化改动前的干净版本（回滚本轮全部改动用这个）**；
 - **`round2-v1` 标签：第二轮优化完成点（确定性基线 / 深根水层 / 鸟虫树荫 / 文案对齐）**；
+- **`round3-v1` 标签：第三轮 UI 现代化完成点（深色设计系统 / 交互与动效）**；
+- **`pre-round4` 标签：第四轮测试看板改动前（回滚本轮全部改动用这个）**；
+- **`round4-v1` 标签：第四轮完成点（可视化测试看板 / 自动化回归 / 108 测试点）**；
 - 如果后续改坏了，可以 `git switch main` 回到稳定版本，或 `git checkout pre-round2` 查看本轮之前的状态。
 
 ### 开发调试 URL
@@ -88,9 +105,12 @@ README.md                  面向使用者的简要说明
 DEVELOPMENT.md             本文件：开发者主文档 / 索引
 ITERATIONS.md              长期视觉与功能迭代记录（按轮次）
 docs/                      开发者子文档（本文件下方索引）
+qa/                          可视化测试看板（独立入口 /qa/：catalog.json、results.json、history.json、evidence/）
 tools/
   shoot.sh / visual-audit.sh   固定时间点截图与视觉审查
   ui-shot.js                  独立 Playwright UI 定点截图器（第三轮新增）
+  qa-run.js / qa-release.sh   自动化测试 Runner 与大版本发布前检查（第四轮新增）
+  qa/                          Runner 的 harness、静态服务器与 10 个模块检查
   render.js / make-video.sh    旧成片流水线（勿当现行时间轴）
   probe.js / make-*.js         调试探针与 BGM 生成存档
 ```
@@ -110,6 +130,8 @@ tools/
 | [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 第二轮优化的问题清单、实施范围与验收标准（已完成，保留原始清单） | 追溯「为什么这样改」、查 P0/P1/P2 问题编号 |
 | [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 第三轮 UI 整改前的基线审计问题清单（P0 4 / P1 22 / P2 20，共 46 条） | 查整改前问题、复现步骤与旧版截图 |
 | [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 第三轮设计系统：token、组件清单、动效时长与 easing、交互映射、a11y、逐条验收状态、截图索引 | 改界面/组件、做 UI 回归、判断整改是否完成 |
+| [`docs/12-test-points.md`](docs/12-test-points.md) | 全项目 108 个测试点总表：10 模块、P0/P1/P2、自动/人工、预期与 automationKey 索引 | 评估项目覆盖、查某个功能验什么、新增大版本测试 |
+| [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 可视化测试看板：入口、看板结构、大版本运行流程、结果解读、如何新增测试点、常见问题 | 每次大版本发布前、维护 QA 数据、排查看板问题 |
 
 `ITERATIONS.md` 是历史记录，不是运行文档；当需要知道“为什么上一版这样做”时再查。`docs/10` 是旧版基线审计，`docs/11` 是 v3 的整改结果与现行规范，两篇要一起看。
 
@@ -117,22 +139,24 @@ tools/
 
 | 文档 | 最后更新 | 对应代码 / 说明 |
 |---|---|---|
-| [`README.md`](README.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 界面与交互段落、本轮新增 |
-| `DEVELOPMENT.md` | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 主索引、文件表与文档表 |
-| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 架构（确定性 / rootAge / 水层 / 静态对象） |
-| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 时间表与镜头（第二轮结论保留） |
-| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 树体与根系（第二轮结论保留） |
-| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 环境（第二轮结论保留） |
-| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · **整篇重写**：布局 / 组件 / 事件表 / 快捷键 / 课堂流程 / BGM |
-| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 构建与部署（结论保留） |
-| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 测试与调试（结论保留） |
-| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
-| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 第二轮问题清单（历史） |
-| [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
-| [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · **新建**：设计 token / 组件 / 动效 / 交互映射 / a11y / 逐条验收 |
-| [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-07 | 历史记录追加 r32；功能说明以本文件为准 |
+| [`README.md`](README.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 界面与交互段落、本轮新增 |
+| `DEVELOPMENT.md` | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 主索引、文件表与文档表 |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 架构（确定性 / rootAge / 水层 / 静态对象） |
+| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 时间表与镜头（第二轮结论保留） |
+| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 树体与根系（第二轮结论保留） |
+| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 环境（第二轮结论保留） |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · **整篇重写**：布局 / 组件 / 事件表 / 快捷键 / 课堂流程 / BGM |
+| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 构建与部署（结论保留） |
+| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 测试与调试（结论保留） |
+| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
+| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 第二轮问题清单（历史） |
+| [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
+| [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 2026-11-08 | `e065665` · 第四轮 · 可视化测试看板 · **新建**：设计 token / 组件 / 动效 / 交互映射 / a11y / 逐条验收 |
+| [`docs/12-test-points.md`](docs/12-test-points.md) | 2026-11-08 | v4.0.0 · 第四轮 · **新建**：108 条测试点总表 |
+| [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 2026-11-08 | v4.0.0 · 第四轮 · **新建**：测试看板使用手册与发布流程 |
+| [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-08 | 历史记录追加 r33（第四轮测试看板）；功能说明以本文件为准 |
 
-维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `54137d0` 占位符，提交后由维护者全局替换为真实哈希。
+维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `e065665` 占位符，提交后由维护者全局替换为真实哈希。
 
 ---
 
@@ -203,6 +227,7 @@ FACE_H = SOIL_DEPTH + 2.5; // 14.5
 | 改界面、组件、动效、无障碍 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) 与 [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md)；`index.html` 的 `:root` token、`src/main.js` 交互层 |
 | 做视觉审查、对齐画面标准 | [`docs/08-visual-standard.md`](docs/08-visual-standard.md)；运行 `./tools/visual-audit.sh audit-rN`；UI 定点截图用 `node tools/ui-shot.js` |
 | 查第三轮 UI 整改前问题 / 逐条状态 | [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md)（基线清单） / [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) §7（验收状态） |
+| 跑自动化测试 / 看测试点 / 大版本发布前检查 | `node tools/qa-run.js --version <v> --label "<标签>"`；看板 `/qa/`；测试点 [`docs/12-test-points.md`](docs/12-test-points.md)；手册 [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) |
 | 改背景音乐 | [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md)；`assets/`、`src/bgm.js`、`index.html` 的 `<audio>` |
 | 重新打包 / 发布 GitHub Pages | [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) |
 | 截图 / 定位视觉回归 / 确定性验证 | [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) |

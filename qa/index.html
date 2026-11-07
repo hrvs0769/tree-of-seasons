@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0C100E">
+<meta name="description" content="一棵树的四季 · 质量看板：测试点目录、自动化运行结果与历史趋势。">
+<title>一棵树的四季 · 质量看板</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='9' fill='%230C100E' stroke='%237BD6A6' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='4' fill='none' stroke='%237BD6A6' stroke-width='1.5' opacity='.6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/qa.css?v=4">
+</head>
+<body>
+<a class="skip-link" href="#main">跳到主要内容</a>
+
+<svg class="svg-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-tree" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.1"/><circle cx="12" cy="12" r="4.2" opacity=".5"/><path d="M12 3.9v2M12 18.1v2M3.9 12h2M18.1 12h2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h3"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></symbol>
+  <symbol id="i-dash" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 6l7 6-7 6V6zM13 6l7 6-7 6V6z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c.8-3.4 3.6-5.4 7-5.4s6.2 2 7 5.4"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l2.4-6 4.2 12 2.4-6H21"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.4"/><path d="M16 16l4.2 4.2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4"/><path d="M12 11v5.2M12 7.6v.2"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17l5-5 4 4 2.5-2.5 3.5 3.5"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 6.3"/><path d="M20 4v7h-7"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 18l-6-6 6-6"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../" aria-label="返回《一棵树的四季》演示">
+      <span class="brand-mark" aria-hidden="true"><svg class="icon"><use href="#i-tree"/></svg></span>
+      <span class="brand-text">
+        <span class="brand-title">一棵树的四季<span class="brand-sep" aria-hidden="true">·</span><span class="brand-sub">质量看板</span></span>
+        <span class="brand-meta">THE FOUR SEASONS OF A TREE / QUALITY ASSURANCE</span>
+      </span>
+    </a>
+
+    <span class="console-tag" aria-label="QA 控制台"><span class="console-led" aria-hidden="true"></span>QA&nbsp;CONSOLE</span>
+    <span class="demo-badge" id="demoBadge" hidden>示例数据 · DEMO</span>
+
+    <div class="top-meta">
+      <span class="top-meta-item"><span class="top-meta-key">VERSION</span><strong id="topVersion">—</strong></span>
+      <span class="top-meta-sep" aria-hidden="true"></span>
+      <span class="top-meta-item"><span class="top-meta-key">LAST&nbsp;RUN</span><strong id="topLastRun">—</strong></span>
+    </div>
+
+    <nav class="top-actions" aria-label="看板操作">
+      <a class="btn btn-ghost" href="../">
+        <svg class="icon" aria-hidden="true"><use href="#i-arrow-left"/></svg>
+        <span>返回演示</span>
+      </a>
+      <button class="btn btn-primary" id="copyCommand" type="button">
+        <svg class="icon icon-copy" aria-hidden="true"><use href="#i-copy"/></svg>
+        <svg class="icon icon-checked" aria-hidden="true"><use href="#i-check"/></svg>
+        <span class="btn-label-full">复制执行命令</span>
+        <span class="btn-label-short">复制命令</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="page">
+  <h1 class="sr-only">一棵树的四季 · 质量看板</h1>
+
+  <div class="demo-notice" id="demoNotice" hidden>
+    <span class="demo-notice-tag">DEMO DATA</span>
+    <p>当前展示的是示例数据（<code>qa/data/demo-*.json</code>），仅用于视觉预览，不代表真实测试结果。</p>
+  </div>
+
+  <div class="notice-bar" id="dataNotice" hidden>
+    <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
+    <div class="notice-copy">
+      <strong>尚无自动化运行记录</strong>
+      <span>测试点目录来自 <code>catalog.json</code>；执行一次全量运行后，看板会显示通过率、失败项与证据截图。</span>
+    </div>
+    <button class="btn btn-ghost btn-small js-copy" type="button">
+      <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>复制执行命令
+    </button>
+  </div>
+
+  <section class="fatal-panel" id="fatalError" hidden aria-labelledby="fatalTitle">
+    <span class="fatal-code" aria-hidden="true">ERR · DATA LINK</span>
+    <h1 id="fatalTitle">测试数据加载失败</h1>
+    <p>无法读取 <code>qa/data/catalog.json</code>，也没有可用的演示数据。请确认静态服务器根目录为项目根，并重试。</p>
+    <div class="fatal-actions">
+      <button class="btn btn-primary" id="retryLoad" type="button"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg>重新加载</button>
+      <button class="btn btn-ghost js-copy" type="button"><svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg>复制执行命令</button>
+    </div>
+  </section>
+
+  <div class="layout" id="dashboard">
+    <div class="main-col">
+
+      <section class="panel hero-panel section" id="overview" aria-labelledby="overviewTitle">
+        <div class="panel-head">
+          <span class="sec-no" aria-hidden="true">01</span>
+          <h2 id="overviewTitle">运行总览</h2>
+          <span class="panel-en">OVERVIEW</span>
+          <span class="panel-head-line" aria-hidden="true"></span>
+          <span class="panel-head-meta" id="heroUpdated">—</span>
+        </div>
+        <div class="hero-body">
+          <div class="ring-wrap">
+            <svg class="ring" viewBox="0 0 200 200" role="img" aria-labelledby="ringTitle">
+              <title id="ringTitle">自动化测试通过率</title>
+              <circle class="ring-ticks" cx="100" cy="100" r="93"></circle>
+              <circle class="ring-track" cx="100" cy="100" r="76"></circle>
+              <circle class="ring-value" id="ringValue" cx="100" cy="100" r="76" transform="rotate(-90 100 100)"></circle>
+            </svg>
+            <div class="ring-center">
+              <span class="ring-label" id="ringLabel">PASS RATE</span>
+              <span class="ring-number"><span id="passRate">—</span><span class="ring-unit">%</span></span>
+              <span class="ring-sub" id="ringSub">AUTO CASES</span>
+            </div>
+            <span class="ring-passrate" id="ringPassRate" hidden>已执行项通过率 —</span>
+          </div>
+
+          <div class="hero-mid">
+            <div class="verdict" id="projectVerdict" role="status" aria-live="polite">
+              <span class="verdict-icon" aria-hidden="true"><svg class="icon"><use href="#i-info"/></svg></span>
+              <div class="verdict-copy">
+                <span class="verdict-label">项目评估结论</span>
+                <strong id="verdictText">正在读取运行结果…</strong>
+              </div>
+              <span class="verdict-tag" id="verdictTag">P0 —</span>
+            </div>
+            <div class="stat-grid">
+              <div class="stat stat-pass">
+                <span class="stat-label">已通过</span>
+                <strong id="statPassed">—</strong>
+                <span class="stat-foot">PASSED · AUTO</span>
+              </div>
+              <div class="stat stat-fail">
+                <span class="stat-label">失败</span>
+                <strong id="statFailed">—</strong>
+                <span class="stat-foot">FAILED · AUTO</span>
+              </div>
+              <div class="stat stat-pending">
+                <span class="stat-label">未运行</span>
+                <strong id="statNotRun">—</strong>
+                <span class="stat-foot" id="statNotRunFoot">NOT RUN · AUTO</span>
+              </div>
+              <div class="stat stat-manual">
+                <span class="stat-label">待人工</span>
+                <strong id="statManual">—</strong>
+                <span class="stat-foot">MANUAL REVIEW</span>
+              </div>
+            </div>
+            <div class="hero-status">
+              <span class="status-badge is-pending" id="runBadge"><span class="status-dot" aria-hidden="true"></span><span class="status-text">未运行</span></span>
+              <div class="hero-progress" id="heroProgress" hidden>
+                <div class="progress-head"><span id="progressText">0 / 0</span><span id="progressPct">0%</span></div>
+                <div class="progress-track" id="progressBar" role="progressbar" aria-label="自动化测试进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="progressFill"></i></div>
+              </div>
+              <p class="hero-status-note" id="runStatusNote">尚无自动化运行记录</p>
+            </div>
+          </div>
+
+          <dl class="hero-meta" aria-label="最近一次运行信息">
+            <div class="meta-row"><dt>版本</dt><dd id="metaVersion">—</dd></div>
+            <div class="meta-row"><dt>COMMIT</dt><dd id="metaCommit" class="mono">—</dd></div>
+            <div class="meta-row"><dt>耗时</dt><dd id="metaDuration">—</dd></div>
+            <div class="meta-row"><dt>浏览器</dt><dd id="metaBrowser">—</dd></div>
+            <div class="meta-row"><dt>BASE URL</dt><dd id="metaBaseUrl" class="mono">—</dd></div>
+            <div class="meta-row"><dt>RUN ID</dt><dd id="metaRunId" class="mono">—</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="panel map-panel section" id="map" aria-labelledby="mapTitle">
+        <div class="panel-head">
+          <span class="sec-no" aria-hidden="true">02</span>
+          <h2 id="mapTitle">测试点地图</h2>
+          <span class="panel-en">TEST MAP</span>
+          <span class="panel-head-line" aria-hidden="true"></span>
+          <span class="panel-head-meta">10 个模块 · 点击筛选</span>
+        </div>
+        <div class="map-grid" id="moduleMap" role="group" aria-label="按模块筛选测试点">
+          <div class="map-skeleton" aria-hidden="true"></div>
+        </div>
+      </section>
+
+      <section class="panel catalog-panel section" id="catalog" aria-labelledby="catalogTitle">
+        <div class="panel-head">
+          <span class="sec-no" aria-hidden="true">03</span>
+          <h2 id="catalogTitle">测试点列表</h2>
+          <span class="panel-en">CATALOG LOG</span>
+          <span class="panel-head-line" aria-hidden="true"></span>
+          <button class="btn btn-quiet filter-toggle" id="filterToggle" type="button" aria-expanded="false" aria-controls="filters">
+            <svg class="icon" aria-hidden="true"><use href="#i-filter"/></svg>
+            <span>筛选</span>
+            <span class="filter-toggle-count" id="filterToggleCount"></span>
+          </button>
+        </div>
+
+        <div class="filters" id="filters">
+          <div class="field field-search">
+            <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+            <label class="sr-only" for="searchInput">搜索测试点</label>
+            <input id="searchInput" type="search" placeholder="搜索 ID、标题、摘要" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field field-select">
+            <label for="filterModule">模块</label>
+            <select id="filterModule" aria-label="按模块筛选">
+              <option value="all">全部</option>
+            </select>
+          </div>
+          <div class="field field-select">
+            <label for="filterPriority">优先级</label>
+            <select id="filterPriority" aria-label="按优先级筛选">
+              <option value="all">全部</option>
+              <option value="P0">P0</option>
+              <option value="P1">P1</option>
+              <option value="P2">P2</option>
+            </select>
+          </div>
+          <div class="field field-select">
+            <label for="filterStatus">状态</label>
+            <select id="filterStatus" aria-label="按状态筛选">
+              <option value="all">全部</option>
+              <option value="pass">通过</option>
+              <option value="fail">失败</option>
+              <option value="not-run">未运行</option>
+              <option value="manual">待人工复核</option>
+              <option value="skip">已跳过</option>
+            </select>
+          </div>
+          <div class="field field-select">
+            <label for="filterType">类型</label>
+            <select id="filterType" aria-label="按类型筛选">
+              <option value="all">全部</option>
+              <option value="auto">自动</option>
+              <option value="manual">人工</option>
+            </select>
+          </div>
+          <div class="filter-count" aria-live="polite" aria-atomic="true">
+            <b id="filterCurrent">—</b><span id="filterTotal">/ —</span>
+          </div>
+          <button class="btn btn-quiet btn-clear" id="clearFilters" type="button">清空</button>
+        </div>
+
+        <div class="catalog-status">
+          <span id="catalogSummary">数据加载中…</span>
+          <span class="catalog-status-hint">点击行展开详情 · 失败项默认展开</span>
+        </div>
+
+        <div class="case-groups" id="caseGroups">
+          <div class="case-skeleton" aria-hidden="true">
+            <div class="skeleton sk-line sk-a"></div><div class="skeleton sk-line sk-b"></div><div class="skeleton sk-line sk-c"></div>
+          </div>
+          <div class="case-skeleton" aria-hidden="true">
+            <div class="skeleton sk-line sk-a"></div><div class="skeleton sk-line sk-b"></div><div class="skeleton sk-line sk-c"></div>
+          </div>
+          <div class="case-skeleton" aria-hidden="true">
+            <div class="skeleton sk-line sk-a"></div><div class="skeleton sk-line sk-b"></div><div class="skeleton sk-line sk-c"></div>
+          </div>
+        </div>
+        <div class="empty-state" id="catalogEmpty" hidden>
+          <span class="empty-code" aria-hidden="true">NO MATCH</span>
+          <h3>当前筛选没有测试点</h3>
+          <p>换一个关键词，或清空筛选条件查看全部测试点。</p>
+          <button class="btn btn-ghost" id="emptyClear" type="button">清空筛选</button>
+        </div>
+      </section>
+
+    </div>
+
+    <aside class="rail" aria-label="运行辅助信息">
+      <section class="panel rail-panel" aria-labelledby="recentTitle">
+        <div class="panel-head compact">
+          <span class="sec-no" aria-hidden="true">R1</span>
+          <h2 id="recentTitle">最近运行</h2>
+          <span class="panel-en">RUN LOG</span>
+        </div>
+        <div class="rail-body" id="recentRun">
+          <div class="skeleton sk-block"></div>
+          <div class="skeleton sk-line sk-b"></div>
+          <div class="skeleton sk-line sk-c"></div>
+        </div>
+      </section>
+
+      <section class="panel rail-panel" aria-labelledby="historyTitle">
+        <div class="panel-head compact">
+          <span class="sec-no" aria-hidden="true">R2</span>
+          <h2 id="historyTitle">历史趋势</h2>
+          <span class="panel-en">HISTORY</span>
+          <span class="panel-head-line" aria-hidden="true"></span>
+          <span class="panel-head-meta" id="historyCount">—</span>
+        </div>
+        <div class="chart-wrap" id="historyChart"><div class="chart-empty">读取中…</div></div>
+        <p class="chart-note">近 6 次大版本 · 自动化通过率</p>
+      </section>
+
+      <section class="panel rail-panel" aria-labelledby="flowTitle">
+        <div class="panel-head compact">
+          <span class="sec-no" aria-hidden="true">R3</span>
+          <h2 id="flowTitle">大版本自动化流程</h2>
+          <span class="panel-en">PIPELINE</span>
+        </div>
+        <ol class="flow-steps">
+          <li>
+            <span class="flow-no" aria-hidden="true">01</span>
+            <div class="flow-body">
+              <h3>构建</h3>
+              <p>用 esbuild 从 <code>src/main.js</code> 重建 <code>app.js</code>，确认静态产物与源码一致。</p>
+            </div>
+          </li>
+          <li>
+            <span class="flow-no" aria-hidden="true">02</span>
+            <div class="flow-body">
+              <h3>跑测试</h3>
+              <p>执行全量 Playwright 检查，逐条落盘结果与证据截图。</p>
+              <code class="flow-code">node tools/qa-run.js --version v4.0.0</code>
+            </div>
+          </li>
+          <li>
+            <span class="flow-no" aria-hidden="true">03</span>
+            <div class="flow-body">
+              <h3>看板复核</h3>
+              <p>查看通过率、失败详情与证据截图；P0/P1 全通过后再部署。</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+    </aside>
+  </div>
+</main>
+
+<footer class="site-foot">
+  <div class="site-foot-inner">
+    <span class="foot-brand">QA CONSOLE <span aria-hidden="true">·</span> 一棵树的四季</span>
+    <span class="foot-meta">schema v1 · catalog / results / history · 只读静态看板</span>
+  </div>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true">
+  <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>
+  <span id="toastText"></span>
+</div>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-labelledby="lightboxCaption" hidden>
+  <button class="lightbox-close" id="lightboxClose" type="button" aria-label="关闭证据截图">
+    <svg class="icon" aria-hidden="true"><use href="#i-x"/></svg>
+  </button>
+  <div class="lightbox-inner">
+    <img id="lightboxImage" alt="">
+    <p class="lightbox-caption" id="lightboxCaption">证据截图</p>
+  </div>
+</div>
+
+<noscript>
+  <div class="noscript">本看板需要启用 JavaScript 才能读取 catalog / results / history 数据。</div>
+</noscript>
+
+<script src="assets/qa.js?v=4"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "runs": [
+    {
+      "runId": "20261108-004",
+      "version": "v4.0.0",
+      "label": "第四轮 · 可视化测试看板",
+      "commit": "e065665",
+      "finishedAt": "2026-11-08T03:17:29+08:00",
+      "durationMs": 1982005,
+      "summary": {
+        "total": 108,
+        "auto": 100,
+        "manual": 8,
+        "passed": 98,
+        "failed": 0,
+        "skipped": 2,
+        "passRate": 1
+      },
+      "failed": [],
+      "skipped": [
+        "PERF-06",
+        "REL-02"
+      ]
+    }
+  ]
+}

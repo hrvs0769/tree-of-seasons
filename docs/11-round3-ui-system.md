@@ -2,7 +2,9 @@
 
 > 本文解决：v3 界面用哪套设计 token、由哪些组件构成、动效时长与 easing 如何统一、pointer/keyboard/touch 如何映射、无障碍做到了什么程度，以及 `docs/10` 的 P0/P1/P2 清单逐条整改到什么状态。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)；组件与事件细节见 [`05-ui-and-audio.md`](05-ui-and-audio.md)；整改前的问题清单见 [`10-round3-ui-plan.md`](10-round3-ui-plan.md)。
-> 最后更新：2026-11-07 · 对应代码：`54137d0`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-08 · 对应代码：`e065665`（第四轮 · 可视化测试看板）
+>
+> 第四轮起，本文的 UI/交互/a11y 验收项已纳入自动化看板；完整测试点见 [`12-test-points.md`](12-test-points.md)，运行方式见 [`13-test-dashboard.md`](13-test-dashboard.md)。
 
 ## 1. 设计语言
 

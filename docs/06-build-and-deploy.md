@@ -2,7 +2,7 @@
 
 > 本文解决：怎么重新打包、哪些文件是生成物、怎么发布到 GitHub Pages、怎么更新缓存，以及部署时别漏哪些资源。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-07 · 对应代码：`54137d0`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-08 · 对应代码：`e065665`（第四轮 · 可视化测试看板）
 
 ## 1. 本地运行
 
@@ -56,6 +56,9 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 | `pre-visual-refresh` / `visual-refresh-v1` | 远山视觉改版前 / 完成点 |
 | **`pre-round2`** | **第二轮优化改动前的干净版本**（回滚本轮全部改动用这个） |
 | **`round2-v1`** | **第二轮优化完成点**（确定性基线 / 深根水层 / 鸟虫树荫 / 文案对齐） |
+| **`round3-v1`** | 第三轮 UI 现代化（深色设计系统 / 交互与动效）完成点 |
+| **`pre-round4`** | 第四轮测试看板改动前的干净版本 |
+| **`round4-v1`** | **第四轮完成点**（可视化测试看板 / 自动化回归 / 108 测试点） |
 
 ```bash
 git tag                                  # 查看已有回退点
@@ -72,6 +75,7 @@ git checkout pre-round2 -- src/main.js   # 只回退主源码（随后必须重�
 | GitHub 仓库 | https://github.com/hrvs0769/tree-of-seasons |
 | GitHub Pages | https://hrvs0769.github.io/tree-of-seasons/ |
 | 课堂模式入口 | https://hrvs0769.github.io/tree-of-seasons/?class |
+| 质量看板入口 | https://hrvs0769.github.io/tree-of-seasons/qa/ |
 | 分支/目录 | `main` / `/` |
 | 发布方式 | GitHub Pages legacy branch source（`gh api .../pages`） |
 | 账号 | `gh` 已登录 `hrvs0769` |
@@ -98,6 +102,13 @@ mkdir -p /tmp/tree-of-seasons-deploy/assets
 cp assets/tree-of-seasons-bgm-v3.mp3 assets/MUSIC-LICENSE.md /tmp/tree-of-seasons-deploy/assets/
 mkdir -p /tmp/tree-of-seasons-deploy/docs
 cp -R docs/* /tmp/tree-of-seasons-deploy/docs/ 2>/dev/null || true
+# 质量看板（第四轮新增）：静态入口 + 数据 + 证据截图
+mkdir -p /tmp/tree-of-seasons-deploy/qa
+rsync -a --delete qa/ /tmp/tree-of-seasons-deploy/qa/
+# Runner 源码也部署，方便在公开仓库复跑（不含 shots/）
+mkdir -p /tmp/tree-of-seasons-deploy/tools
+cp tools/qa-run.js tools/qa-release.sh /tmp/tree-of-seasons-deploy/tools/
+rsync -a --delete tools/qa/ /tmp/tree-of-seasons-deploy/tools/qa/
 touch /tmp/tree-of-seasons-deploy/.nojekyll
 ```
 
@@ -131,7 +142,7 @@ JSON
 
 ## 5. 缓存
 
-- 浏览器/平台可能缓存 `app.js`、`index.html`。第三轮起 `index.html` 对 `app.js` / `src/bgm.js` 加了 `?v=round3` 版本号；发布新版本时同步递增该参数（如 `?v=round4`）即可强制刷新构建产物。
+- 浏览器/平台可能缓存 `app.js`、`index.html`。第三轮起 `index.html` 对 `app.js` / `src/bgm.js` 加了 `?v=round3`；第四轮起改为 `?v=round4`。发布新版本时同步递增该参数（如 `?v=round5`）即可强制刷新构建产物。看板数据文件由 runner 带 `no-store` 请求，通常无需额外缓存参数。
 - 更新后让用户访问带版本查询参数的 URL，例如：
   `https://hrvs0769.github.io/tree-of-seasons/?v=7`
 - 本地调试同样可在 URL 加 `?v=时间戳`。
@@ -148,6 +159,13 @@ lib/three.module.min.js
 src/bgm.js              （音频控制）
 assets/tree-of-seasons-bgm-v3.mp3
 assets/MUSIC-LICENSE.md
+qa/index.html            （第四轮：质量看板入口 /qa/）
+qa/assets/qa.css
+qa/assets/qa.js
+qa/data/catalog.json
+qa/data/results.json
+qa/data/history.json
+qa/evidence/            （证据截图；体积小，随看板发布）
 ```
 
 推荐一起带上：
@@ -158,6 +176,8 @@ DEVELOPMENT.md
 ITERATIONS.md
 docs/*.md
 src/main.js             （源码，便于公开仓库维护）
+tools/qa-run.js         （第四轮：Runner 源码）
+tools/qa/               （第四轮：检查注册表与 harness）
 .nojekyll
 ```
 

@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "runId": "20261108-001",
+  "version": "v4.0.0",
+  "label": "第四轮 · 可视化测试看板",
+  "commit": "d3adf85",
+  "status": "failed",
+  "startedAt": "2026-11-08T00:20:00+08:00",
+  "finishedAt": "2026-11-08T00:25:42+08:00",
+  "durationMs": 342000,
+  "environment": {
+    "baseUrl": "http://127.0.0.1:8777",
+    "browser": "Chromium 1208",
+    "platform": "macOS",
+    "viewport": "1440x900"
+  },
+  "progress": {
+    "done": 21,
+    "total": 21,
+    "currentId": "REL-01"
+  },
+  "summary": {
+    "total": 27,
+    "auto": 21,
+    "manual": 6,
+    "passed": 19,
+    "failed": 2,
+    "skipped": 0,
+    "passRate": 0.905
+  },
+  "cases": [
+    {
+      "id": "BOOT-01",
+      "status": "pass",
+      "durationMs": 320,
+      "message": "加载完成，无 console error",
+      "actual": "console.error=0, pageerror=0",
+      "evidence": [
+        "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20640%20360%22%3E%0A%3Crect%20width%3D%22640%22%20height%3D%22360%22%20fill%3D%22%230C100E%22%2F%3E%0A%3Cg%20stroke%3D%22%23232C28%22%20stroke-width%3D%221%22%3E%3Cpath%20d%3D%22M0%2060H640M0%20120H640M0%20180H640M0%20240H640M0%20300H640%22%2F%3E%3Cpath%20d%3D%22M80%200V360M160%200V360M240%200V360M320%200V360M400%200V360M480%200V360M560%200V360%22%2F%3E%3C%2Fg%3E%0A%3Crect%20x%3D%2218%22%20y%3D%2216%22%20width%3D%22604%22%20height%3D%22328%22%20rx%3D%2210%22%20fill%3D%22%23151B18%22%20stroke%3D%22%23ffffff20%22%2F%3E%0A%3Ccircle%20cx%3D%2234%22%20cy%3D%2234%22%20r%3D%224%22%20fill%3D%22%237BD6A6%22%20opacity%3D%22.85%22%2F%3E%0A%3Ctext%20x%3D%2248%22%20y%3D%2239%22%20fill%3D%22%23AEB6AF%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%3EBOOT-01%20%C2%B7%20%E9%A6%96%E9%A1%B5%E5%86%B7%E5%90%AF%E5%8A%A8%3C%2Ftext%3E%0A%3Crect%20x%3D%2234%22%20y%3D%2258%22%20width%3D%22572%22%20height%3D%22236%22%20rx%3D%226%22%20fill%3D%22%230A0D0B%22%20stroke%3D%22%23ffffff12%22%2F%3E%0A%3Ccircle%20cx%3D%22180%22%20cy%3D%22176%22%20r%3D%2258%22%20fill%3D%22none%22%20stroke%3D%22%237BD6A6%22%20stroke-width%3D%222%22%20opacity%3D%22.75%22%2F%3E%0A%3Cpath%20d%3D%22M180%20234V176M180%20196l-28-26M180%20206l32-30%22%20stroke%3D%22%237BD6A6%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20opacity%3D%22.75%22%2F%3E%0A%3Ccircle%20cx%3D%22180%22%20cy%3D%22176%22%20r%3D%2210%22%20fill%3D%22%237BD6A6%22%20opacity%3D%22.3%22%2F%3E%0A%3Ctext%20x%3D%22300%22%20y%3D%22154%22%20fill%3D%22%23F2F4F0%22%20font-family%3D%22sans-serif%22%20font-size%3D%2220%22%20font-weight%3D%22600%22%3E%E9%A6%96%E9%A1%B5%E5%86%B7%E5%90%AF%E5%8A%A8%3C%2Ftext%3E%0A%3Ctext%20x%3D%22300%22%20y%3D%22184%22%20fill%3D%22%238A928B%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%3Eviewport%201440%C3%97900%20%C2%B7%20chromium%3C%2Ftext%3E%0A%3Crect%20x%3D%22300%22%20y%3D%22204%22%20width%3D%22164%22%20height%3D%2226%22%20rx%3D%224%22%20fill%3D%22%237BD6A6%22%20opacity%3D%22.12%22%2F%3E%0A%3Ctext%20x%3D%22310%22%20y%3D%22222%22%20fill%3D%22%237BD6A6%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%3EASSERT%20PASSED%3C%2Ftext%3E%0A%3Ctext%20x%3D%2234%22%20y%3D%22322%22%20fill%3D%22%235F6A63%22%20font-family%3D%22monospace%22%20font-size%3D%2210%22%3EEVIDENCE%20%C2%B7%20qa%2Fevidence%2FBOOT-01.jpg%20%C2%B7%20%E6%9C%AC%E5%9C%B0%E6%BC%94%E7%A4%BA%E5%8D%A0%E4%BD%8D%E5%9B%BE%3C%2Ftext%3E%0A%3C%2Fsvg%3E"
+      ]
+    },
+    {
+      "id": "BOOT-02",
+      "status": "pass",
+      "durationMs": 480,
+      "message": "加载层 500ms 淡出",
+      "actual": "#loading opacity=0, display=none",
+      "evidence": []
+    },
+    {
+      "id": "SCENE-01",
+      "status": "pass",
+      "durationMs": 1240,
+      "message": "两次定帧截图逐像素一致",
+      "actual": "difference bbox = None",
+      "evidence": []
+    },
+    {
+      "id": "SCENE-02",
+      "status": "pass",
+      "durationMs": 860,
+      "message": "固定 seed 树形稳定",
+      "actual": "vertices=18432, NaN=0",
+      "evidence": []
+    },
+    {
+      "id": "STORY-01",
+      "status": "pass",
+      "durationMs": 640,
+      "message": "14 章时序与旁白一致",
+      "actual": "chapters=14, missing=0",
+      "evidence": []
+    },
+    {
+      "id": "STORY-02",
+      "status": "pass",
+      "durationMs": 720,
+      "message": "切章后播放状态保持",
+      "actual": "playing=true, chapter=8",
+      "evidence": []
+    },
+    {
+      "id": "PLAY-01",
+      "status": "pass",
+      "durationMs": 280,
+      "message": "播放/暂停状态同步",
+      "actual": "playing toggle ok, aria-label ok",
+      "evidence": []
+    },
+    {
+      "id": "PLAY-02",
+      "status": "pass",
+      "durationMs": 410,
+      "message": "拖动后恢复播放",
+      "actual": "seek 120s, playing=true",
+      "evidence": []
+    },
+    {
+      "id": "PLAY-03",
+      "status": "pass",
+      "durationMs": 390,
+      "message": "音乐与音量状态一致",
+      "actual": "aria-pressed=true, volume=0.6",
+      "evidence": []
+    },
+    {
+      "id": "CLASS-01",
+      "status": "pass",
+      "durationMs": 920,
+      "message": "课堂进入退出正常，进度保留",
+      "actual": "storyTime preserved 132.4s",
+      "evidence": []
+    },
+    {
+      "id": "CLASS-02",
+      "status": "fail",
+      "durationMs": 1500,
+      "message": "每章停开启后章节末未暂停：playing 仍为 true",
+      "actual": "playing=true, pausePrompt.show=false",
+      "evidence": [
+        "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20640%20360%22%3E%0A%3Crect%20width%3D%22640%22%20height%3D%22360%22%20fill%3D%22%230C100E%22%2F%3E%0A%3Cg%20stroke%3D%22%23232C28%22%20stroke-width%3D%221%22%3E%3Cpath%20d%3D%22M0%2060H640M0%20120H640M0%20180H640M0%20240H640M0%20300H640%22%2F%3E%3Cpath%20d%3D%22M80%200V360M160%200V360M240%200V360M320%200V360M400%200V360M480%200V360M560%200V360%22%2F%3E%3C%2Fg%3E%0A%3Crect%20x%3D%2218%22%20y%3D%2216%22%20width%3D%22604%22%20height%3D%22328%22%20rx%3D%2210%22%20fill%3D%22%23151B18%22%20stroke%3D%22%23ffffff20%22%2F%3E%0A%3Ccircle%20cx%3D%2234%22%20cy%3D%2234%22%20r%3D%224%22%20fill%3D%22%23E17A63%22%20opacity%3D%22.85%22%2F%3E%0A%3Ctext%20x%3D%2248%22%20y%3D%2239%22%20fill%3D%22%23AEB6AF%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%3ECLASS-02%20%C2%B7%20%E6%AF%8F%E7%AB%A0%E5%81%9C%E6%96%AD%E8%A8%80%E5%A4%B1%E8%B4%A5%3C%2Ftext%3E%0A%3Crect%20x%3D%2234%22%20y%3D%2258%22%20width%3D%22572%22%20height%3D%22236%22%20rx%3D%226%22%20fill%3D%22%230A0D0B%22%20stroke%3D%22%23ffffff12%22%2F%3E%0A%3Ccircle%20cx%3D%22180%22%20cy%3D%22176%22%20r%3D%2258%22%20fill%3D%22none%22%20stroke%3D%22%23E17A63%22%20stroke-width%3D%222%22%20opacity%3D%22.75%22%2F%3E%0A%3Cpath%20d%3D%22M180%20234V176M180%20196l-28-26M180%20206l32-30%22%20stroke%3D%22%23E17A63%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20opacity%3D%22.75%22%2F%3E%0A%3Ccircle%20cx%3D%22180%22%20cy%3D%22176%22%20r%3D%2210%22%20fill%3D%22%23E17A63%22%20opacity%3D%22.3%22%2F%3E%0A%3Ctext%20x%3D%22300%22%20y%3D%22154%22%20fill%3D%22%23F2F4F0%22%20font-family%3D%22sans-serif%22%20font-size%3D%2220%22%20font-weight%3D%22600%22%3E%E6%AF%8F%E7%AB%A0%E5%81%9C%E6%96%AD%E8%A8%80%E5%A4%B1%E8%B4%A5%3C%2Ftext%3E%0A%3Ctext%20x%3D%22300%22%20y%3D%22184%22%20fill%3D%22%238A928B%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%3Eviewport%201440%C3%97900%20%C2%B7%20chromium%3C%2Ftext%3E%0A%3Crect%20x%3D%22300%22%20y%3D%22204%22%20width%3D%22164%22%20height%3D%2226%22%20rx%3D%224%22%20fill%3D%22%23E17A63%22%20opacity%3D%22.12%22%2F%3E%0A%3Ctext%20x%3D%22310%22%20y%3D%22222%22%20fill%3D%22%23E17A63%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%3EASSERT%20FAILED%3C%2Ftext%3E%0A%3Ctext%20x%3D%2234%22%20y%3D%22322%22%20fill%3D%22%235F6A63%22%20font-family%3D%22monospace%22%20font-size%3D%2210%22%3EEVIDENCE%20%C2%B7%20qa%2Fevidence%2FCLASS-02.jpg%20%C2%B7%20%E6%9C%AC%E5%9C%B0%E6%BC%94%E7%A4%BA%E5%8D%A0%E4%BD%8D%E5%9B%BE%3C%2Ftext%3E%0A%3C%2Fsvg%3E"
+      ]
+    },
+    {
+      "id": "CLASS-03",
+      "status": "pass",
+      "durationMs": 560,
+      "message": "弹层打开时快捷键已隔离",
+      "actual": "space/c/t ignored, esc closed",
+      "evidence": []
+    },
+    {
+      "id": "EXPLORE-01",
+      "status": "pass",
+      "durationMs": 610,
+      "message": "点认卡锚定点击位置",
+      "actual": "bbox inside viewport, arrow=126,208",
+      "evidence": []
+    },
+    {
+      "id": "EXPLORE-02",
+      "status": "pass",
+      "durationMs": 780,
+      "message": "找一找任务按序推进",
+      "actual": "findProgress 1/3 → 3/3",
+      "evidence": []
+    },
+    {
+      "id": "RESP-01",
+      "status": "pass",
+      "durationMs": 1680,
+      "message": "五档断点均无横向溢出",
+      "actual": "5/5 scrollWidth<=innerWidth",
+      "evidence": []
+    },
+    {
+      "id": "RESP-02",
+      "status": "pass",
+      "durationMs": 940,
+      "message": "移动端关键控件 ≥44px",
+      "actual": "8 buttons ok, player ok",
+      "evidence": []
+    },
+    {
+      "id": "A11Y-01",
+      "status": "pass",
+      "durationMs": 830,
+      "message": "弹层焦点闭环正常",
+      "actual": "focus trapped, restored",
+      "evidence": []
+    },
+    {
+      "id": "A11Y-02",
+      "status": "pass",
+      "durationMs": 460,
+      "message": "开关 ARIA 状态一致",
+      "actual": "aria-pressed 6/6",
+      "evidence": []
+    },
+    {
+      "id": "PERF-01",
+      "status": "pass",
+      "durationMs": 2100,
+      "message": "首屏 1.4s 可交互",
+      "actual": "interactive 1.4s, longtask=0",
+      "evidence": []
+    },
+    {
+      "id": "PERF-02",
+      "status": "fail",
+      "durationMs": 1180,
+      "message": "静止 2s 内仍检测到 61 次 draw call",
+      "actual": "drawcalls: 61 → 122 (+61)",
+      "evidence": [
+        "data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20640%20360%22%3E%0A%3Crect%20width%3D%22640%22%20height%3D%22360%22%20fill%3D%22%230C100E%22%2F%3E%0A%3Cg%20stroke%3D%22%23232C28%22%20stroke-width%3D%221%22%3E%3Cpath%20d%3D%22M0%2060H640M0%20120H640M0%20180H640M0%20240H640M0%20300H640%22%2F%3E%3Cpath%20d%3D%22M80%200V360M160%200V360M240%200V360M320%200V360M400%200V360M480%200V360M560%200V360%22%2F%3E%3C%2Fg%3E%0A%3Crect%20x%3D%2218%22%20y%3D%2216%22%20width%3D%22604%22%20height%3D%22328%22%20rx%3D%2210%22%20fill%3D%22%23151B18%22%20stroke%3D%22%23ffffff20%22%2F%3E%0A%3Ccircle%20cx%3D%2234%22%20cy%3D%2234%22%20r%3D%224%22%20fill%3D%22%23E17A63%22%20opacity%3D%22.85%22%2F%3E%0A%3Ctext%20x%3D%2248%22%20y%3D%2239%22%20fill%3D%22%23AEB6AF%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%3EPERF-02%20%C2%B7%20%E9%9D%99%E6%80%81%E9%87%8D%E7%BB%98%E6%96%AD%E8%A8%80%E5%A4%B1%E8%B4%A5%3C%2Ftext%3E%0A%3Crect%20x%3D%2234%22%20y%3D%2258%22%20width%3D%22572%22%20height%3D%22236%22%20rx%3D%226%22%20fill%3D%22%230A0D0B%22%20stroke%3D%22%23ffffff12%22%2F%3E%0A%3Ccircle%20cx%3D%22180%22%20cy%3D%22176%22%20r%3D%2258%22%20fill%3D%22none%22%20stroke%3D%22%23E17A63%22%20stroke-width%3D%222%22%20opacity%3D%22.75%22%2F%3E%0A%3Cpath%20d%3D%22M180%20234V176M180%20196l-28-26M180%20206l32-30%22%20stroke%3D%22%23E17A63%22%20stroke-width%3D%222%22%20fill%3D%22none%22%20opacity%3D%22.75%22%2F%3E%0A%3Ccircle%20cx%3D%22180%22%20cy%3D%22176%22%20r%3D%2210%22%20fill%3D%22%23E17A63%22%20opacity%3D%22.3%22%2F%3E%0A%3Ctext%20x%3D%22300%22%20y%3D%22154%22%20fill%3D%22%23F2F4F0%22%20font-family%3D%22sans-serif%22%20font-size%3D%2220%22%20font-weight%3D%22600%22%3E%E9%9D%99%E6%80%81%E9%87%8D%E7%BB%98%E6%96%AD%E8%A8%80%E5%A4%B1%E8%B4%A5%3C%2Ftext%3E%0A%3Ctext%20x%3D%22300%22%20y%3D%22184%22%20fill%3D%22%238A928B%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%3Eviewport%201440%C3%97900%20%C2%B7%20chromium%3C%2Ftext%3E%0A%3Crect%20x%3D%22300%22%20y%3D%22204%22%20width%3D%22164%22%20height%3D%2226%22%20rx%3D%224%22%20fill%3D%22%23E17A63%22%20opacity%3D%22.12%22%2F%3E%0A%3Ctext%20x%3D%22310%22%20y%3D%22222%22%20fill%3D%22%23E17A63%22%20font-family%3D%22monospace%22%20font-size%3D%2212%22%3EASSERT%20FAILED%3C%2Ftext%3E%0A%3Ctext%20x%3D%2234%22%20y%3D%22322%22%20fill%3D%22%235F6A63%22%20font-family%3D%22monospace%22%20font-size%3D%2210%22%3EEVIDENCE%20%C2%B7%20qa%2Fevidence%2FPERF-02.jpg%20%C2%B7%20%E6%9C%AC%E5%9C%B0%E6%BC%94%E7%A4%BA%E5%8D%A0%E4%BD%8D%E5%9B%BE%3C%2Ftext%3E%0A%3C%2Fsvg%3E"
+      ]
+    },
+    {
+      "id": "REL-01",
+      "status": "pass",
+      "durationMs": 720,
+      "message": "构建产物与源码一致",
+      "actual": "app.js sha256 match",
+      "evidence": []
+    }
+  ]
+}

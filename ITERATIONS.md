@@ -1,6 +1,6 @@
 # 视觉迭代记录（自截图 → 图像分析 → 自我改进）
 
-> 最后更新：2026-11-07 · 对应代码：`54137d0`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-08 · 对应代码：`e065665`（第四轮 · 可视化测试看板）
 >
 > 历史记录 · 当前功能说明以 `DEVELOPMENT.md` 为准
 
@@ -474,3 +474,35 @@ HR 连续四次否定自制配乐（正弦合成 → 采样编曲 → 悠然版 
 验收（对照 `docs/10` 46 条）：**已修复 34 / 部分 12 / 不做 0**；`docs/10 §5` 的 10 条范围约定单列为 9 条不做 / 1 条部分（双击复位属点按级补充，记为部分）。截图见 `shots/round3/`：`v12-start.png`（开场）、`v12-normal.png`（自由观看）、`v12-class.png`（桌面课堂）、`v12-mobile-class.png`（移动课堂）、`v14-quartet.png`（四季合影）、`v8-chapters.png` / `v8-teacher.png`（弹层）、`v4-partcard.png` / `v4-find.png` / `v4-pause.png`（点认 / 找一找 / 自动暂停）、`v12-exit.png`（退出确认）；另有 `a11y-*` 五种尺寸与 `a11y-reduced-motion-1280x800.png`。新增独立截图工具 `tools/ui-shot.js`（Playwright，可指定视口、actions JSON、等待时间）。
 
 还剩（`docs/11 §7` 的「部分」项）：移动端 / ≤980px 音量控件、辅助字号统一到 ≥12px、`#partClose / #findClose` 命中区补到 44px、桌面顶栏分组、移动端双提示层避让、`backdrop-filter` 无模糊回退、章节缩略图真实化、章节弹层 DOM 复用、季节转盘点击跳季。
+
+---
+
+### r33 —— 第四轮：可视化测试看板与自动化回归（2026-11-08）
+
+> 本轮只增加质量基础设施，**不改 3D 场景、14 章文案/时序、UI 视觉和 BGM**。目标：让项目负责人能在一个独立页面看清全项目测试点，并在每次大版本更新时看到自动化测试进度与结果。
+
+看到：
+
+1. 测试知识散落在 `docs/07`（定帧/逐章/性能）、`docs/08`（视觉标准）、`docs/10`（第三轮问题清单）、`docs/11`（UI 与 a11y 验收）里，没有一个「整个项目到底验什么」的总入口。
+2. 之前每轮验收靠临时写截图命令和人工检查，无法回答「这次改完有多少测试点通过、上次是多少、失败的是哪条」。
+3. 真实课堂判断（朗读声音、投影下的焦点、老电脑流畅度）与可自动断言的技术项混在一起，容易把「没测」误当成「通过」。
+
+改：
+
+- **独立看板 `/qa/`**：`qa/index.html + assets/qa.css + assets/qa.js`，纯原生无框架/外链；深炭黑工程控制台视觉，顶部版本与最近运行、Hero（运行中显示执行进度环，结束后显示通过率环）、P0 评估结论、10 模块测试点地图、搜索 + 模块/优先级/状态/类型筛选、按模块分组列表、详情（目标/预期/步骤/实际/证据截图）、历史趋势、自动化流程说明、空态/运行中/失败三态、五档响应式与 reduced-motion。
+- **测试点总表**：`qa/data/catalog.json` 108 条、10 模块（P0 22 / P1 61 / P2 25；auto 100 / manual 8），每条含 goal/expected/steps/tags/since 与 automationKey；可读版 `docs/12-test-points.md`。
+- **自动化 Runner**：`tools/qa-run.js` + `tools/qa/`（harness / 静态服务器 / 10 个检查模块 / 134 个检查项），Playwright Chromium 逐条执行、每条独立 BrowserContext、45s 超时、逐条原子写 `qa/data/results.json`（运行中带 progress）、追加 `qa/data/history.json`、证据 `qa/evidence/*.jpg`；退出码按 P0/P1 失败区分；`tools/qa-release.sh` 封装「构建 app.js → 全量测试 → 失败非 0」。
+- **数据契约**：`qa/CONTRACT.md` 固定 catalog/results/history 字段、文件所有权与验收；看板 demo 数据只允许 `?demo=1`，正式页面在无结果时显示真实空态。
+- **发布流程**：`docs/06` 部署清单加入 `qa/`、`tools/qa-run.js`、`tools/qa/`；`README.md` / `DEVELOPMENT.md` 增加入口与命令；`docs/07` 首段改为「先跑自动化，再做人工画面核对」；`docs/13-test-dashboard.md` 为完整使用手册。
+
+验收：
+
+| 检查 | 结果 |
+|---|---|
+| 测试点 | 108 条 / 10 模块 / auto 100（92.6%）/ manual 8 / P0 22 全部 auto |
+| 覆盖 | runner registry 134 个检查，catalog 100 个 auto key 全部可 resolve（0 缺失） |
+| 自动化 | `node tools/qa-run.js --version v4.0.0 --label "第四轮 · 可视化测试看板"` 全量通过 98 / 失败 0 / 跳过 2（PERF-06 软件 GL 首屏预算、REL-02 需线上环境），总耗时约 33 分钟 |
+| 看板 | 1440×900 / 1280×800 / 1024×768 / 768×1024 / 390×844 无横向溢出；运行中 2s 轮询、完成态与历史趋势已验证；console error 0 |
+| 文档 | `docs/12` 与 catalog 统计一致；`docs/13` 覆盖入口/数据/流程/新增测试点/FAQ |
+
+> 回退点：`pre-round4`（本轮前）/ `round4-v1`（本轮完成点）。

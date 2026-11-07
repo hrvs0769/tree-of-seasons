@@ -1,0 +1,2315 @@
+{
+  "schemaVersion": 1,
+  "project": "一棵树的四季",
+  "projectEn": "The Four Seasons of a Tree",
+  "updatedAt": "2026-11-08",
+  "version": "v4.0.0",
+  "modules": [
+    {
+      "id": "boot",
+      "name": "启动与资源",
+      "en": "BOOTSTRAP",
+      "accent": "#7BD6A6",
+      "description": "打开页面到首屏可见的链路：HTML/JS/音频/字体资源、加载层、开场页、错误处理。"
+    },
+    {
+      "id": "scene",
+      "name": "3D 场景与确定性",
+      "en": "SCENE",
+      "accent": "#5FBF7C",
+      "description": "画布与 WebGL、四季环境、雨雪、根系水层、鸟虫树荫，以及定帧像素确定性与静态重绘。"
+    },
+    {
+      "id": "story",
+      "name": "叙事与章节",
+      "en": "STORY",
+      "accent": "#E0A45C",
+      "description": "14 章章节数据、文案、章节切换、章节栏与弹层、季节轮盘和结尾回春。"
+    },
+    {
+      "id": "player",
+      "name": "播放器与音频",
+      "en": "PLAYER",
+      "accent": "#8FB7D8",
+      "description": "播放/暂停、时间码、进度拖动、重播与再种、BGM 开关音量记忆、快捷键与定帧静音。"
+    },
+    {
+      "id": "classroom",
+      "name": "课堂模式",
+      "en": "CLASSROOM",
+      "accent": "#A9E8C7",
+      "description": "?class 课堂入口、顶栏 8 工具、字幕、课堂进度、每章暂停、教师提示、退出保留、投影/锁定/朗读、四季合影与结束提示。"
+    },
+    {
+      "id": "explore",
+      "name": "探索与点认",
+      "en": "EXPLORE",
+      "accent": "#E5B36A",
+      "description": "画布拖动死区与惯性、双击复位、滚轮/双指缩放、键盘环顾、点认卡定位、找一找队列与错误提示、移动端抽屉。"
+    },
+    {
+      "id": "responsive",
+      "name": "响应式与视觉",
+      "en": "RESPONSIVE",
+      "accent": "#7BCB8E",
+      "description": "1440/1280/1024/768/390 五档断点、无横向溢出、播放器与课堂顶栏布局、深色 token、对比度、无衬线无 emoji、SVG sprite。"
+    },
+    {
+      "id": "a11y",
+      "name": "无障碍",
+      "en": "ACCESSIBILITY",
+      "accent": "#8FA8DC",
+      "description": "dialog 语义、inert、焦点陷阱与恢复、开场页模态、aria-pressed、slider 语义、live region、焦点可见、reduced-motion、44px 触控、viewport 缩放、canvas 标签。"
+    },
+    {
+      "id": "perf",
+      "name": "性能与稳定性",
+      "en": "PERFORMANCE",
+      "accent": "#D4B36A",
+      "description": "draw calls 450–500、triangles ≤650k、静态帧不重绘、连续再种无泄漏、长播无报错、加载耗时与 FPS 感知。"
+    },
+    {
+      "id": "release",
+      "name": "发布与文档",
+      "en": "RELEASE",
+      "accent": "#AEB6AF",
+      "description": "GitHub Pages 200、md5 一致、docs 头哈希、标签回退点、README 入口、部署排除大文件、BGM 授权与 QA 入口可用。"
+    }
+  ],
+  "cases": [
+    {
+      "id": "BOOT-01",
+      "module": "boot",
+      "title": "首页冷启动无报错",
+      "summary": "冷启动后 console.error 与 pageerror 均为 0，加载层正常退场。",
+      "goal": "首屏白屏或脚本报错会让老师无法开始上课，必须确保任何环境下都能打开课堂。",
+      "expected": "#loading 隐藏并 display:none；console.error=0；pageerror=0。",
+      "steps": [
+        "以 1440×900 打开 index.html",
+        "等待 #loading 隐藏",
+        "读取 console 与 pageerror 记录"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "boot.noErrors",
+      "tags": [
+        "稳定性",
+        "教学"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "BOOT-02",
+      "module": "boot",
+      "title": "关键资源全部 200",
+      "summary": "index.html、app.js、bgm.js、Three.js 与 BGM 音频均成功加载。",
+      "goal": "任一运行资源 404 都会造成 3D 黑屏或没有声音，课堂现场无法补救。",
+      "expected": "5 个关键资源响应 200 或 file:// 读取成功；无失败请求。",
+      "steps": [
+        "打开页面并记录网络请求",
+        "检查 app.js / src/bgm.js / lib/three.module.min.js / bgm mp3",
+        "确认状态码或读取结果"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "boot.resources",
+      "tags": [
+        "稳定性",
+        "部署"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "BOOT-03",
+      "module": "boot",
+      "title": "加载层可见并退场",
+      "summary": "加载层以深色主题展示「正在生长…」，加载完成后 620ms 内消失。",
+      "goal": "加载层是首屏第一印象；浅色闪屏或卡住会让孩子以为页面坏了。",
+      "expected": "#loading 初始可见且背景 #0C100E；完成后 .hidden 并在 620ms 后 display:none；role=status。",
+      "steps": [
+        "打开页面立即检查 #loading",
+        "等待应用初始化",
+        "确认 opacity 与 display 状态"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "boot.loadingHidden",
+      "tags": [
+        "视觉",
+        "稳定性"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "BOOT-04",
+      "module": "boot",
+      "title": "开场页可见两按钮",
+      "summary": "开场页可见且开始上课/自由观看按钮均可点击。",
+      "goal": "开场页是唯一入口，按钮不可见或被禁用会让课堂无法开始。",
+      "expected": "#startScreen 非 hidden；role=dialog aria-modal=true aria-labelledby=startTitle；两按钮可见可点。",
+      "steps": [
+        "打开首页并等待 #loading 隐藏",
+        "检查 #startScreen 语义与标题",
+        "读取两按钮 rect 与 disabled"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "boot.startScreen",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "BOOT-05",
+      "module": "boot",
+      "title": "开始上课进入课堂",
+      "summary": "点击开始上课进入课堂模式，顶栏出现且开场页隐藏。",
+      "goal": "课堂入口是老师上课的第一步，按钮无响应会直接卡住课堂。",
+      "expected": "classroomMode=true；body.classroom-mode；#classroomTop 可见；#startScreen.hidden。",
+      "steps": [
+        "打开首页",
+        "点击 #startClassBtn",
+        "等待 600ms 检查课堂模式与顶栏"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "boot.startClassEnter",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "BOOT-06",
+      "module": "boot",
+      "title": "自由观看开始播放",
+      "summary": "点击自由观看隐藏开场页并开始播放，时间持续前进。",
+      "goal": "自由观看是家长与试课最常用入口，不能自动播放会让人以为页面坏了。",
+      "expected": "#startScreen.hidden；classroomMode=false；playing=true；storyTime 增长；#player 可见。",
+      "steps": [
+        "打开首页",
+        "点击 #freeViewBtn",
+        "等待 1.4s 比较 storyTime"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "boot.freeView",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "BOOT-07",
+      "module": "boot",
+      "title": "离线 file:// 可直接运行",
+      "summary": "双击 index.html 以 file:// 打开时 3D 场景与播放器正常工作。",
+      "goal": "学校电脑常常没有服务器，离线可用是课堂演示的底线。",
+      "expected": "file:// 下 canvas 有尺寸、无网络请求、无 console error、播放器时间码可见。",
+      "steps": [
+        "用 file:// 打开 index.html",
+        "等待场景初始化",
+        "检查 canvas、时间码与 console"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "boot.fileProtocol",
+      "tags": [
+        "兼容性",
+        "稳定性"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "BOOT-08",
+      "module": "boot",
+      "title": "构建资源带缓存版本",
+      "summary": "app.js 与 src/bgm.js 引用均带 ?v=round3 版本参数。",
+      "goal": "更新后浏览器缓存旧 app.js 会导致「代码改了画面没变」，版本参数是发版保障。",
+      "expected": "两个 script src 含 ?v= 参数且版本一致；升级时应递增。",
+      "steps": [
+        "读取 index.html 的 script 标签",
+        "断言 app.js 与 bgm.js 均带 ?v="
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "boot.cacheVersion",
+      "tags": [
+        "部署",
+        "稳定性"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "BOOT-09",
+      "module": "boot",
+      "title": "meta 与深色主题一致",
+      "summary": "charset、viewport、theme-color 与 color-scheme 齐全。",
+      "goal": "移动端地址栏与系统控件颜色不一致会破坏沉浸感，viewport 错误会导致缩放异常。",
+      "expected": "title=一棵树的四季；viewport=width=device-width, initial-scale=1, viewport-fit=cover；theme-color #0C100E；color-scheme dark。",
+      "steps": [
+        "读取 head 的 meta 与 title",
+        "断言 theme-color 与 :root color-scheme"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "boot.themeMeta",
+      "tags": [
+        "视觉",
+        "兼容性"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "BOOT-10",
+      "module": "boot",
+      "title": "无外部网络依赖",
+      "summary": "页面不加载 CDN、网络字体、外部图片，所有资源均为本地相对路径。",
+      "goal": "教室网络不稳定或断网时仍要能上课，任何外链都是风险。",
+      "expected": "网络请求仅本地资源；无第三方域名；字体为系统栈。",
+      "steps": [
+        "记录所有请求 URL",
+        "过滤第三方域名",
+        "检查 CSS 字体来源"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "boot.noExternalDeps",
+      "tags": [
+        "稳定性",
+        "部署"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "SCENE-01",
+      "module": "scene",
+      "title": "canvas 与 WebGL 正常",
+      "summary": "#app 内创建 canvas，WebGL 上下文可用且尺寸等于舞台客户区。",
+      "goal": "画布创建失败或尺寸为 0 会直接黑屏，3D 树是本项目的核心内容。",
+      "expected": "canvas 存在；WebGL 上下文非空；canvas 宽高与 #app clientWidth/clientHeight 一致。",
+      "steps": [
+        "打开 1440×900 页面",
+        "检查 #app canvas",
+        "读取 WebGL 上下文与尺寸"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "scene.canvasWebGL",
+      "tags": [
+        "稳定性",
+        "视觉"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "SCENE-02",
+      "module": "scene",
+      "title": "14 章关键帧季节正确",
+      "summary": "14 章中点均正常渲染，季节标签、标题与画面亮度一致。",
+      "goal": "逐章画面是课堂讲授的视觉底稿，任一章节黑屏或季节错位都会中断教学。",
+      "expected": "14 章 data-season 与章节表一致；标题正确；avgLum>8 且非黑像素>3%。",
+      "steps": [
+        "打开 ?dbg&t0=0&freeze&stage",
+        "逐章 seek 到章节中点",
+        "读取季节/标题并采样画面亮度"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "scene.chapterKeyframes",
+      "tags": [
+        "视觉",
+        "教学"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "SCENE-03",
+      "module": "scene",
+      "title": "春雨与章节窗口一致",
+      "summary": "第 2 章 16–31s 有可见雨丝，第 8/12 章晴天无雨。",
+      "goal": "旁白说「春雨落下来」时画面必须有雨，否则文案与画面脱节。",
+      "expected": "t=20 雨粒子可见；t=30 仍在下；t=120/210 无雨。",
+      "steps": [
+        "打开 ?t0=20&freeze",
+        "检查雨粒子与雨丝",
+        "再检查 ?t0=120 与 ?t0=210"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "scene.rainWindow",
+      "tags": [
+        "视觉",
+        "内容"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "SCENE-04",
+      "module": "scene",
+      "title": "冬章雪与枝头积雪",
+      "summary": "t=164 冬章已有雪与放大的枝头雪帽，t=190 春章无雪。",
+      "goal": "雪是冬季认知的关键元素，晚到或没有都会让冬章名不副实。",
+      "expected": "t=164/170 雪与雪帽可见；t=190 两者不可见。",
+      "steps": [
+        "打开 ?t0=164&freeze 与 ?t0=170&freeze",
+        "检查雪粒子与枝头雪帽",
+        "打开 ?t0=190&freeze 确认无雪"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "scene.snow",
+      "tags": [
+        "视觉",
+        "内容"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "SCENE-05",
+      "module": "scene",
+      "title": "根系生长与深扎",
+      "summary": "第 3 章侧根铺开，第 2 年深根继续下扎并抵达含水层。",
+      "goal": "「向下扎根」是核心教学段，根若静止或只有一根直锥，讲解失去说服力。",
+      "expected": "t=44 主根与多条侧根可见；t=250 根系延伸至 y≈-10 水层附近。",
+      "steps": [
+        "打开 ?t0=44&freeze",
+        "打开 ?t0=250&freeze",
+        "对比根尖深度与侧根数量"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "scene.rootGrowth",
+      "tags": [
+        "教学",
+        "视觉"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "SCENE-06",
+      "module": "scene",
+      "title": "地下水层显现",
+      "summary": "t=250 水面反光、波纹与根尖光点可见，生长阶段不可见。",
+      "goal": "含水层是「根帮大树喝水」的视觉证据，缺失会让深根讲解落空。",
+      "expected": "t=250 水面与根尖光点可见且透明度>0；t=120 水层不可见。",
+      "steps": [
+        "打开 ?t0=250&freeze",
+        "检查水面亮度与波纹",
+        "打开 ?t0=120&freeze 对比"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "scene.waterLayer",
+      "tags": [
+        "视觉",
+        "内容"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "SCENE-07",
+      "module": "scene",
+      "title": "鸟虫与树荫可见",
+      "summary": "第 12 章飞鸟、栖息鸟、蝴蝶、蜜蜂、瓢虫与树荫光斑都在画面中。",
+      "goal": "「小鸟和昆虫都来这里休息」必须有画面证据，孩子才能找到并点认。",
+      "expected": "t=210 五类生物可见、树荫透明度>0；t=170 无鸟。",
+      "steps": [
+        "打开 ?t0=210&freeze",
+        "检查五类生物与树荫",
+        "打开 ?t0=170&freeze 确认无鸟"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "scene.creaturesShade",
+      "tags": [
+        "内容",
+        "视觉"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "SCENE-08",
+      "module": "scene",
+      "title": "定帧 t0=128 像素确定",
+      "summary": "两个独立浏览器上下文加载 ?t0=128&freeze，截图像素完全一致。",
+      "goal": "截图审查与视觉回归的前提是同一时刻画面可复现，否则无法判断改动好坏。",
+      "expected": "两次截图逐像素差异为空（bbox=None）；树形/粒子/云位置一致。",
+      "steps": [
+        "用两个独立 user-data-dir 打开 ?t0=128&freeze",
+        "分别截图",
+        "逐像素比较差异"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "scene.determinism128",
+      "tags": [
+        "稳定性",
+        "视觉"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "SCENE-09",
+      "module": "scene",
+      "title": "定帧 t0=250 像素确定",
+      "summary": "深根水层场景在两次独立加载下逐像素一致。",
+      "goal": "最后两章镜头最复杂，若含未固定随机，视觉验收会不可信。",
+      "expected": "?t0=250&freeze 两次截图逐像素一致。",
+      "steps": [
+        "两个独立 profile 打开 ?t0=250&freeze",
+        "截图并比较像素差异"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "scene.determinism250",
+      "tags": [
+        "稳定性",
+        "视觉"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "SCENE-10",
+      "module": "scene",
+      "title": "定帧静态重绘机制",
+      "summary": "静态画面只在时间、相机或找一找状态变化时重绘一次。",
+      "goal": "每帧重复绘制 400+ draw call 会让低配电脑发热卡顿，也拖慢截图。",
+      "expected": "freeze 后 renderer.info.render.frame 不增长；seekForTest 或相机变化后帧计数小幅增加。",
+      "steps": [
+        "打开 ?t0=128&freeze&dbg",
+        "记录 renderer.info.render.frame",
+        "等待 2 秒再次读取"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "scene.freezeStatic",
+      "tags": [
+        "性能",
+        "稳定性"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "SCENE-11",
+      "module": "scene",
+      "title": "resize 与 DPR 适配",
+      "summary": "窗口尺寸变化时 canvas 跟随 #app 尺寸，像素比不超过 1.75。",
+      "goal": "投屏切换分辨率或副屏移动时画面不能拉伸模糊。",
+      "expected": "resize 后 canvas 尺寸等于 #app；camera.aspect 同步；pixelRatio 上限 1.75。",
+      "steps": [
+        "打开页面记录尺寸",
+        "改窗口到 1024×768",
+        "比较 #app、canvas 与相机 aspect"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "scene.resizeNoError",
+      "tags": [
+        "兼容性",
+        "性能"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "SCENE-12",
+      "module": "scene",
+      "title": "树种子固定与再种",
+      "summary": "定帧/课堂固定树种子 20240601，再种一棵沿固定随机流生成新树。",
+      "goal": "同一课堂每次打开应是同一棵树，演示可复现；再种只换树形不破坏确定性。",
+      "expected": "?t0=128&freeze 两次树形一致；点击 #replant 后新树生成、时间归零、无报错。",
+      "steps": [
+        "两次打开 ?t0=128&freeze 对比树冠",
+        "点击 #replant",
+        "确认新树生成且时间归零"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "scene.seedFlow",
+      "tags": [
+        "稳定性",
+        "交互"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "STORY-01",
+      "module": "story",
+      "title": "14 章数据边界",
+      "summary": "CHAPTERS 共 14 章，start/end 连续覆盖 0–260s，无缝隙无重叠。",
+      "goal": "章节表是旁白、镜头、字幕的唯一时间源，错一格整堂课都会乱。",
+      "expected": "length=14；首章 start=0；末章 end=260；每章 end=下一章 start。",
+      "steps": [
+        "读取 CHAPTERS 数据",
+        "检查数量与起止",
+        "验证相邻章节连续"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "story.chapterCount",
+      "tags": [
+        "内容",
+        "教学"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "STORY-02",
+      "module": "story",
+      "title": "总时长 259.9 秒",
+      "summary": "STORY_END=259.9，播放器显示 04:20，进度条最大值一致。",
+      "goal": "时长错误会让最后一章被截断或出现空气时间。",
+      "expected": "STORY_END≈259.9；#timecode 显示 04:20；#timeline max=259.9。",
+      "steps": [
+        "读取 STORY_END 与时间码",
+        "检查 #timeline 的 max",
+        "播放到结尾观察停止位置"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "story.timelineMax",
+      "tags": [
+        "内容",
+        "交互"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "STORY-03",
+      "module": "story",
+      "title": "章节标题与文案齐全",
+      "summary": "14 章标题与旁白文案齐全。需人工：审读适龄性。",
+      "goal": "文案是老师照着念的讲稿，缺字或错章会让课堂卡壳。",
+      "expected": "14 个 title 与 text 非空；标题顺序与文档一致；关键词可高亮。",
+      "steps": [
+        "读取 CHAPTERS",
+        "逐章检查标题与 text",
+        "与 docs/02 对照"
+      ],
+      "priority": "P1",
+      "type": "manual",
+      "tags": [
+        "内容",
+        "教学"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "STORY-04",
+      "module": "story",
+      "title": "章节切换 UI 同步",
+      "summary": "跳转 t=210 后章节编号、标题、正文、字幕与章节栏同步为第 12 章。",
+      "goal": "老师拖进度条重讲时，界面必须立刻对齐，否则会念错章节。",
+      "expected": "#chapterIndex 第 12 章/共 14 章；#chapterTitle 第二年 · 夏；#subtitleText 同源；章节栏当前段高亮。",
+      "steps": [
+        "打开 ?t0=210&freeze",
+        "读取章节编号/标题/正文/字幕",
+        "检查 #chapterRail 当前段"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "story.chapterSwitchSync",
+      "tags": [
+        "交互",
+        "教学"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "STORY-05",
+      "module": "story",
+      "title": "章节栏 14 段刻线",
+      "summary": "#chapterRail 由 14 个 span 组成，done/current 类随播放位置更新。",
+      "goal": "章节栏让老师一眼看到讲到哪里，段数或状态错误会误导进度判断。",
+      "expected": "span 数量=14；t=0 第 1 段 current；t=210 前 11 段 done、第 12 段 current。",
+      "steps": [
+        "读取 #chapterRail 子节点",
+        "检查 t=0 与 t=210 的 class 分布"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "story.chapterRail14",
+      "tags": [
+        "视觉",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "STORY-06",
+      "module": "story",
+      "title": "章节弹层 14 卡",
+      "summary": "章节弹层打开后显示 14 张卡片，当前章高亮并滚动到视口中央。",
+      "goal": "老师现场跳章全靠这个弹层，卡片缺失或当前章看不见会浪费时间。",
+      "expected": ".chapter-item 数量=14；.current 存在；当前卡完整处于可视区。",
+      "steps": [
+        "课堂模式打开 #chapterDrawer",
+        "统计卡片数量",
+        "检查当前章位置与高亮"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "story.chapterDrawer14",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "STORY-07",
+      "module": "story",
+      "title": "时间轴章节刻度",
+      "summary": "#marks 生成 13 个章节起点刻度，位置与 CHAPTERS.start 百分比一致。",
+      "goal": "刻度帮助老师快速定位章节，位置偏差会导致跳章不准。",
+      "expected": "mark 数量=13；left 百分比与 start/STORY_END 相符；title 为章名。",
+      "steps": [
+        "读取 #marks 的 span",
+        "计算期望百分比",
+        "比对 left 与 title"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "story.timelineMarks",
+      "tags": [
+        "交互",
+        "视觉"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "STORY-08",
+      "module": "story",
+      "title": "季节轮盘与年份",
+      "summary": "细环轮盘四角标春夏秋冬，指针角度随季节进度旋转，中心显示第 N 年。",
+      "goal": "轮盘是孩子理解四季轮回的可视化教具，指针错位会讲错季节。",
+      "expected": "4 个 .wheel-label；#wheelNeedle 角度≈seasonProgress×360；#wheelYear 第 1/2 年正确。",
+      "steps": [
+        "打开 ?class&t0=210&freeze",
+        "读取指针角度与年份",
+        "对照当前季节"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "classroom.wheel",
+      "tags": [
+        "视觉",
+        "教学"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "STORY-09",
+      "module": "story",
+      "title": "结尾回春与新芽",
+      "summary": "t=259.8 画面为春色、土面新芽出现，HUD 显示「春 · 万物发芽 · 新的轮回」。",
+      "goal": "结尾是「生命轮回」的落点，若停在冬景或标签错季，整堂课的主题不成立。",
+      "expected": "data-season=春；#sub 万物发芽；新芽可见；t=259.9 自动停止。",
+      "steps": [
+        "打开 ?t0=259.8&freeze",
+        "检查季节/HUD/新芽",
+        "播放到 259.9 确认停止"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "story.endingSpring",
+      "tags": [
+        "内容",
+        "教学"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "STORY-10",
+      "module": "story",
+      "title": "旁白与字幕同源",
+      "summary": "侧栏旁白与课堂大字幕使用同一章节文案，关键词以 em 高亮。",
+      "goal": "两处文案不一致会让老师念的和孩子看到的不同步。",
+      "expected": "#chapterText 与 #subtitleText 文本一致；字幕含 em 关键词；meta 显示第 N 章。",
+      "steps": [
+        "打开 ?class&t0=210&freeze",
+        "对比两处文本",
+        "检查 em 标签与 meta"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "story.subtitleHighlight",
+      "tags": [
+        "内容",
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "PLAY-01",
+      "module": "player",
+      "title": "播放与暂停",
+      "summary": "点击 #playBtn 在播放/暂停间切换，data-playing 与 aria-label 同步。",
+      "goal": "播放键是课堂最常用控件，任何状态错乱都会直接影响授课节奏。",
+      "expected": "点击后 data-playing 1→0→1；storyTime 播放时增长、暂停时不变；图标切换。",
+      "steps": [
+        "打开自由观看页",
+        "点击 #playBtn 两次",
+        "检查 data-playing 与 storyTime"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "player.playPause",
+      "tags": [
+        "交互",
+        "教学"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "PLAY-02",
+      "module": "player",
+      "title": "时间码显示与更新",
+      "summary": "时间码按 mm:ss / 04:20 显示，并随时间每秒更新。",
+      "goal": "老师需要据此判断还剩多少时间，时间码停滞会让人误判进度。",
+      "expected": "初始 00:00 / 04:20；跳到 100s 显示 01:40 / 04:20；aria-valuetext 同步。",
+      "steps": [
+        "打开页面读取 #timecode",
+        "拖动到 100s",
+        "再次读取时间码与 aria-valuetext"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "player.timeAdvances",
+      "tags": [
+        "交互",
+        "教学"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "PLAY-03",
+      "module": "player",
+      "title": "进度条拖动跳转",
+      "summary": "拖动或点击 #timeline 可跳到任意秒，章节 UI 同步更新。",
+      "goal": "老师要反复重讲某一句，进度条不可拖会让课堂失去灵活性。",
+      "expected": "设 value=200 后 storyTime≈200；时间码 03:20；章节变为第二年 · 夏。",
+      "steps": [
+        "打开页面",
+        "设置 #timeline.value=200 并触发 input/change",
+        "检查 storyTime、时间码与章节标题"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "player.timelineSeek",
+      "tags": [
+        "交互",
+        "教学"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "PLAY-04",
+      "module": "player",
+      "title": "拖动恢复播放状态",
+      "summary": "拖动进度条期间保持原播放状态，松手后自动恢复。",
+      "goal": "旧版一拖就永久暂停，老师每次都要再点播放；恢复状态是课堂流畅性的关键。",
+      "expected": "播放中拖动→松手后 playing=true；暂停中拖动→松手仍 false。",
+      "steps": [
+        "播放中拖动 #timeline 到 120",
+        "松手后读取 playing",
+        "暂停后再拖一次对比"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "player.scrubResume",
+      "tags": [
+        "交互",
+        "教学"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "PLAY-05",
+      "module": "player",
+      "title": "重播回到开头",
+      "summary": "点击 #replayBtn 后 storyTime=0、playing=true、回到第 1 章。",
+      "goal": "下课重放或孩子要求「再看一遍」时需要一键重播。",
+      "expected": "storyTime=0；playing=true；#chapterTitle 种子入土。",
+      "steps": [
+        "播放到 60s",
+        "点击 #replayBtn",
+        "检查时间、播放状态与章节"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "player.replay",
+      "tags": [
+        "交互"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "PLAY-06",
+      "module": "player",
+      "title": "再种一棵",
+      "summary": "点击 #replant 用新种子重建树，时间归零并继续播放。",
+      "goal": "「再种一棵」是课程互动彩蛋，失败会造成画面卡死或重复树。",
+      "expected": "树对象重建；storyTime=0；playing=true；无 console error。",
+      "steps": [
+        "播放到 60s",
+        "点击 #replant",
+        "检查时间归零与画面新树"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "player.replant",
+      "tags": [
+        "交互",
+        "稳定性"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "PLAY-07",
+      "module": "player",
+      "title": "背景音乐开关",
+      "summary": "#musicBtn 切换音乐开关，aria-pressed 与 audio.paused 保持一致。",
+      "goal": "课堂需要随时静音或恢复音乐，开关状态错误会影响课堂秩序。",
+      "expected": "点击后 aria-pressed true↔false；audio.paused 同步；按钮宽度不变。",
+      "steps": [
+        "打开页面点击 #musicBtn",
+        "检查 aria-pressed 与 audio.paused",
+        "再点一次"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "player.musicToggle",
+      "tags": [
+        "音频",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "PLAY-08",
+      "module": "player",
+      "title": "音量与偏好记忆",
+      "summary": "音量滑块与课堂滑块双向同步，开关/音量刷新后保持。",
+      "goal": "不同教室音响差异大，老师每次上课都要重新调音量会很烦。",
+      "expected": "拖动 #volume 到 40 → audio.volume≈0.4、#classVolume=40；localStorage 存 {on,volume}；刷新后一致。",
+      "steps": [
+        "设置 #volume=40 并读取 audio.volume",
+        "检查 #classVolume 同步",
+        "刷新后读取按钮与音量"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "player.volumePersist",
+      "tags": [
+        "音频",
+        "稳定性"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "PLAY-09",
+      "module": "player",
+      "title": "freeze 静音与播放器隐藏",
+      "summary": "?t0=N&freeze 下播放器与旁白隐藏，音频完全不出声。",
+      "goal": "截图/录屏时任何 UI 或音乐都会污染素材，定帧必须纯净。",
+      "expected": "#player display:none；#narration display:none；audio.paused=true 或 muted。",
+      "steps": [
+        "打开 ?t0=34&freeze",
+        "检查 #player 与 #narration",
+        "检查 audio 状态"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "player.freezeHidden",
+      "tags": [
+        "音频",
+        "稳定性"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "PLAY-10",
+      "module": "player",
+      "title": "播放快捷键",
+      "summary": "空格播放/暂停、←/→±5s、Home/End 首尾、PageUp/PageDown 换章。",
+      "goal": "老师用翻页笔或键盘讲课，快捷键是课堂效率保障。",
+      "expected": "空格切换 playing；←→ 改变 storyTime±5；Home=0；End=259.9；PageUp/PageDown 章节切换。",
+      "steps": [
+        "打开页面按空格",
+        "按 ← 与 →",
+        "按 Home/End 与 PageUp/PageDown"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "player.keyboardSeek",
+      "tags": [
+        "交互",
+        "教学"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "PLAY-11",
+      "module": "player",
+      "title": "播放状态语义",
+      "summary": "播放键用 data-playing 驱动 SVG 与 aria-label，bgm.js 也读同一状态。",
+      "goal": "状态语义不一致会导致读屏读出错误动作，也会让音乐不同步。",
+      "expected": "data-playing=1 时 aria-label=暂停；=0 时 aria-label=播放；音频状态一致。",
+      "steps": [
+        "读取 #playBtn 属性",
+        "切换播放状态",
+        "对比 aria-label 与 audio.paused"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "player.ariaPlaying",
+      "tags": [
+        "无障碍",
+        "音频"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "PLAY-12",
+      "module": "player",
+      "title": "进度条时间气泡",
+      "summary": "hover 进度条显示 mm:ss · 章名。需人工：检查不遮刻度。",
+      "goal": "老师需要精确跳到某一句，气泡让定位更直观。",
+      "expected": "指针在 50% 处显示约 02:10 · 对应章名；离开后隐藏。",
+      "steps": [
+        "悬停 #timelineWrap 中点",
+        "读取 #scrubTip 文本与可见性",
+        "移出后确认隐藏"
+      ],
+      "priority": "P2",
+      "type": "manual",
+      "tags": [
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "CLASS-01",
+      "module": "classroom",
+      "title": "?class 直接进入课堂",
+      "summary": "访问 ?class 直接进入课堂模式：顶栏/字幕/底栏显示，开场页隐藏。",
+      "goal": "线上课堂入口是老师最常用的 URL，入口失败整堂课无法开始。",
+      "expected": "body.classroom-mode；#startScreen.hidden；#classroomTop/#subtitleBar/#classroomBar 可见；固定树种子。",
+      "steps": [
+        "打开 ?class",
+        "检查 body class 与三层课堂布局",
+        "确认开场页隐藏"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "classroom.enter",
+      "tags": [
+        "教学",
+        "稳定性"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "CLASS-02",
+      "module": "classroom",
+      "title": "顶栏 8 个工具按钮",
+      "summary": "顶栏含章节、教师提示、找一找、四季合影、每章停、增亮、锁定、退出 8 个按钮。",
+      "goal": "课堂工具是老师授课的操作台，少一个功能就少一种教学手段。",
+      "expected": "8 个按钮 id 齐全且可见；role=toolbar；aria-label=课堂工具。",
+      "steps": [
+        "打开 ?class",
+        "统计 .class-top-actions button",
+        "核对 8 个 id"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "classroom.topbar",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "CLASS-03",
+      "module": "classroom",
+      "title": "课堂大字幕",
+      "summary": "字幕显示当前章节全文，关键词高亮，aria-live 播报。",
+      "goal": "后排孩子靠字幕理解内容，字幕缺失或错章会直接失去教学作用。",
+      "expected": "#subtitleText 文本与章节一致；含 em 关键词；aria-live=polite aria-atomic=true；meta 第 N 章。",
+      "steps": [
+        "打开 ?class&t0=210&freeze",
+        "读取字幕文本与 em",
+        "检查 aria 属性与 meta"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "classroom.subtitle",
+      "tags": [
+        "教学",
+        "无障碍"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "CLASS-04",
+      "module": "classroom",
+      "title": "课堂进度条",
+      "summary": "#classProgress 为 slider，可点击/拖动/键盘跳转并保留播放状态。",
+      "goal": "老师随时重讲某句，课堂进度条是核心操作。",
+      "expected": "role=slider；aria-valuemin=0 max=260 now 正确；点击 50% → storyTime≈130；←→ ±5s。",
+      "steps": [
+        "打开 ?class",
+        "点击进度条中点",
+        "按 ← → 并读取 aria-valuenow"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "classroom.progress",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "CLASS-05",
+      "module": "classroom",
+      "title": "首尾章按钮禁用",
+      "summary": "第 1 章「上一章」禁用，第 14 章「下一章」禁用。",
+      "goal": "首尾章按钮可点会造成越界或空跳，破坏课堂节奏。",
+      "expected": "t=0 时 #classPrevBtn.disabled=true；t=250 时 #classNextBtn.disabled=true。",
+      "steps": [
+        "打开 ?class&t0=0",
+        "检查上一章 disabled",
+        "打开 ?class&t0=250 检查下一章"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "classroom.prevNext",
+      "tags": [
+        "交互",
+        "教学"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "CLASS-06",
+      "module": "classroom",
+      "title": "每章结束自动暂停",
+      "summary": "从 15.5s 播放到 16s 自动停在章节边界，提示下一章并可继续。",
+      "goal": "每章暂停是幼儿园课堂的核心节奏，老师要在这里提问互动。",
+      "expected": "storyTime 停在 16.0；#pausePrompt 显示第 1 章结束与下一章；点 #pauseContinue 后 playing=true。",
+      "steps": [
+        "打开 ?class&t0=15.5",
+        "等待跨越 16s",
+        "读取暂停位置与提示",
+        "点击继续播放"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "classroom.autoPause",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "CLASS-07",
+      "module": "classroom",
+      "title": "教师提示弹层",
+      "summary": "教师提示显示当前章可以问/可以动。需人工：审核内容适龄。",
+      "goal": "提示卡帮助老师现场提问和做动作，是课堂版的核心增值内容。",
+      "expected": "#teacherTitle 第 N 章标题；#teacherBody 含两个内容块；关闭后回到原焦点。",
+      "steps": [
+        "打开 ?class&t0=210",
+        "点击 #classTeacherBtn",
+        "检查标题与内容块"
+      ],
+      "priority": "P1",
+      "type": "manual",
+      "tags": [
+        "教学",
+        "内容"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "CLASS-08",
+      "module": "classroom",
+      "title": "退出确认与保留进度",
+      "summary": "退出先确认，取消可返回，确认后保留 storyTime 并显示继续观看。",
+      "goal": "退出按钮紧邻锁定，误触必须可撤销，且老师处理事情后要能接着讲。",
+      "expected": "#exitConfirm.show；取消仍在课堂；确认后 storyTime≈100、#freeViewBtn=继续观看。",
+      "steps": [
+        "打开 ?class&t0=100",
+        "点击退出并检查确认弹层",
+        "点取消确认仍在课堂",
+        "再退出确认并读取 storyTime"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "classroom.exit",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "CLASS-09",
+      "module": "classroom",
+      "title": "投影增亮",
+      "summary": "增亮按钮切换 body.projector，画面明显变亮且 aria-pressed 同步。",
+      "goal": "教室投影偏暗，增亮能让后排看清树和字幕。",
+      "expected": "body.classList 含 projector；canvas 亮度提升；#classProjectorBtn aria-pressed 同步。",
+      "steps": [
+        "打开 ?class&t0=210&freeze",
+        "点击增亮",
+        "对比截图亮度与 aria-pressed"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "classroom.projector",
+      "tags": [
+        "教学",
+        "视觉"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "CLASS-10",
+      "module": "classroom",
+      "title": "屏幕锁定与长按解锁",
+      "summary": "锁定后全屏遮罩出现，长按 2 秒解锁，锁定按钮 aria-pressed 同步。",
+      "goal": "小朋友乱点会打乱课堂，锁定是课堂秩序保障。",
+      "expected": "#lockOverlay.show；长按 2s 后消失；aria-pressed true→false。",
+      "steps": [
+        "打开 ?class",
+        "点击锁定",
+        "长按遮罩 2 秒",
+        "检查遮罩与按钮状态"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "classroom.lock",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "CLASS-11",
+      "module": "classroom",
+      "title": "故事姐姐朗读",
+      "summary": "朗读开关可用，朗读时 BGM 自动压低到 18%。需人工：确认系统中文语音实际可听。",
+      "goal": "朗读能减轻老师嗓子负担，但语音质量因系统而异，必须真人试听。",
+      "expected": "#classVoiceBtn aria-pressed 切换；speechSynthesis 触发；朗读期间 BGM 音量×0.18。",
+      "steps": [
+        "在 macOS Chrome 打开 ?class",
+        "打开朗读并听当前章",
+        "确认 BGM 变轻、结束后恢复"
+      ],
+      "priority": "P1",
+      "type": "manual",
+      "tags": [
+        "教学",
+        "音频"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "CLASS-12",
+      "module": "classroom",
+      "title": "四季合影忙碌态",
+      "summary": "生成合影时按钮进入 busy/aria-busy，完成后 4 张图按原比例完整显示。",
+      "goal": "生成需要时间，没有反馈老师会重复点击；裁切会毁掉四季对比。",
+      "expected": "点击后 #classQuartetBtn.disabled + aria-busy=true + .busy；完成后 4 个 img，object-fit:contain。",
+      "steps": [
+        "打开 ?class&t0=210",
+        "点击四季合影",
+        "立即读取按钮状态",
+        "等待完成检查 4 张图"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "classroom.quartet",
+      "tags": [
+        "教学",
+        "视觉"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "CLASS-13",
+      "module": "classroom",
+      "title": "结束提示不弹合影",
+      "summary": "到 259.9s 自动停止，仅 toast 提示可点四季合影，不自动打开弹层。",
+      "goal": "结束应由老师决定是否回顾，自动弹层会打断课堂收尾。",
+      "expected": "storyTime=259.9；playing=false；#classToast 文本含「四季合影」；无 .modal.show。",
+      "steps": [
+        "打开 ?class&t0=259.5",
+        "等待结束",
+        "读取 toast 文本与弹层状态"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "classroom.end",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "CLASS-14",
+      "module": "classroom",
+      "title": "上一章与下一章",
+      "summary": "上一章/下一章按钮跳到相邻章节起点，边界章按钮禁用。",
+      "goal": "老师按章讲解时需要快速切换，跳错章会打乱节奏。",
+      "expected": "点击下一章从第 1 章到第 2 章 start=16；上一章回到 0；按钮状态同步。",
+      "steps": [
+        "打开 ?class&t0=0",
+        "点击下一章",
+        "检查 storyTime=16 与标题",
+        "点击上一章回到 0"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "classroom.nextPrev",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "EXPLORE-01",
+      "module": "explore",
+      "title": "拖拽死区与惯性",
+      "summary": "位移≤9px 视为点按，>9px 才转镜头，松手后有惯性衰减。",
+      "goal": "小朋友手抖不应误转视角或误开卡片；老师拖拽要顺滑。",
+      "expected": "4px 移动相机不变且可点认；20px 拖动相机变化、partCard 不出现；松手后速度衰减。",
+      "steps": [
+        "打开 ?class&t0=210&freeze&dbg",
+        "在树干处按下移动 4px 松开",
+        "再拖动 20px 松开",
+        "读取相机参数"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "explore.dragDeadzone",
+      "tags": [
+        "交互",
+        "教学"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "EXPLORE-02",
+      "module": "explore",
+      "title": "双击复位视角",
+      "summary": "双击画布后相机回到 theta/phi/radius=1.46/1.46/12.5，点认卡隐藏。",
+      "goal": "孩子把视角拖乱后，老师双击即可恢复正面构图。",
+      "expected": "相机三参数复位；#partCard 隐藏；toast「视角已复位」。",
+      "steps": [
+        "拖动改变视角",
+        "双击画布",
+        "读取相机参数与 toast"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "explore.doubleClickReset",
+      "tags": [
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "EXPLORE-03",
+      "module": "explore",
+      "title": "滚轮平滑缩放",
+      "summary": "滚轮按指数系数改变 cam.radius，并夹在 5.5–30 之间。",
+      "goal": "老师需要拉近看根或拉远看全树，缩放范围失控会穿模或看不清。",
+      "expected": "滚轮上滚 radius 减小、下滚增大；边界不越界。",
+      "steps": [
+        "打开 ?class&t0=210&freeze&dbg",
+        "滚轮上滚与下滚",
+        "读取 cam.radius"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "explore.wheelZoom",
+      "tags": [
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "EXPLORE-04",
+      "module": "explore",
+      "title": "双指缩放",
+      "summary": "双指捏合改变缩放，单指拖动不受影响。需人工：真机手感。",
+      "goal": "平板课堂常用双指缩放，单指拖动与双指缩放必须互不干扰。",
+      "expected": "双指距离拉大 radius 减小；手势结束后视角保持。",
+      "steps": [
+        "模拟 390 宽双指触摸",
+        "改变两指距离",
+        "读取 cam.radius 变化"
+      ],
+      "priority": "P2",
+      "type": "manual",
+      "tags": [
+        "交互",
+        "兼容性"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "EXPLORE-05",
+      "module": "explore",
+      "title": "键盘环顾与点认",
+      "summary": "画布聚焦后方向键旋转、+/- 缩放、Enter 点认画面中心。",
+      "goal": "没有鼠标或需要无障碍操作时，键盘必须能完成全部观察与点认。",
+      "expected": "方向键改变 theta/phi；+/- 改变 radius；Enter 打开 #partCard；事件不冒泡到全局快进。",
+      "steps": [
+        "Tab 聚焦 canvas",
+        "按方向键与 +/-",
+        "按 Enter",
+        "检查相机与 partCard"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "explore.canvasKeyboard",
+      "tags": [
+        "无障碍",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "EXPLORE-06",
+      "module": "explore",
+      "title": "点认卡定位与内容",
+      "summary": "点击树上部位后卡片锚定点击位置并自动翻转，glyph/名称/拼音/描述正确。",
+      "goal": "孩子点哪里、卡片就在哪里，才能把词语和部位对应起来。",
+      "expected": "桌面卡片在点击点右下 gap=14 且不出界；移动端固定底部；glyph 为专用字。",
+      "steps": [
+        "打开 ?class&t0=210&freeze",
+        "点击树干",
+        "读取卡片位置与文本",
+        "390 宽重复一次"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "explore.tapPartCard",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "EXPLORE-07",
+      "module": "explore",
+      "title": "找一找队列与命中",
+      "summary": "找一找按当前章节真实可见部位出题，点中目标显示「找到啦」并结束。",
+      "goal": "找一找是课堂互动核心，题目必须看得见、点得中，否则孩子会挫败。",
+      "expected": "findState.findBag 均来自当前章节且可见；点中目标 → toast 找到啦 + stopFindGame。",
+      "steps": [
+        "打开 ?class&t0=210&freeze",
+        "点击找一找读取队列",
+        "点中目标部位",
+        "检查 toast 与队列状态"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "explore.findGameStart",
+      "tags": [
+        "教学",
+        "交互"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "EXPLORE-08",
+      "module": "explore",
+      "title": "找一找错误提示",
+      "summary": "点错时任务条抖动并在底部 toast 提示，不遮挡任务条。",
+      "goal": "错误反馈要温和可见，且不能把「找什么」盖住。",
+      "expected": "findBanner 与 classToast bbox 重叠为 0；banner 有 shake；toast 文本提示再试。",
+      "steps": [
+        "打开找一找",
+        "点击空白处",
+        "测量两个元素 bbox 并读 toast"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "explore.findGameWrong",
+      "tags": [
+        "教学",
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "EXPLORE-09",
+      "module": "explore",
+      "title": "移动端点认卡抽屉",
+      "summary": "390 宽下点认卡固定为底部抽屉，不遮挡画面中心与字幕。",
+      "goal": "手机上卡片若浮在画面中间会挡住树，影响孩子观察。",
+      "expected": "#partCard position fixed 底部；宽度≥84vw；不遮挡 #subtitleBar。",
+      "steps": [
+        "390×844 打开 ?class&t0=210&freeze",
+        "点击树干",
+        "读取卡片 position 与 bbox"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "explore.mobileDrawer",
+      "tags": [
+        "兼容性",
+        "交互"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-01",
+      "module": "responsive",
+      "title": "五档断点布局可用",
+      "summary": "1440/1280/1024/768/390 五档核心区域可见。需人工：逐档看布局协调。",
+      "goal": "项目要在教室大屏、笔记本、平板和手机都能上课。",
+      "expected": "五档下 #app/#player 或课堂三层布局可见；关键按钮不消失；无遮挡。",
+      "steps": [
+        "依次以五档视口打开首页与 ?class",
+        "截图并检查核心区域"
+      ],
+      "priority": "P1",
+      "type": "manual",
+      "tags": [
+        "兼容性",
+        "视觉"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-02",
+      "module": "responsive",
+      "title": "五档无横向溢出",
+      "summary": "1440/1280/1024/768/390 五档无横向溢出、无滚动条。",
+      "goal": "横向溢出会让投影出现半截内容，是课堂事故。",
+      "expected": "五档 scrollWidth 均 ≤ innerWidth+1；body 不产生横向滚动条。",
+      "steps": [
+        "依次设置 1440/1280/1024/768/390 视口",
+        "读取 documentElement.scrollWidth",
+        "对比 innerWidth"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "responsive.noOverflow",
+      "tags": [
+        "兼容性",
+        "视觉"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-03",
+      "module": "responsive",
+      "title": "播放器高度与舞台让位",
+      "summary": "桌面播放器高 78px、移动端 110px，#app 底部正确让位不重叠。",
+      "goal": "播放器压住画面会遮挡树根与字幕，影响观察。",
+      "expected": "桌面 --player-h=78px；≤700px=110px；#app 与 #player 不重叠。",
+      "steps": [
+        "1440 与 390 分别读取 #player 与 #app 的 rect",
+        "检查高度与重叠"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "responsive.playerHeight",
+      "tags": [
+        "视觉",
+        "兼容性"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-04",
+      "module": "responsive",
+      "title": "课堂顶栏移动端两行",
+      "summary": "390 宽下课堂 8 个按钮排成 4+4 两行，每个高度≥44px。",
+      "goal": "老师用手机或平板控制课堂时，小按钮根本点不准。",
+      "expected": "按钮两行分布；每个高≥44；#classroomTop 桌面 64px、移动 134px。",
+      "steps": [
+        "390×844 打开 ?class",
+        "读取 8 个按钮的 rect",
+        "检查换行与高度"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "responsive.classTopbarMobile",
+      "tags": [
+        "兼容性",
+        "教学"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-05",
+      "module": "responsive",
+      "title": "深色设计 token",
+      "summary": "页面背景 #0C100E、卡片 #151B18、文字 #F2F4F0、强调 #7BD6A6。",
+      "goal": "统一 token 是第三轮视觉系统的基础，偏色或浅底会破坏整体质感。",
+      "expected": ":root 四个 token 精确匹配；body 背景为 --paper；卡片背景为 --surface。",
+      "steps": [
+        "读取 :root 计算样式",
+        "检查关键元素背景与文字颜色"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "responsive.darkTokens",
+      "tags": [
+        "视觉"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-06",
+      "module": "responsive",
+      "title": "文本对比度 AA",
+      "summary": "主文/次文/辅助文在深色底上对比度均达到 WCAG AA。",
+      "goal": "投影环境下低对比文字后排看不见，直接影响教学可读性。",
+      "expected": "--ink 17.3:1、--ink-2 9.2:1、--ink-3 ≥4.5:1。",
+      "steps": [
+        "取 :root 色值计算对比度",
+        "抽样检查 #chapterText 与 #tips"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "responsive.contrast",
+      "tags": [
+        "无障碍",
+        "视觉"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-07",
+      "module": "responsive",
+      "title": "无衬线且无 emoji 图标",
+      "summary": "全站字体栈无衬线，按钮与状态不使用 emoji，图标全部内联 SVG。",
+      "goal": "宋体/emoji 会回到旧版古风与不稳定渲染，破坏现代设计系统。",
+      "expected": "font-family 不含 serif；控件文本无 emoji；图标均 svg use。",
+      "steps": [
+        "检查 body 字体与 :root --font",
+        "扫描按钮文本 emoji",
+        "统计 svg 图标"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "responsive.noSerifEmoji",
+      "tags": [
+        "视觉",
+        "兼容性"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-08",
+      "module": "responsive",
+      "title": "SVG sprite 15 个图标",
+      "summary": "sprite 含 15 个 #i-* symbol，全部 aria-hidden。",
+      "goal": "图标缺失会显示空白按钮，孩子与老师都看不懂。",
+      "expected": "symbol 数量=15；每个 id 匹配 #i-*；使用处 aria-hidden=true。",
+      "steps": [
+        "读取顶部 svg symbol",
+        "统计与核对 id",
+        "检查 aria-hidden"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "responsive.svgSprite",
+      "tags": [
+        "视觉",
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-09",
+      "module": "responsive",
+      "title": "移动端字幕不压画面",
+      "summary": "390 宽课堂下字幕带、控制条都在舞台之外，不覆盖 3D 画面。",
+      "goal": "手机屏小，字幕压树会让孩子看不清根和叶。",
+      "expected": "#subtitleBar 与 #app 的 bbox 不重叠；#classroomBar 同理；树冠区域可见。",
+      "steps": [
+        "390×844 打开 ?class&t0=210&freeze",
+        "读取字幕/控制条/画布 bbox",
+        "计算重叠面积"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "responsive.subtitleClear",
+      "tags": [
+        "兼容性",
+        "教学"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "RESP-10",
+      "module": "responsive",
+      "title": "移动端播放器控件 44px",
+      "summary": "390 宽下播放器 5 个核心控件与进度命中区均≥44px。",
+      "goal": "老师单手持机操作时，小控件会频繁误触。",
+      "expected": "#playBtn/#replayBtn/#musicBtn/#replant/#timelineWrap 尺寸≥44；无控件被裁切。",
+      "steps": [
+        "390×844 打开 ?ui=1&t0=128&freeze",
+        "遍历 5 个控件读取 rect",
+        "检查最小宽高"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "responsive.mobilePlayer44",
+      "tags": [
+        "无障碍",
+        "兼容性"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-01",
+      "module": "a11y",
+      "title": "五个弹层 dialog 语义",
+      "summary": "5 个弹层均为 role=dialog aria-modal=true 且标题关联。",
+      "goal": "读屏用户需要知道当前是对话框以及标题，否则无法操作课堂。",
+      "expected": "5 个 .modal 属性齐全且 aria-labelledby 指向真实标题 id；#partCard aria-modal=false。",
+      "steps": [
+        "读取 5 个 .modal 属性",
+        "核对 aria-labelledby 目标",
+        "检查 partCard"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "a11y.modalSemantics",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-02",
+      "module": "a11y",
+      "title": "弹层打开背景 inert",
+      "summary": "弹层打开时 8 个背景容器加 inert，关闭后移除。",
+      "goal": "背景控件仍可 Tab 到会让读屏和键盘用户在弹层外迷路。",
+      "expected": "8 个背景 id 全部有 inert；关闭后无 inert。",
+      "steps": [
+        "打开 #chapterDrawer",
+        "逐个检查背景 id 的 inert",
+        "关闭后再检查"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "a11y.modalInert",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-03",
+      "module": "a11y",
+      "title": "弹层焦点陷阱",
+      "summary": "Tab 在打开弹层内循环，首尾互相 wrap，不会跑到背景。",
+      "goal": "键盘用户打开弹层后必须能只在弹层内操作。",
+      "expected": "activeElement 始终在 .modal.show 内；Shift+Tab 从首项到末项；Tab 从末项到首项。",
+      "steps": [
+        "打开章节弹层",
+        "连续按 Tab 与 Shift+Tab",
+        "记录 activeElement 路径"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "a11y.focusTrap",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-04",
+      "module": "a11y",
+      "title": "关闭弹层焦点恢复",
+      "summary": "关闭弹层后焦点回到触发按钮。",
+      "goal": "焦点丢失会让键盘用户从页面顶部重新 Tab，课堂操作效率极低。",
+      "expected": "从 #chapterBtnNormal 打开再关闭，activeElement===#chapterBtnNormal。",
+      "steps": [
+        "聚焦章节按钮并打开弹层",
+        "Esc 关闭",
+        "读取 activeElement"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "a11y.escRestoreFocus",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-05",
+      "module": "a11y",
+      "title": "开场页模态",
+      "summary": "开场页为 dialog aria-modal，背景 inert，焦点在开始按钮。",
+      "goal": "开场页是首屏必经层，若背景可操作会让键盘与读屏用户困惑。",
+      "expected": "role=dialog；背景 4 个容器 inert；activeElement=#startClassBtn；Tab 不离开开场页。",
+      "steps": [
+        "打开首页",
+        "检查 startScreen aria 属性",
+        "读取焦点与背景 inert",
+        "按 Tab 数次"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "a11y.startDialog",
+      "tags": [
+        "无障碍",
+        "教学"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-06",
+      "module": "a11y",
+      "title": "开关按钮 aria-pressed",
+      "summary": "音乐与课堂每章停/朗读/增亮/锁定按钮均写 aria-pressed 且与状态一致。",
+      "goal": "读屏用户靠 aria-pressed 判断开关状态，缺失就不知道当前是否开启。",
+      "expected": "5 类按钮属性存在；切换后 true↔false；文案固定。",
+      "steps": [
+        "读取 #musicBtn 与 4 个课堂开关",
+        "逐个切换并检查 aria-pressed"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "a11y.ariaPressed",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-07",
+      "module": "a11y",
+      "title": "滑杆 aria 语义",
+      "summary": "#classProgress 与 #timeline 的 slider/aria 属性完整。",
+      "goal": "读屏用户需要知道进度与可调范围，否则无法判断播放位置。",
+      "expected": "classProgress role=slider aria-valuemin=0 max=260 now=秒；timeline aria-label=播放进度。",
+      "steps": [
+        "打开 ?class",
+        "读取两个滑杆的 aria 属性",
+        "跳转后检查 valuenow 更新"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "a11y.progressAria",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-08",
+      "module": "a11y",
+      "title": "状态播报 live region",
+      "summary": "找一找、暂停提示、toast、字幕均为 role=status/aria-live，变化可被播报。",
+      "goal": "视觉反馈对读屏用户完全不可见，必须靠 live region 传达。",
+      "expected": "#findBanner/#pausePrompt/#classToast role=status；#subtitleText aria-live=polite aria-atomic=true。",
+      "steps": [
+        "检查四个元素的 role 与 aria-live",
+        "触发 find 与 pause 观察文本变化"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "a11y.liveRegions",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-09",
+      "module": "a11y",
+      "title": "焦点可见",
+      "summary": "键盘焦点显示 2px 薄荷绿描边。需人工：投影下确认可见。",
+      "goal": "键盘老师必须看清当前焦点，否则无法可靠操作。",
+      "expected": "getComputedStyle 的 outline 宽度≈2px、颜色 accent；画布 focus-visible 有描边。",
+      "steps": [
+        "Tab 到按钮与滑杆",
+        "读取 outline 样式",
+        "聚焦 canvas 截图"
+      ],
+      "priority": "P1",
+      "type": "manual",
+      "tags": [
+        "无障碍",
+        "视觉"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-10",
+      "module": "a11y",
+      "title": "减少动态效果",
+      "summary": "reduce 时动画时长压到 .001ms，并关闭自动环绕。",
+      "goal": "对动态敏感的孩子与老师需要稳定的画面，不能被持续运动困扰。",
+      "expected": "CSS animation-duration≈0.001ms；6 秒后相机不自动环绕；无 shake。",
+      "steps": [
+        "emulate reducedMotion=reduce",
+        "读取 animation 时长",
+        "等待 7 秒记录相机角度"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "a11y.reducedMotion",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-11",
+      "module": "a11y",
+      "title": "44px 触控命中",
+      "summary": "390 宽下课堂 8 按钮、播放器 6 控件与进度条命中区均≥44px。",
+      "goal": "幼儿园老师单手持机操作，小按钮必然误触。",
+      "expected": "每个 rect 宽高≥44；#timelineWrap 高度≥44；#classProgress 命中区≥44。",
+      "steps": [
+        "390×844 打开 ?class",
+        "遍历关键控件读取 rect",
+        "检查最小尺寸"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "a11y.touchTargets44",
+      "tags": [
+        "无障碍",
+        "兼容性"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-12",
+      "module": "a11y",
+      "title": "viewport 允许缩放",
+      "summary": "viewport 不含 maximum-scale 与 user-scalable=no。",
+      "goal": "视力不好的老师需要放大页面，禁止缩放是明确的无障碍缺陷。",
+      "expected": "viewport content 只含 width=device-width, initial-scale=1, viewport-fit=cover。",
+      "steps": [
+        "读取 meta[name=viewport]",
+        "断言无 maximum-scale 与 user-scalable=no"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "a11y.viewportZoom",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-13",
+      "module": "a11y",
+      "title": "canvas 名称与键盘",
+      "summary": "canvas 有 tabindex/role/中文 aria-label 与键盘操作。",
+      "goal": "读屏用户需要知道画布是什么、怎么操作，否则 3D 内容完全不可达。",
+      "expected": "aria-label 说明拖动/方向键/滚轮/回车；tabIndex=0；role=application。",
+      "steps": [
+        "读取 canvas 三个属性",
+        "Tab 聚焦后按方向键",
+        "确认相机变化"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "a11y.canvasRole",
+      "tags": [
+        "无障碍"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "A11Y-14",
+      "module": "a11y",
+      "title": "SVG 图标可访问性",
+      "summary": "全部图标 aria-hidden，按钮均有可访问名称。",
+      "goal": "读屏用户不能被装饰图标干扰，也不能遇到无名按钮。",
+      "expected": "svg symbol 均 aria-hidden=true；按钮有 aria-label 或可读文本；图标 use 引用有效。",
+      "steps": [
+        "打开首页与 ?class",
+        "检查所有 svg[aria-hidden]",
+        "统计按钮可访问名缺失数"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "a11y.icons",
+      "tags": [
+        "无障碍",
+        "视觉"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "PERF-01",
+      "module": "perf",
+      "title": "draw calls 预算",
+      "summary": "?dbg 下 renderer.info.render.calls 在 450–500 之间。",
+      "goal": "课堂电脑性能有限，draw call 失控会直接掉帧。",
+      "expected": "calls ≥450 且 ≤500（基线 466）。",
+      "steps": [
+        "打开 ?t0=128&freeze&dbg",
+        "读取 renderer.info.render.calls"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "perf.drawCalls",
+      "tags": [
+        "性能"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "PERF-02",
+      "module": "perf",
+      "title": "三角面预算",
+      "summary": "renderer.info.render.triangles ≤650000。",
+      "goal": "面数过高会让集显笔记本发热卡顿，影响课堂播放。",
+      "expected": "triangles ≤650000（基线约 628574）。",
+      "steps": [
+        "打开 ?t0=128&freeze&dbg",
+        "读取 triangles"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "perf.triangles",
+      "tags": [
+        "性能"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "PERF-03",
+      "module": "perf",
+      "title": "暂停不重复绘制",
+      "summary": "暂停/定帧 2 秒内 renderer.info.render.frame 不增长。",
+      "goal": "静态画面持续重绘会浪费电量和性能，也拖慢无头截图。",
+      "expected": "frame 计数前后一致；staticKey 不变。",
+      "steps": [
+        "打开 ?t0=128&freeze&dbg",
+        "记录 frame 并等待 2 秒",
+        "再次读取"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "perf.staticFrames",
+      "tags": [
+        "性能",
+        "稳定性"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "PERF-04",
+      "module": "perf",
+      "title": "连续再种无泄漏",
+      "summary": "连续点击再种 10 次后 geometries/textures 不持续增长。",
+      "goal": "每节课多次再种，若资源不释放会越来越卡直到崩溃。",
+      "expected": "10 次后 geometry/texture 增量 ≤5；无 console error。",
+      "steps": [
+        "打开 ?t0=128&freeze&dbg",
+        "读取 memory 基线",
+        "连续点击 #replant 10 次",
+        "再次读取 memory"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "perf.geometryStability",
+      "tags": [
+        "性能",
+        "稳定性"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "PERF-05",
+      "module": "perf",
+      "title": "长播无报错",
+      "summary": "从 0 播到结尾或分段跳播全时间轴无 console error/pageerror。",
+      "goal": "课堂要连续播放 4 分 20 秒，中途报错会黑屏。",
+      "expected": "全时间轴抽样 20 个点均无 pageerror；console.error=0。",
+      "steps": [
+        "打开页面",
+        "按章节起点依次 seek",
+        "收集 console/pageerror"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "perf.longPlay",
+      "tags": [
+        "稳定性",
+        "性能"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "PERF-06",
+      "module": "perf",
+      "title": "首屏加载耗时",
+      "summary": "本地静态服务器下首屏可读时间≤3 秒。",
+      "goal": "上课前打开页面等待过久会耽误课堂开始。",
+      "expected": "#loading 隐藏且舞台可见的总耗时 ≤3000ms。",
+      "steps": [
+        "启动本地静态服务器",
+        "记录导航到 #loading 隐藏的时间",
+        "断言 ≤3s"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "perf.loadTime",
+      "tags": [
+        "性能"
+      ],
+      "since": "v4.0"
+    },
+    {
+      "id": "PERF-07",
+      "module": "perf",
+      "title": "动画流畅度感知",
+      "summary": "不同教室电脑上动画观感是否流畅（目标≥30fps）。需人工：显卡与投影环境差异大。",
+      "goal": "帧率仪无法代表真实课堂观感，必须到教室实地看一眼。",
+      "expected": "人工在目标电脑播放 60 秒，无明显卡顿/掉帧/撕裂。",
+      "steps": [
+        "在教室电脑打开页面",
+        "播放第 1、8、12 章",
+        "观察雨雪与鸟虫动画是否顺滑"
+      ],
+      "priority": "P2",
+      "type": "manual",
+      "tags": [
+        "性能",
+        "教学"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "PERF-08",
+      "module": "perf",
+      "title": "长播内存稳定",
+      "summary": "播放 60 秒后 geometries/textures 数量不持续增长。",
+      "goal": "长时间课堂与多次切换可能积累资源，最终拖垮浏览器。",
+      "expected": "60 秒后几何/纹理数量与开始时差≤2。",
+      "steps": [
+        "打开 ?t0=0",
+        "记录 memory",
+        "播放 60 秒",
+        "再次读取"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "perf.memoryStable",
+      "tags": [
+        "性能"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "PERF-09",
+      "module": "perf",
+      "title": "大批量实例化",
+      "summary": "草叶花雪等批量物体使用 InstancedMesh/Points。",
+      "goal": "拆成大量 Mesh 会让 draw calls 爆表，实例化是性能预算的关键。",
+      "expected": "scene 中存在 grass/leaves/flowers/snow 的 InstancedMesh；每类 1 次绘制。",
+      "steps": [
+        "打开 ?dbg",
+        "遍历 scene 检查 InstancedMesh 类型",
+        "统计各类 draw call"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "perf.instancing",
+      "tags": [
+        "性能"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "REL-01",
+      "module": "release",
+      "title": "GitHub Pages 首页 200",
+      "summary": "线上首页返回 200 且包含项目标题。",
+      "goal": "发布会场地址打不开，家长和老师就无法进入课堂。",
+      "expected": "HTTP 200；HTML 含「一棵树的四季」；无重定向到 404。",
+      "steps": [
+        "curl 线上首页",
+        "检查状态码与标题"
+      ],
+      "priority": "P0",
+      "type": "auto",
+      "automationKey": "release.pagesHome",
+      "tags": [
+        "部署"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "REL-02",
+      "module": "release",
+      "title": "线上资源 md5 一致",
+      "summary": "线上 index.html/app.js/bgm mp3 与本地 md5 完全一致。",
+      "goal": "部署漏同步或缓存旧文件会让线上功能与本地不一致。",
+      "expected": "3 个文件 md5 相同；app.js 修改时间晚于 src/main.js。",
+      "steps": [
+        "计算本地 md5",
+        "下载线上文件计算 md5",
+        "逐项比对"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "release.md5",
+      "tags": [
+        "部署",
+        "稳定性"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "REL-03",
+      "module": "release",
+      "title": "文档头哈希一致",
+      "summary": "docs/ 各文档头部「对应代码」为真实提交哈希，不使用占位符。",
+      "goal": "文档与代码版本脱节会误导后续维护者。",
+      "expected": "头部哈希格式 7–40 位十六进制；无 __COMMIT_HASH__。",
+      "steps": [
+        "扫描 docs/*.md 头部",
+        "正则匹配哈希",
+        "检查占位符"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "release.docsHash",
+      "tags": [
+        "部署",
+        "内容"
+      ],
+      "since": "v3.0"
+    },
+    {
+      "id": "REL-04",
+      "module": "release",
+      "title": "Git 回退标签",
+      "summary": "pre-round2 / round2-v1 等回退标签存在且可 checkout。",
+      "goal": "大版本出问题时需要快速回退，标签丢失会延长故障时间。",
+      "expected": "git tag 含 pre-round2、round2-v1；rev-parse 成功。",
+      "steps": [
+        "运行 git tag",
+        "核对关键标签",
+        "rev-parse 验证"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "release.tags",
+      "tags": [
+        "部署"
+      ],
+      "since": "v2.0"
+    },
+    {
+      "id": "REL-05",
+      "module": "release",
+      "title": "README 入口齐全",
+      "summary": "README 含线上地址、课堂入口、本地预览、视觉审查命令与文档索引。",
+      "goal": "新老师或新开发者第一步看 README，入口缺失会找不到课堂地址。",
+      "expected": "含线上首页与 ?class 入口；含 tools/visual-audit.sh；链接 docs/01–11。",
+      "steps": [
+        "读取 README",
+        "检查线上地址与命令",
+        "检查文档链接"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "release.readmeEntry",
+      "tags": [
+        "内容",
+        "部署"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "REL-06",
+      "module": "release",
+      "title": "部署排除大文件",
+      "summary": "部署快照不含 shots/、mp4、wav、node_modules，含 .nojekyll。",
+      "goal": "大文件会让 Pages 构建慢且浪费仓库空间，也可能触发限制。",
+      "expected": "部署目录无 tree-of-seasons.mp4/wav/shots；存在 .nojekyll。",
+      "steps": [
+        "检查部署脚本与目录清单",
+        "列出大文件",
+        "确认 .nojekyll"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "release.deployExclude",
+      "tags": [
+        "部署"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "REL-07",
+      "module": "release",
+      "title": "BGM 授权可追溯",
+      "summary": "assets/MUSIC-LICENSE.md 记录 CC0 来源、作者、SHA-256 与处理方式。",
+      "goal": "公开部署必须版权清晰，授权缺失会导致下架风险。",
+      "expected": "文档含 CC0 1.0、Yoiyami、原曲地址与 sha256；音频文件与记录一致。",
+      "steps": [
+        "读取 MUSIC-LICENSE.md",
+        "校验 sha256",
+        "检查授权字段"
+      ],
+      "priority": "P2",
+      "type": "auto",
+      "automationKey": "release.bgmLicense",
+      "tags": [
+        "音频",
+        "内容"
+      ],
+      "since": "v1.0"
+    },
+    {
+      "id": "REL-08",
+      "module": "release",
+      "title": "QA 看板入口可用",
+      "summary": "/qa/ 返回 200，catalog.json 可加载，看板无 console error。",
+      "goal": "测试看板本身也是交付物，入口坏了负责人无法跟踪质量。",
+      "expected": "/qa/ 200；fetch data/catalog.json 成功；页面无 error。",
+      "steps": [
+        "访问本地 /qa/ 与线上 /qa/",
+        "检查 catalog 请求",
+        "读取 console"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "release.qaEntry",
+      "tags": [
+        "部署"
+      ],
+      "since": "v4.0"
+    }
+  ]
+}

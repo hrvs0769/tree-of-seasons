@@ -2,15 +2,23 @@
 
 纯代码生成的 3D 树木生命周期演示（Three.js）。剖面视角：地上看发芽长叶，地下看生根、一直扎到含水层。配课堂旁白、暂停和可拖动进度条，全程不加载任何外部素材。
 
-> 最后更新：2026-11-07 · 对应代码：`54137d0`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-08 · 对应代码：`e065665`（第四轮 · 可视化测试看板）
 
 线上课堂模式直达：https://hrvs0769.github.io/tree-of-seasons/?class
+
+**质量看板（独立入口）**：https://hrvs0769.github.io/tree-of-seasons/qa/ — 108 个测试点、100 条自动化，按大版本记录通过率与失败证据。
 
 视觉审查工具：`./tools/visual-audit.sh audit-rN`（默认快速 8 张；`AUDIT_FULL=1` 全量 24 张）；UI 定点截图用 `node tools/ui-shot.js <url> <out.png> [w] [h] '[actions-json]' [waitMs]`
 
 ## 本地预览
 
 双击 `index.html` 只用于开发预览（已打包为普通脚本，无需本地服务器）。课堂使用请通过上面的 GitHub Pages 线上地址访问，不另外提供离线课堂包。
+
+## 本轮新增（2026-11-08 · 第四轮 可视化测试看板）
+
+- **独立质量看板 `/qa/`**：深色工程控制台，10 个模块、108 个测试点（P0 22 / P1 61 / P2 25）、自动 100 / 人工 8；支持搜索与模块/优先级/状态/类型筛选、测试点详情、证据截图、历史通过率趋势与运行中实时进度。
+- **自动化测试 Runner**：`node tools/qa-run.js --version v4.0.0 --label "..."` 用 Playwright 跑 100 条自动检查，逐条落盘 `qa/data/results.json`，并把每次大版本摘要写入 `qa/data/history.json`；P0/P1 有失败时退出码非 0。
+- **一条命令发布前检查**：`./tools/qa-release.sh v4.1.0 "第五轮 · 主题"` 会先构建 `app.js` 再跑全量；测试点总表见 [`docs/12-test-points.md`](docs/12-test-points.md)，使用手册见 [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md)。
 
 ## 本轮新增（2026-11-07 · 第三轮 UI 现代化）
 
@@ -103,6 +111,7 @@
 - 调试：URL 加 `?debug` 看时间轴日志，`?t0=52` 直接从第 52 秒开始
 - 定帧：`?t0=34&freeze` 把时间钉死在第 34 秒不放，画面完全静止且每次加载一致 —— 截图对比用
 - `?dbg` 暴露 `window.__renderer` 等探针；`window.__classroom.seekForTest(t)` 会复位 `cam.theta/radius/phi=1.46/12.5/1.46`，保证截图是正面视角
+- 质量看板：`qa/`（独立入口 `/qa/`）；自动化 `tools/qa-run.js`，测试点 `qa/data/catalog.json`，运行结果 `qa/data/results.json` / `history.json`
 - 视觉迭代：`./tools/shoot.sh rN` 一轮出 **11 张桌面关键帧**（`6 / 20 / 44 / 66 / 100 / 128 / 170 / 190 / 210 / 230 / 250` 秒，覆盖春雨 / 根系 / 四季 / 鸟虫 / 果实 / 深根水层）+ 1 张手机 390×844（`190` 秒），拼成 `shots/rN/sheet.png`；`./tools/visual-audit.sh audit-rN` 出固定审查截图与评分骨架。评审记录见 `ITERATIONS.md`
 
 ## 背景音乐
@@ -132,3 +141,6 @@
 - [`docs/09-round2-plan.md`](docs/09-round2-plan.md) — 第二轮优化问题清单与验收标准（已完成）
 - [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) — 第三轮 UI 整改前的基线审计问题清单（P0/P1/P2 共 46 条）
 - [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) — 第三轮设计系统：token、组件、动效、交互映射、a11y、逐条验收与截图索引
+- [`docs/12-test-points.md`](docs/12-test-points.md) — 全项目 108 个测试点总表（10 模块 / P0-P1-P2 / 自动-人工）
+- [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) — 可视化测试看板使用手册：入口、数据契约、大版本运行流程、如何新增测试点
+- [`qa/README.md`](qa/README.md) — QA 看板目录说明与命令速查
