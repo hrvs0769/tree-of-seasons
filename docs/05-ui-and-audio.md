@@ -3,7 +3,7 @@
 > 本文解决：新版界面（v3 现代设计系统）由哪些 DOM 与组件组成、每个交互背后是哪个事件与函数、快捷键/课堂流程怎么走，以及背景音乐 `src/bgm.js` 如何与画面时间同步。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
 > 设计 token、组件清单、动效规范、交互映射与验收结果见 [`11-round3-ui-system.md`](11-round3-ui-system.md)；整改前的问题清单见 [`10-round3-ui-plan.md`](10-round3-ui-plan.md)。
-> 最后更新：2026-11-08 · 对应代码：`6518080`（第四轮 · 可视化测试看板）
+> 最后更新：2026-11-08 · 对应代码：`32225e7`（第五轮 · Web Speech 朗诵）
 
 > **本轮变更摘要**：第三轮彻底重做了界面语言与交互层。去掉宋体、金棕、深绿渐变、点状纹理、装饰光晕、胶囊按钮与 emoji 图标；改为深炭黑 + 雾白 + 单一薄荷绿 + 全站无衬线 + 1px 细线 + 统一圆角与轻投影。3D 舞台变成浮动圆角画框，课堂模式改为深色顶栏 / 深色字幕带 / 深色控制条。播放器、镜头、弹层、点认卡、找一找、自动暂停、快捷键面板全部补齐状态语义与键盘可达性。**3D 场景、14 章文案、章节时序、BGM 音频文件均未改动。**
 
@@ -104,7 +104,7 @@
 | `#timeline` | `pointerdown/input/change` | `beginScrub` / `setStoryTime` / `endScrub` | 拖动 seek，松手恢复原播放状态 |
 | `#timelineWrap` | `pointermove/pointerdown/pointerleave` | `updateScrubTip()` | 时间气泡显示/隐藏 |
 | `#classProgress` | `pointerdown/move/up` + `keydown ←→` | `seekClassProgress()` / `classScrubResume` | 课堂内任意秒跳转，同样保留播放状态 |
-| `#pausePrompt` | `click`（委托 `#pauseContinue`） | — | `hidePausePrompt()` + `playing=true` + 朗读恢复；事件不穿透到 canvas |
+| `#pausePrompt` | `click`（委托 `#pauseContinue`） | — | `hidePausePrompt()` + `playing=true` + 朗诵恢复；事件不穿透到 canvas |
 | `.modal` | `pointerdown`（点在遮罩上） | `closeModal(m)` | 关闭 |
 | `[data-close]` | `click` | `closeModal(document.getElementById(...))` | 关闭对应弹层 |
 | `document` | `keydown Tab` | focus trap | 弹层打开时 Tab 在 `.modal.show` 内循环 |
@@ -201,7 +201,7 @@
 
 ## 12. 自动暂停提示
 
-`showPausePrompt(text)` 渲染 `.pause-text` + `<button id="pauseContinue" class="pause-btn">继续播放</button>`；`pausePromptEl` 上的委托点击只在 `e.target.closest('#pauseContinue')` 时生效：隐藏提示、`autoPausePending=false`、`playing=true`、课堂模式且开着朗读时补一次 `speakCurrentChapter()`。提示 `pointer-events:auto`，点击不会穿透到画布；键盘 Enter/Space 由按钮原生触发。
+`showPausePrompt(text)` 渲染 `.pause-text` + `<button id="pauseContinue" class="pause-btn">继续播放</button>`；`pausePromptEl` 上的委托点击只在 `e.target.closest('#pauseContinue')` 时生效：隐藏提示、`autoPausePending=false`、`playing=true`、课堂模式且开着朗诵时补一次 `speakCurrentChapter()`。提示 `pointer-events:auto`，点击不会穿透到画布；键盘 Enter/Space 由按钮原生触发。
 
 ## 13. 点认卡 `#partCard`
 
@@ -248,7 +248,7 @@
 3. 每章结束自动停 → `#pausePrompt` 出现 → 老师提问（可点「教师提示」看「可以问 / 可以动」）→ 点「继续播放」或空格继续。
 4. 想重讲某句：拖 `#classProgress` 或按 `←/→`；想换章：顶栏「章节」或 `C` / `PageUp` / `PageDown`。
 5. 「找一找」按当前章节可见部位出题（含 bird / insect），点中出点认卡；「四季合影」`Q` 生成四张（按钮期间 `busy`）。
-6. 需要时「增亮」（投影）、「锁定」（长按 2s 解锁）、「朗读」（Web Speech，BGM 自动 duck 到 18%）。
+6. 需要时「增亮」（投影）、「锁定」（长按 2s 解锁）、「朗诵」（浏览器 Web Speech，中文在线自然音优先；无语音时降级提示；BGM 自动 duck 到 18%）。
 7. 结束：到 04:20 自动停并 toast 提示可回顾合影（不强制弹层）；点「退出」→ `#exitConfirm` 确认 → 保留 `storyTime` 回到开场页，按钮变「继续观看」。
 8. 任意时刻 `?` 打开快捷键面板；`Esc` 按「弹层 → 点认卡 → 找一找 → 暂停提示 → 退出确认」逐层关闭。
 
@@ -264,10 +264,20 @@
 | 音量 | `#volume` 与 `#classVolume` 共用 `onVolumeInput()`，`localStorage['tree-of-seasons.bgm']` 保存 `{on, volume}`（默认 0.85）；`M` 键在 `bgm.js` 内 `toggleMusic()` |
 | 同步 | `syncPlayState()` 读 `dataset.playing` 对齐音频；拖进度条 / ←→ / Home / End / 重播 / 再种一棵后 `seekToStory()` 把 `audio.currentTime` 对齐 `#timeline.value`；每 200ms 漂移校正（小偏差改 `playbackRate`，大偏差直接 seek） |
 | 自动播放限制 | 先尝试 `audio.play()`，失败则等待首次用户手势；`unlocked` 状态只影响状态点与 aria，不改文案 |
-| 朗读 ducking | `tree:voice` 事件把 `applyVolume()` 的系数改为 0.18，结束恢复 |
+| 朗诵 ducking | `tree:voice` 事件把 `applyVolume()` 的系数改为 0.18，结束恢复 |
 | 截图 / 导出 | `?freeze` / `?video` 时 `#player` 隐藏，音频完全不出声 |
 
 换音乐：替换 `assets/` 文件 → 改 `index.html` 的 `<audio src>` → 更新 `assets/MUSIC-LICENSE.md` → 用无头浏览器验证加载时长、播放/暂停、跳转、静音、偏好记忆、定帧静音。
+
+### 20.1 朗诵 `src/speech.js`（Web Speech API）
+
+- 只使用 `window.speechSynthesis`，**不请求后端、不加载音频文件**；`speech.js` 被 esbuild 打进 `app.js`。
+- 选择顺序：中文语音 → 在线（`localService === false`）→ 名称含 Natural / Online / Neural / Google / Xiaoxiao / Yunxi 等在线自然音 → 本机中文音（婷婷 / 美嘉 / 善怡等）；非中文声音不参与。
+- 语音列表可能异步返回：监听 `voiceschanged`，并在初始化后短暂轮询；用户点「朗诵」时最多等 1.2s。
+- 无语音 / 无中文语音 / 浏览器不支持时，显示 `#voiceNotice`（`role=alert`，可关闭），说明安装中文语音或换 Chrome / Edge；文字旁白继续可用。
+- `#classVoiceBtn` 默认关闭（避免自动出声）；始终可点：没有语音时保持 `aria-pressed=false`，不会把「开启但无声」伪装成成功；按钮有 `.warn` 状态和动态 `title`。
+- 调试：`window.__classroom.speech.state()` 看当前语音、`setVoicesForTest([...])` / `resetForTest()` 可注入假语音列表做自动化回归。
+
 
 ## 21. 改 UI 时最容易踩的坑
 

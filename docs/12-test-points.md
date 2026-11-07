@@ -2,13 +2,13 @@
 
 > 本文与 `qa/data/catalog.json` 同步维护、内容逐条一致；修改测试点请先改 catalog，再同步本文。
 > 唯一契约见 [`../qa/CONTRACT.md`](../qa/CONTRACT.md)；可视化看板入口见 `qa/index.html`。
-> 最后更新：2026-11-08 · 对应版本：v4.0.0 · 共 108 条测试点
+> 最后更新：2026-11-08 · 对应版本：v4.1.0 · 对应代码：`32225e7` · 共 109 条测试点
 
 ## 1. 总览
 
-- 总条数：**108**
-- 自动化：**100** 条（92.6%） · 人工：**8** 条
-- 优先级：**P0 22** 条（20.4%） · **P1 61** 条（56.5%） · **P2 25** 条（23.1%）
+- 总条数：**109**
+- 自动化：**101** 条（92.7%） · 人工：**8** 条
+- 优先级：**P0 22** 条（20.2%） · **P1 62** 条（56.9%） · **P2 25** 条（22.9%）
 
 ### 模块统计
 
@@ -18,13 +18,13 @@
 | scene | 3D 场景与确定性 | 12 | 12 | 0 | 4 | 6 | 2 |
 | story | 叙事与章节 | 10 | 9 | 1 | 3 | 4 | 3 |
 | player | 播放器与音频 | 12 | 11 | 1 | 2 | 8 | 2 |
-| classroom | 课堂模式 | 14 | 12 | 2 | 4 | 6 | 4 |
+| classroom | 课堂模式 | 15 | 13 | 2 | 4 | 7 | 4 |
 | explore | 探索与点认 | 9 | 8 | 1 | 1 | 5 | 3 |
 | responsive | 响应式与视觉 | 10 | 9 | 1 | 1 | 8 | 1 |
 | a11y | 无障碍 | 14 | 13 | 1 | 3 | 10 | 1 |
 | perf | 性能与稳定性 | 9 | 8 | 1 | 0 | 6 | 3 |
 | release | 发布与文档 | 8 | 8 | 0 | 1 | 4 | 3 |
-| **合计** | — | **108** | **100** | **8** | **22** | **61** | **25** |
+| **合计** | — | **109** | **101** | **8** | **22** | **62** | **25** |
 
 ### 模块说明
 
@@ -32,7 +32,7 @@
 - **scene · 3D 场景与确定性（SCENE）**：画布与 WebGL、四季环境、雨雪、根系水层、鸟虫树荫，以及定帧像素确定性与静态重绘。
 - **story · 叙事与章节（STORY）**：14 章章节数据、文案、章节切换、章节栏与弹层、季节轮盘和结尾回春。
 - **player · 播放器与音频（PLAYER）**：播放/暂停、时间码、进度拖动、重播与再种、BGM 开关音量记忆、快捷键与定帧静音。
-- **classroom · 课堂模式（CLASSROOM）**：?class 课堂入口、顶栏 8 工具、字幕、课堂进度、每章暂停、教师提示、退出保留、投影/锁定/朗读、四季合影与结束提示。
+- **classroom · 课堂模式（CLASSROOM）**：?class 课堂入口、顶栏 8 工具、字幕、课堂进度、每章暂停、教师提示、退出保留、投影/锁定、Web Speech 朗诵（中文在线自然音优先 + 无语音降级）、四季合影与结束提示。
 - **explore · 探索与点认（EXPLORE）**：画布拖动死区与惯性、双击复位、滚轮/双指缩放、键盘环顾、点认卡定位、找一找队列与错误提示、移动端抽屉。
 - **responsive · 响应式与视觉（RESPONSIVE）**：1440/1280/1024/768/390 五档断点、无横向溢出、播放器与课堂顶栏布局、深色 token、对比度、无衬线无 emoji、SVG sprite。
 - **a11y · 无障碍（ACCESSIBILITY）**：dialog 语义、inert、焦点陷阱与恢复、开场页模态、aria-pressed、slider 语义、live region、焦点可见、reduced-motion、44px 触控、viewport 缩放、canvas 标签。
@@ -105,7 +105,7 @@
 | PLAY-11 | 播放状态语义 | P2 | 自动 | data-playing=1 时 aria-label=暂停；=0 时 aria-label=播放；音频状态一致。 |
 | PLAY-12 | 进度条时间气泡 | P2 | 人工 | 指针在 50% 处显示约 02:10 · 对应章名；离开后隐藏。 |
 
-### classroom · 课堂模式（14 条）
+### classroom · 课堂模式（15 条）
 
 | ID | 测试点 | 优先级 | 类型 | 预期 |
 |---|---|---|---|---|
@@ -119,10 +119,11 @@
 | CLASS-08 | 退出确认与保留进度 | P0 | 自动 | #exitConfirm.show；取消仍在课堂；确认后 storyTime≈100、#freeViewBtn=继续观看。 |
 | CLASS-09 | 投影增亮 | P1 | 自动 | body.classList 含 projector；canvas 亮度提升；#classProjectorBtn aria-pressed 同步。 |
 | CLASS-10 | 屏幕锁定与长按解锁 | P2 | 自动 | #lockOverlay.show；长按 2s 后消失；aria-pressed true→false。 |
-| CLASS-11 | 故事姐姐朗读 | P1 | 人工 | #classVoiceBtn aria-pressed 切换；speechSynthesis 触发；朗读期间 BGM 音量×0.18。 |
+| CLASS-11 | 故事姐姐朗诵 | P1 | 人工 | #classVoiceBtn aria-pressed 切换；优先在线自然中文语音；朗读期间 BGM 音量×0.18；无中文音时显示 #voiceNotice 降级提示。 |
 | CLASS-12 | 四季合影忙碌态 | P1 | 自动 | 点击后 #classQuartetBtn.disabled + aria-busy=true + .busy；完成后 4 个 img，object-fit:contain。 |
 | CLASS-13 | 结束提示不弹合影 | P2 | 自动 | storyTime=259.9；playing=false；#classToast 文本含「四季合影」；无 .modal.show。 |
 | CLASS-14 | 上一章与下一章 | P2 | 自动 | 点击下一章从第 1 章到第 2 章 start=16；上一章回到 0；按钮状态同步。 |
+| CLASS-15 | 朗诵语音选择与降级提示 | P1 | 自动 | 中文在线 Natural 音（如 Microsoft Xiaoxiao Online）优先；无语音时 #voiceNotice.show 且 aria-pressed=false；仅非中文音时 reason=no-chinese。 |
 
 ### explore · 探索与点认（9 条）
 
@@ -265,7 +266,7 @@
 | `player.keyboardSeek` | PLAY-10 播放快捷键 | 空格播放/暂停、←/→±5s、Home/End 首尾、PageUp/PageDown 换章。 |
 | `player.ariaPlaying` | PLAY-11 播放状态语义 | 播放键用 data-playing 驱动 SVG 与 aria-label，bgm.js 也读同一状态。 |
 
-### classroom · 课堂模式（12 个）
+### classroom · 课堂模式（13 个）
 
 | automationKey | 用例 | 检查内容 |
 |---|---|---|
@@ -281,6 +282,7 @@
 | `classroom.quartet` | CLASS-12 四季合影忙碌态 | 生成合影时按钮进入 busy/aria-busy，完成后 4 张图按原比例完整显示。 |
 | `classroom.end` | CLASS-13 结束提示不弹合影 | 到 259.9s 自动停止，仅 toast 提示可点四季合影，不自动打开弹层。 |
 | `classroom.nextPrev` | CLASS-14 上一章与下一章 | 上一章/下一章按钮跳到相邻章节起点，边界章按钮禁用。 |
+| `classroom.voice` | CLASS-15 朗诵语音选择与降级提示 | 中文在线 Natural 音优先；无语音时显示 #voiceNotice 且 aria-pressed=false；仅非中文音时 reason=no-chinese。 |
 
 ### explore · 探索与点认（8 个）
 

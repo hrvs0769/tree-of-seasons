@@ -120,7 +120,7 @@
   }
 
   function getRunCommand() {
-    var version = (state.catalog && state.catalog.version) || (state.results && state.results.version) || 'v4.0.0';
+    var version = (state.catalog && state.catalog.version) || (state.results && state.results.version) || 'v4.1.0';
     return 'node tools/qa-run.js --version ' + version + ' --label "' + COPY_LABEL + '"';
   }
 

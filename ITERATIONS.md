@@ -506,3 +506,40 @@ HR 连续四次否定自制配乐（正弦合成 → 采样编曲 → 悠然版 
 | 文档 | `docs/12` 与 catalog 统计一致；`docs/13` 覆盖入口/数据/流程/新增测试点/FAQ |
 
 > 回退点：`pre-round4`（本轮前）/ `round4-v1`（本轮完成点）。
+
+---
+
+### r34 —— 第五轮：朗诵改用 Web Speech API（2026-11-08）
+
+> 本轮回归主线项目，只改「故事姐姐朗诵」的语音实现，**不改 3D 场景、14 章文案/时序、BGM 音频与课堂业务流程**。目标：不依赖后端、不下载音频文件，直接使用浏览器 `speechSynthesis`；中文在线自然音优先，没有可用语音时给老师明确降级提示。
+
+看到：
+
+1. 旧版课堂「朗读」虽然已经调用 `speechSynthesis`，但只用一条宽松正则挑第一个中文声音：可能选中本机紧凑音、趣味音，或者把英文/中文混在一起；没有在线自然音优先级。
+2. 语音列表是异步加载的，旧代码在 `getVoices()` 为空时直接拿到 `null`，之后如果 `voiceschanged` 没触发，就静默无声；老师不知道是没有语音、浏览器不支持，还是自己没点开。
+3. 没有降级提示：没有中文声音时仍会继续尝试，甚至可能用默认英文声音硬读中文，课堂体验不可控。
+
+改：
+
+- **新增 `src/speech.js`**：独立的 Web Speech 朗诵器，纯 `speechSynthesis`，不请求后端、不加载任何音频。导出 `createSpeechReader()`、`rankVoices()`、`isChineseVoice()`。
+- **中文在线自然音优先**：`scoreVoice()` 按「中文语言 + 普通话地区 + `localService === false`（在线）+ Natural/Online/Neural/Google/Xiaoxiao/Yunxi 等名称 + 本机中文音（婷婷/美嘉/善怡）」打分排序；趣味音/紧凑音降权；非中文声音不参与。
+- **异步语音列表**：初始化 `refresh()` + `voiceschanged` 监听 + 120ms/150ms/400ms 短轮询；点击「朗读」时 `ensureAvailable(1200)` 最多等 1.2 秒；有测试注入模式时立即返回，便于自动化。
+- **降级提示**：新增 `#voiceNotice`（`role=alert`、可关闭、14s 自动收起）；区分 `unsupported` / `no-voices` / `no-chinese` / `error` 四种文案，明确告诉老师安装中文语音或改用 Chrome / Edge，并说明「文字旁白仍可正常使用」。
+- **按钮语义**：`#classVoiceBtn` 默认关闭；无可用语音时点击保持 `aria-pressed=false`，不伪装成已开启；按钮加 `.warn` 橙色边框与动态 `title`（在线自然语音 / 本机中文语音 / 未检测到中文语音）。
+- **播放联动**：保留 `tree:voice` 事件和 BGM `duck` 到 18%；`speakCurrentChapter()` 仍覆盖章节切换、继续播放、上一章/下一章、重播等路径；`cancelSpeech()` 统一走 reader。
+- **自动化与文档**：`tools/qa/checks/classroom.js` 的 `class.voiceAria` 改为「语音排序 + 无语音降级」检查；`qa/data/catalog.json` 新增 `CLASS-15`（P1 自动）；`docs/12` 从 108 条更新为 109 条（auto 101 / manual 8 / P1 62），`docs/13` 基线同步；README / DEVELOPMENT / docs/01 / docs/05 / docs/07 同步说明。
+- **不动的范围**：BGM 仍是 `assets/tree-of-seasons-bgm-v3.mp3`（朗诵不依赖它）；课堂布局、字幕、找一找、四季合影、投影/锁定均未改。
+
+验收：
+
+| 检查 | 结果 |
+|---|---|
+| 构建 | `esbuild` 打包 `app.js` 成功，`src/speech.js` 正常内联 |
+| 语音排序 | 注入含 Tingting（本机）、Microsoft Xiaoxiao/Yunxi Online Natural、Google 普通话、英文的列表：首选 `Microsoft Xiaoxiao Online`，`online=true, natural=true` |
+| 本机回退 | 只有 Tingting + 英文时：选 Tingting，标记 `local`，仍可用 |
+| 无中文音 | 只有英文时：`available=false, reason=no-chinese`，不硬读 |
+| 无语音降级 | 空列表点击朗读：`#voiceNotice.show` 显示完整提示，`aria-pressed=false` |
+| 真实浏览器 | macOS Chromium 列表 180 个声音，自动选「本机中文语音 · 婷婷」；无语音截图见 `shots/round5/voice-fallback-1440.png` / `voice-fallback-390.png` |
+| 回归 | `CLASS` 自动用例 13/13 通过（含新增 CLASS-15）；全量 QA 99 通过 / 0 失败 / 2 跳过（PERF-06 软件 GL、REL-02 需线上），passRate 100% |
+
+回退点：`pre-round5`（本轮前）/ `round5-v1`（本轮完成点）。

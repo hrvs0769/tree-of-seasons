@@ -2,7 +2,7 @@
 
 > 本文解决：改动后怎么快速验证、怎么用 URL 参数定帧、怎么定位画面上的“怪东西”，以及章节/画面错位的核对方法。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-08 · 对应代码：`6518080`（第四轮 · 可视化测试看板）
+> 最后更新：2026-11-08 · 对应代码：`32225e7`（第五轮 · Web Speech 朗诵）
 
 ## 0. 一键自动化测试（第四轮新增）
 
@@ -10,11 +10,11 @@
 
 ```bash
 cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
-node tools/qa-run.js --version v4.0.0 --label "第四轮 · 可视化测试看板"
+node tools/qa-run.js --version v4.1.0 --label "第五轮 · Web Speech 朗诵"
 # 或：./tools/qa-release.sh <版本> "<标签>"（先构建再跑，P0/P1 失败非 0）
 ```
 
-看板入口 `http://127.0.0.1:8777/qa/`（线上 `/qa/`），108 个测试点分 10 模块；运行中每 2 秒刷新进度。测试点总表见 [`12-test-points.md`](12-test-points.md)，使用说明见 [`13-test-dashboard.md`](13-test-dashboard.md)。本文件下面的定帧截图、逐章画面核对、性能与课堂回归清单，仍是自动化覆盖不到的人工验收部分。
+看板入口 `http://127.0.0.1:8777/qa/`（线上 `/qa/`），109 个测试点分 10 模块；运行中每 2 秒刷新进度。测试点总表见 [`12-test-points.md`](12-test-points.md)，使用说明见 [`13-test-dashboard.md`](13-test-dashboard.md)。本文件下面的定帧截图、逐章画面核对、性能与课堂回归清单，仍是自动化覆盖不到的人工验收部分。
 
 ## 1. URL 调试参数
 
@@ -213,6 +213,6 @@ const i = window.__renderer.info;
 7. 开启「每章停」：从 15 秒播放到 16 秒必须自动停，提示「第 1 章结束 · 下一章：春雨滋润」；按空格从第 2 章继续，不能卡在 16 秒。
 8. 「投影增亮」：`body.projector` 出现，canvas 明显变亮；关闭后恢复。
 9. 「锁定」：全屏遮罩出现，2 秒长按解锁；解锁后按钮可继续操作。
-10. 「朗读」：macOS Chrome 下应能听到中文女声；朗读时 BGM 音量应自动压低。
+10. 「朗诵」：macOS Chrome 下应能听到中文女声；有 Edge/Windows Natural 语音时应优先选在线自然音（按钮 `title` 会显示「在线自然语音 · …」）；清空/禁用系统语音时应出现 `#voiceNotice` 降级提示且按钮保持未开启；朗读时 BGM 音量应自动压低。
 11. `?class&t0=128`（不加 freeze）：确认播放/暂停、上一章/下一章、重播都跟着时间轴，背景音乐同步。
 12. 开场页：点「开始上课」应请求全屏并进入课堂模式；点「自由观看」保留原布局。

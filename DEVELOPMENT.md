@@ -2,7 +2,7 @@
 
 > **给新会话的 AI / 新开发者：先读这份主文档。**
 > 这里只放项目概况、架构、文件索引、关键约定和常见任务。需要改某个模块时，再按下方文档索引进入对应子文档，不要先通读整个 `src/main.js`。
-> 最后更新：2026-11-08 · 对应代码：`6518080`（第四轮 · 可视化测试看板）
+> 最后更新：2026-11-08 · 对应代码：`32225e7`（第五轮 · Web Speech 朗诵）
 
 ---
 
@@ -25,7 +25,7 @@
 | 界面系统（第三轮） | 深炭黑 `--paper #0C100E` + 雾白 `--ink #F2F4F0` + 单一薄荷绿 `--accent #7BD6A6`；全站无衬线、内联 SVG 图标、1px 细线、圆角 9/14/20；设计 token 与验收见 `docs/11` |
 | 音乐 | Yoiyami《The Budding of Consciousness》，CC0，见 `assets/MUSIC-LICENSE.md` |
 
-当前版本包含两种观看方式：默认是「左侧编辑式讲解栏 + 右侧浮动圆角 3D 画框 + 底部播放条」的自由观看布局；点「开始上课」或访问 `?class` 后进入**幼儿园课堂模式**（深色顶栏、深色大字幕带、深色控制条、每章自动暂停、章节卡片、点认/找一找、细环季节转盘与四季合影、故事姐姐朗读、投影增亮、屏幕锁定）。
+当前版本包含两种观看方式：默认是「左侧编辑式讲解栏 + 右侧浮动圆角 3D 画框 + 底部播放条」的自由观看布局；点「开始上课」或访问 `?class` 后进入**幼儿园课堂模式**（深色顶栏、深色大字幕带、深色控制条、每章自动暂停、章节卡片、点认/找一找、细环季节转盘与四季合影、故事姐姐朗诵、投影增亮、屏幕锁定）。
 
 第二轮优化后，画面新增：6 层土壤剖面与地下水层、扎到含水层的深根、真正可见的云、远处偶尔飞过的鸟群、栖息的小鸟与蝴蝶/蜜蜂/瓢虫、树荫光斑、云影、飞絮、结尾新芽；所有章节文案提到的元素都能在画面里找到。
 
@@ -49,8 +49,8 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 
 ### 跑自动化测试 / 发布前检查
 ```bash
-# 全量自动化：100 条 auto，逐条写 qa/data/results.json
-node tools/qa-run.js --version v4.0.0 --label "第四轮 · 可视化测试看板"
+# 全量自动化：101 条 auto，逐条写 qa/data/results.json
+node tools/qa-run.js --version v4.1.0 --label "第五轮 · Web Speech 朗诵"
 
 # 构建 + 全量 + P0/P1 失败即非 0（推荐发布前用）
 ./tools/qa-release.sh v4.1.0 "第五轮 · 本轮主题"
@@ -58,7 +58,7 @@ node tools/qa-run.js --version v4.0.0 --label "第四轮 · 可视化测试看�
 # 打开看板（本地 8777）
 open http://127.0.0.1:8777/qa/
 ```
-测试点总表：`qa/data/catalog.json`（108 条，10 模块）；使用手册：[`docs/13-test-dashboard.md`](docs/13-test-dashboard.md)。
+测试点总表：`qa/data/catalog.json`（109 条，10 模块）；使用手册：[`docs/13-test-dashboard.md`](docs/13-test-dashboard.md)。
 
 ### 回退点（Git）
 - `pre-classroom-mode` 标签：课堂模式改造前的稳定回退点；
@@ -72,6 +72,8 @@ open http://127.0.0.1:8777/qa/
 - **`round3-v1` 标签：第三轮 UI 现代化完成点（深色设计系统 / 交互与动效）**；
 - **`pre-round4` 标签：第四轮测试看板改动前（回滚本轮全部改动用这个）**；
 - **`round4-v1` 标签：第四轮完成点（可视化测试看板 / 自动化回归 / 108 测试点）**；
+- **`pre-round5` 标签：第五轮朗诵 Web Speech 改动前（回滚本轮全部改动用这个）**；
+- **`round5-v1` 标签：第五轮完成点（Web Speech 朗诵 / 中文在线自然音优先 / 无语音降级）**；
 - 如果后续改坏了，可以 `git switch main` 回到稳定版本，或 `git checkout pre-round2` 查看本轮之前的状态。
 
 ### 开发调试 URL
@@ -96,6 +98,7 @@ open http://127.0.0.1:8777/qa/
 index.html                 页面结构、CSS 设计 token、SVG 图标 sprite、课堂布局与全部 DOM（约 1.2k 行）
 app.js                     esbuild 打包后的运行时（生成物）
 src/main.js                全部 3D 场景/时间轴/UI 交互逻辑（主源码，约 4.8k 行）
+src/speech.js              朗诵器：Web Speech 中文语音选择 + 无语音降级（打进 app.js）
 src/bgm.js                 背景音乐播放同步（独立普通脚本，不进 app.js bundle）
 lib/three.module.min.js    Three.js r170
 assets/
@@ -130,7 +133,7 @@ tools/
 | [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 第二轮优化的问题清单、实施范围与验收标准（已完成，保留原始清单） | 追溯「为什么这样改」、查 P0/P1/P2 问题编号 |
 | [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 第三轮 UI 整改前的基线审计问题清单（P0 4 / P1 22 / P2 20，共 46 条） | 查整改前问题、复现步骤与旧版截图 |
 | [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 第三轮设计系统：token、组件清单、动效时长与 easing、交互映射、a11y、逐条验收状态、截图索引 | 改界面/组件、做 UI 回归、判断整改是否完成 |
-| [`docs/12-test-points.md`](docs/12-test-points.md) | 全项目 108 个测试点总表：10 模块、P0/P1/P2、自动/人工、预期与 automationKey 索引 | 评估项目覆盖、查某个功能验什么、新增大版本测试 |
+| [`docs/12-test-points.md`](docs/12-test-points.md) | 全项目 109 个测试点总表：10 模块、P0/P1/P2、自动/人工、预期与 automationKey 索引 | 评估项目覆盖、查某个功能验什么、新增大版本测试 |
 | [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 可视化测试看板：入口、看板结构、大版本运行流程、结果解读、如何新增测试点、常见问题 | 每次大版本发布前、维护 QA 数据、排查看板问题 |
 
 `ITERATIONS.md` 是历史记录，不是运行文档；当需要知道“为什么上一版这样做”时再查。`docs/10` 是旧版基线审计，`docs/11` 是 v3 的整改结果与现行规范，两篇要一起看。
@@ -139,24 +142,24 @@ tools/
 
 | 文档 | 最后更新 | 对应代码 / 说明 |
 |---|---|---|
-| [`README.md`](README.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 界面与交互段落、本轮新增 |
-| `DEVELOPMENT.md` | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 主索引、文件表与文档表 |
-| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 架构（确定性 / rootAge / 水层 / 静态对象） |
+| [`README.md`](README.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 增加朗诵说明与文件表 |
+| `DEVELOPMENT.md` | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 主索引、文件表与文档表 |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 文件职责新增 speech.js |
 | [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 时间表与镜头（第二轮结论保留） |
 | [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 树体与根系（第二轮结论保留） |
 | [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 环境（第二轮结论保留） |
-| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · **整篇重写**：布局 / 组件 / 事件表 / 快捷键 / 课堂流程 / BGM |
-| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 构建与部署（结论保留） |
-| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 测试与调试（结论保留） |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 新增 §20.1 朗诵器 |
+| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 缓存版本与回退点更新 |
+| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 测试点 109 与朗诵人工步骤 |
 | [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
 | [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 第二轮问题清单（历史） |
 | [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
 | [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · **新建**：设计 token / 组件 / 动效 / 交互映射 / a11y / 逐条验收 |
-| [`docs/12-test-points.md`](docs/12-test-points.md) | 2026-11-08 | v4.0.0 · 第四轮 · **新建**：108 条测试点总表 |
-| [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 2026-11-08 | v4.0.0 · 第四轮 · **新建**：测试看板使用手册与发布流程 |
-| [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-08 | 历史记录追加 r33（第四轮测试看板）；功能说明以本文件为准 |
+| [`docs/12-test-points.md`](docs/12-test-points.md) | 2026-11-08 | v4.1.0 · 第五轮 · 109 条测试点总表（新增 CLASS-15） |
+| [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 2026-11-08 | v4.1.0 · 第五轮 · 基线同步 109 条 |
+| [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-08 | 历史记录追加 r33/r34；功能说明以本文件为准 |
 
-维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `6518080` 占位符，提交后由维护者全局替换为真实哈希。
+维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `32225e7`（第五轮代码提交）；后续若代码再改，再全局替换为最终哈希。
 
 ---
 
@@ -243,6 +246,6 @@ FACE_H = SOIL_DEPTH + 2.5; // 14.5
 5. **叶片仍是带纹理的小卡片**：远处层次已经足够，极端近景（<0.5m）还能看出平面；要再升级见 `docs/03` 的“后续方向”。
 6. **性能基线（第二轮实测）**：`?dbg` 下 `renderer.info.render.calls = 466`、`triangles ≈ 628574`，仍在 450–500 / ≤0.65M 预算内。改树/根/粒子后一定要用 `renderer.info` 复测。
 7. **章节时间必须和视觉事件同源**：改 `CHAPTERS` 时，雨窗、种子阶段、根/枝生长、镜头关键帧、季节换色、鸟虫窗口都会受影响；核对清单见 `docs/07`。
-8. **故事姐姐朗读依赖系统语音**：`speechSynthesis` 的可用声音因操作系统/浏览器而异；没有中文声音时会退回默认语音。朗读期间 BGM 通过 `tree:voice` 事件自动 duck 到 18%。
+8. **故事姐姐朗诵依赖浏览器语音**：`src/speech.js` 只使用 `speechSynthesis`，不加载音频；优先中文在线自然音（如 Microsoft Xiaoxiao Online / Natural），其次本机中文音（如 macOS 婷婷）。语音列表异步加载，最多等待约 1.2s；没有中文语音或完全无语音时显示 `#voiceNotice` 降级提示，不会拿英文声音硬读中文。朗读期间 BGM 通过 `tree:voice` 事件自动 duck 到 18%。
 9. **定帧一致性是硬约束**：新增任何随机或逐帧积分的对象，必须接入固定种子的 `mulberry32` 或改成 `t` 的闭式函数，并在 `dt=0` 时保持不变；用 `docs/07` 的两次独立 profile 逐像素比对验证。
 10. **剩余打磨项**：末级枝条的节疤/树瘤层次、极近景（44s）主根的表面细节、草丛与远山的重复感；见 `docs/08` 的 audit-r2 remaining items。
