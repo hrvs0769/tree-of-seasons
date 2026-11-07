@@ -664,6 +664,14 @@ button { font-family: inherit; }
   overflow: hidden;
   text-overflow: ellipsis;
   font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+#metaBaseUrl {
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  font-size: 8.5px;
+  line-height: 1.35;
 }
 
 /* ---------------------------------------------------------------- 测试点地图 */
@@ -1840,6 +1848,7 @@ button { font-family: inherit; }
   .map-name { margin: 2px 0 7px; }
   .hero-meta { grid-template-columns: 1fr 1fr; gap: 0 14px; }
   .meta-row { padding: 6px 0; }
+  .meta-row.meta-base { grid-column: 1 / -1; }
   .stat-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
   .stat { min-height: 62px; }
   .stat strong { font-size: 19px; }
