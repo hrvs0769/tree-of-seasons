@@ -1,0 +1,133 @@
+{
+  "schemaVersion": 1,
+  "runs": [
+    {
+      "runId": "20261018-001",
+      "version": "v3.0.0",
+      "label": "第三轮 · UI 现代化",
+      "commit": "a1b2c3d",
+      "finishedAt": "2026-10-18T21:40:00+08:00",
+      "durationMs": 355000,
+      "summary": {
+        "total": 26,
+        "auto": 18,
+        "manual": 8,
+        "passed": 14,
+        "failed": 4,
+        "skipped": 0,
+        "passRate": 0.778
+      },
+      "failed": [
+        "CLASS-02",
+        "A11Y-01",
+        "PERF-02",
+        "RESP-01"
+      ]
+    },
+    {
+      "runId": "20261022-001",
+      "version": "v3.1.0",
+      "label": "第三轮 · 弹层与焦点修复",
+      "commit": "b7c8d9e",
+      "finishedAt": "2026-10-22T22:10:00+08:00",
+      "durationMs": 351000,
+      "summary": {
+        "total": 26,
+        "auto": 18,
+        "manual": 8,
+        "passed": 15,
+        "failed": 3,
+        "skipped": 0,
+        "passRate": 0.833
+      },
+      "failed": [
+        "CLASS-02",
+        "PERF-02",
+        "RESP-01"
+      ]
+    },
+    {
+      "runId": "20261028-001",
+      "version": "v3.2.0",
+      "label": "第三轮 · 课堂交互补齐",
+      "commit": "c3d4e5f",
+      "finishedAt": "2026-10-28T20:30:00+08:00",
+      "durationMs": 349000,
+      "summary": {
+        "total": 27,
+        "auto": 19,
+        "manual": 8,
+        "passed": 17,
+        "failed": 2,
+        "skipped": 0,
+        "passRate": 0.895
+      },
+      "failed": [
+        "CLASS-02",
+        "PERF-02"
+      ]
+    },
+    {
+      "runId": "20261102-001",
+      "version": "v3.4.0",
+      "label": "第三轮 · 验收回归",
+      "commit": "e5f6a7b",
+      "finishedAt": "2026-11-02T19:55:00+08:00",
+      "durationMs": 346000,
+      "summary": {
+        "total": 28,
+        "auto": 20,
+        "manual": 8,
+        "passed": 18,
+        "failed": 2,
+        "skipped": 0,
+        "passRate": 0.9
+      },
+      "failed": [
+        "CLASS-02",
+        "PERF-02"
+      ]
+    },
+    {
+      "runId": "20261105-001",
+      "version": "v4.0.0-rc1",
+      "label": "第四轮 · 候选版",
+      "commit": "f9a8b7c",
+      "finishedAt": "2026-11-05T23:12:00+08:00",
+      "durationMs": 344000,
+      "summary": {
+        "total": 29,
+        "auto": 21,
+        "manual": 8,
+        "passed": 20,
+        "failed": 1,
+        "skipped": 0,
+        "passRate": 0.952
+      },
+      "failed": [
+        "CLASS-02"
+      ]
+    },
+    {
+      "runId": "20261108-001",
+      "version": "v4.0.0",
+      "label": "第四轮 · 可视化测试看板",
+      "commit": "d3adf85",
+      "finishedAt": "2026-11-08T00:25:42+08:00",
+      "durationMs": 342000,
+      "summary": {
+        "total": 27,
+        "auto": 21,
+        "manual": 6,
+        "passed": 19,
+        "failed": 2,
+        "skipped": 0,
+        "passRate": 0.905
+      },
+      "failed": [
+        "CLASS-02",
+        "PERF-02"
+      ]
+    }
+  ]
+}

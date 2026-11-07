@@ -11,7 +11,7 @@
 | 授权 | **CC0 1.0 Universal（公有领域贡献）** https://creativecommons.org/publicdomain/zero/1.0/ |
 | 授权核验 | DishwasherBench 项目 `apps/web/public/audio/LICENSES.md`，2026-10-11 逐曲读取作品页面确认，非站点通用条款 |
 | 原件 SHA-256 | `c879c57f4353c16926026e05fea372be64a73356ea663475aa1f54bf5499b513` |
-| 取得的 MP3 SHA-256 | `9811a72663fb5eeaf9f93f640f0c23669948d0c42b17dbca83a371f5bc8ff83a`（3,584,300 字节） |
+| 取得的 MP3 SHA-256 | `3b32bec1ad263dd6cd4f9965460e8a051d9cc14a835a81b91804857335c2b36c`（3,870,327 字节） |
 
 **CC0 允许**：自由复制、修改、再分发，可用于商业及非商业项目，**无需署名**。
 作者与出处在此致谢，但并非许可要求。
