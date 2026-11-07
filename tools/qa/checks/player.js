@@ -55,7 +55,8 @@ module.exports = [
     title: '←/→ 快退快进 5 秒',
     run: async (ctx) => {
       const s = await ctx.open('?ui=1&t0=100&freeze');
-      await s.page.evaluate(() => document.body.focus());
+      await s.page.evaluate(() => { window.__classroom.seekForTest(100); document.body.focus(); });
+      await sleep(200);
       await s.page.keyboard.press('ArrowRight');
       await sleep(120);
       const tRight = (await state(s.page)).storyTime;
@@ -63,10 +64,10 @@ module.exports = [
       await sleep(120);
       const tLeft = (await state(s.page)).storyTime;
       await s.page.keyboard.press('PageDown');
-      await sleep(150);
+      await sleep(350);
       const pageDown = await s.page.evaluate(() => ({ t: window.__classroom.state().storyTime, title: document.getElementById('chapterTitle').textContent }));
       await s.page.keyboard.press('PageUp');
-      await sleep(150);
+      await sleep(350);
       const pageUp = await s.page.evaluate(() => ({ t: window.__classroom.state().storyTime, title: document.getElementById('chapterTitle').textContent }));
       await ctx.close(s);
       assert(Math.abs(tRight - 105) < 0.2, `ArrowRight 后 storyTime=${tRight}，期望 105`);

@@ -1,5 +1,6 @@
 /* 一棵树的四季 — 纯代码生成的 3D 树木，从种子发芽到参天大树，走过春夏秋冬 */
 import * as THREE from 'three';
+import { createSpeechReader } from './speech.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
@@ -2832,6 +2833,9 @@ const findNextEl = document.getElementById('findNext');
 const findCloseEl = document.getElementById('findClose');
 const pausePromptEl = document.getElementById('pausePrompt');
 const classToastEl = document.getElementById('classToast');
+const voiceNoticeEl = document.getElementById('voiceNotice');
+const voiceNoticeTextEl = document.getElementById('voiceNoticeText');
+const voiceNoticeCloseEl = document.getElementById('voiceNoticeClose');
 const lockOverlayEl = document.getElementById('lockOverlay');
 const chapterBtnNormal = document.getElementById('chapterBtnNormal');
 const quartetBtnNormal = document.getElementById('quartetBtnNormal');
@@ -2856,8 +2860,11 @@ let currentSeasonLabel = '';
 let currentChapter = -1;
 let classroomMode = false;
 let autoPauseAtChapter = true;
-let speechSupported = 'speechSynthesis' in window;
-let voiceOn = speechSupported;
+const speechReader = createSpeechReader();
+const speechSupported = speechReader.supported;
+let voiceOn = false;              // 默认关闭：老师点「朗读」再开口，避免无声状态被误认为已开启
+let voiceNoticeTimer = 0;
+let voiceChecking = false;
 let projectorBright = false;
 let touchLocked = false;
 let startScreenVisible = false;
@@ -2869,7 +2876,6 @@ let findBagIndex = 0;
 let findBagKey = '';
 let findRound = 1;
 let lastSpokenChapter = -1;
-let speechVoice = null;
 let wakeLock = null;
 let idleTimer = 0;
 let lockPressTimer = 0;
@@ -3169,6 +3175,35 @@ function showToast(message, ms = 1800) {
   clearTimeout(showToast._t);
   showToast._t = setTimeout(() => classToastEl.classList.remove('show'), ms);
 }
+
+/* ---- 朗诵不可用时的降级提示（浏览器语音 / 系统语音包问题） ---- */
+const VOICE_FALLBACK_TEXT = {
+  unsupported: '当前浏览器不支持 Web Speech 朗读。请使用最新版 Chrome、Edge 或 Safari 打开；文字旁白仍可正常使用。',
+  'no-voices': '当前浏览器没有可用的语音包，朗读暂时无法发声。请在系统「朗读 / 语音」设置里安装中文语音，或改用 Chrome / Edge 打开；文字旁白仍可正常使用。',
+  'no-chinese': '没有检测到中文语音，朗读无法正确读出中文。请在系统语音设置中安装中文（普通话）语音后重试；文字旁白仍可正常使用。',
+  error: '朗读启动失败，可能是系统语音服务暂时不可用。请稍后重试，或改用 Chrome / Edge 并检查中文语音包；文字旁白仍可正常使用。',
+};
+function voiceLabel(v) {
+  if (!v) return '朗读';
+  const kind = v.online && v.natural ? '在线自然语音' : (v.online ? '在线语音' : '本机中文语音');
+  const name = String(v.name || '').length > 26 ? String(v.name).slice(0, 24) + '…' : String(v.name || '');
+  return kind + ' · ' + name;
+}
+function showVoiceNotice(reasonOrText, ms = 14000) {
+  if (!voiceNoticeEl || !voiceNoticeTextEl) return;
+  const text = VOICE_FALLBACK_TEXT[reasonOrText] || String(reasonOrText || VOICE_FALLBACK_TEXT['no-voices']);
+  voiceNoticeTextEl.textContent = text;
+  voiceNoticeEl.hidden = false;
+  voiceNoticeEl.classList.add('show');
+  clearTimeout(voiceNoticeTimer);
+  if (ms > 0) voiceNoticeTimer = setTimeout(hideVoiceNotice, ms);
+}
+function hideVoiceNotice() {
+  if (!voiceNoticeEl) return;
+  clearTimeout(voiceNoticeTimer);
+  voiceNoticeEl.classList.remove('show');
+  voiceNoticeEl.hidden = true;
+}
 let lastFocusedBeforeModal = null;
 const MODAL_BACKGROUND_IDS = ['app', 'sidebar', 'player', 'classroomTop', 'classroomBar', 'subtitleBar', 'seasonWheel', 'vignette'];
 function setBackgroundInert(on) {
@@ -3307,8 +3342,13 @@ function updateClassroomButtons() {
     classAutoBtn.setAttribute('aria-pressed', autoPauseAtChapter ? 'true' : 'false');
   }
   if (classVoiceBtn) {
+    const vs = speechReader.state();
     classVoiceBtn.classList.toggle('on', voiceOn);
+    classVoiceBtn.classList.toggle('warn', !vs.available);
     classVoiceBtn.setAttribute('aria-pressed', voiceOn ? 'true' : 'false');
+    if (!vs.supported) classVoiceBtn.title = '当前浏览器不支持朗读（Web Speech API）';
+    else if (!vs.available) classVoiceBtn.title = '未检测到中文语音，点击查看降级说明';
+    else classVoiceBtn.title = '朗读：' + voiceLabel(vs.voice);
   }
   if (classProjectorBtn) {
     classProjectorBtn.classList.toggle('on', projectorBright);
@@ -3338,50 +3378,74 @@ function toggleProjector() {
   showToast(projectorBright ? '投影增亮已开启' : '投影增亮已关闭');
 }
 
-/* ---- 故事姐姐朗读（Web Speech API；有中文声音时优先用中文） ---- */
-function pickSpeechVoice() {
-  if (!speechSupported) return;
-  const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
-  speechVoice = voices.find((v) => /zh[-_]?CN|cmn|Chinese|Tingting|Xiaoxiao|Meijia|Huihui/i.test((v.lang || '') + ' ' + (v.name || ''))) || null;
-}
-if (speechSupported) {
-  pickSpeechVoice();
-  if (speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', pickSpeechVoice);
-}
+/* ---- 故事姐姐朗诵：浏览器 Web Speech API
+ * 中文语音优先；中文里优先在线自然音；没有可用语音时用 #voiceNotice 做降级提示。
+ * 不下载任何音频文件，也不依赖后端。 ---- */
 function cancelSpeech() {
-  if (!speechSupported) return;
-  try { speechSynthesis.cancel(); } catch (e) {}
+  speechReader.cancel();
   lastSpokenChapter = -1;
-  window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: false } }));
 }
 function speakCurrentChapter() {
   if (!voiceOn || !speechSupported || FREEZE_T !== null || VIDEO) return;
   const idx = chapterIndexAt(storyTime);
-  if (lastSpokenChapter === idx && speechSynthesis.speaking) return;
-  try { speechSynthesis.cancel(); } catch (e) {}
-  if (!speechVoice) pickSpeechVoice();
-  const u = new SpeechSynthesisUtterance(CHAPTERS[idx].text);
-  if (speechVoice) u.voice = speechVoice;
-  u.lang = 'zh-CN';
-  u.rate = 0.92;
-  u.pitch = 1.04;
-  u.volume = 1;
-  u.onstart = () => window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: true } }));
-  u.onend = () => window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: false } }));
-  u.onerror = () => window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: false } }));
+  if (lastSpokenChapter === idx && speechReader.isSpeaking()) return;
+  const res = speechReader.speak(CHAPTERS[idx].text, {
+    rate: 0.92,
+    pitch: 1.04,
+    volume: 1,
+    onerror: (err) => {
+      if (!/canceled|interrupted/i.test(String(err || ''))) showVoiceNotice('error');
+    },
+  });
+  if (!res.ok) {
+    lastSpokenChapter = -1;
+    voiceOn = false;
+    updateClassroomButtons();
+    showVoiceNotice(res.reason);
+    return;
+  }
   lastSpokenChapter = idx;
-  window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: true } }));
-  try { speechSynthesis.speak(u); } catch (e) {
-    window.dispatchEvent(new CustomEvent('tree:voice', { detail: { speaking: false } }));
+}
+async function toggleVoice() {
+  if (voiceChecking) return;
+  voiceChecking = true;
+  try {
+    if (voiceOn) {
+      voiceOn = false;
+      cancelSpeech();
+      updateClassroomButtons();
+      hideVoiceNotice();
+      showToast('朗读已关闭');
+      return;
+    }
+    const current = speechReader.state();
+    if (!current.supported) {
+      voiceOn = false;
+      updateClassroomButtons();
+      showVoiceNotice('unsupported');
+      return;
+    }
+    // 语音列表可能还没加载完；最多等 1.2 秒，仍没有就明确降级
+    const checked = await speechReader.ensureAvailable(1200);
+    if (!checked.available) {
+      voiceOn = false;
+      updateClassroomButtons();
+      showVoiceNotice(checked.reason);
+      return;
+    }
+    voiceOn = true;
+    updateClassroomButtons();
+    hideVoiceNotice();
+    showToast('朗读已开启 · ' + voiceLabel(checked.voice), 2800);
+    if (classroomMode && playing) speakCurrentChapter();
+  } finally {
+    voiceChecking = false;
   }
 }
-function toggleVoice() {
-  voiceOn = !voiceOn;
-  updateClassroomButtons();
-  if (!voiceOn) cancelSpeech();
-  else if (classroomMode && playing) speakCurrentChapter();
-  showToast(voiceOn ? '故事姐姐朗读已开启' : '朗读已关闭');
-}
+/* 语音列表异步到达 / 系统语音变化时，刷新按钮标题与可用状态 */
+speechReader.subscribe(() => updateClassroomButtons());
+if (voiceNoticeCloseEl) voiceNoticeCloseEl.addEventListener('click', hideVoiceNotice);
+window.addEventListener('beforeunload', () => speechReader.cancel());
 
 /* ---- 屏幕锁定 / 光标隐藏 / 屏幕常亮 ---- */
 function lockScreen() {
@@ -4811,6 +4875,24 @@ window.__classroom = {
   enter: enterClassroomMode,
   exit: exitClassroomMode,
   state: () => ({ classroomMode, autoPauseAtChapter, voiceOn, projectorBright, touchLocked, storyTime, playing, currentChapter }),
+  speech: {
+    state: () => speechReader.state(),
+    setVoicesForTest: (list) => speechReader.setVoicesForTest(list),
+    resetForTest: () => {
+      speechReader.setVoicesForTest(null);
+      speechReader.cancel();
+      voiceOn = false;
+      lastSpokenChapter = -1;
+      updateClassroomButtons();
+      hideVoiceNotice();
+    },
+    setEnabled: (v) => {
+      voiceOn = !!v;
+      if (!voiceOn) cancelSpeech();
+      updateClassroomButtons();
+    },
+    speak: () => speakCurrentChapter(),
+  },
   pickPartAt,
   partVisibleAt,
   findState: () => ({ findActive, findTarget, findBag: findBag.slice(), findBagIndex, findRound }),

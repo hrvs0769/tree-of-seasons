@@ -2,7 +2,7 @@
 
 > 本文解决：页面如何加载、由哪些层组成、每帧按什么顺序更新，以及新增模块应该插在哪里。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-08 · 对应代码：`6518080`（第四轮 · 可视化测试看板）
+> 最后更新：2026-11-08 · 对应代码：`32225e7`（第五轮 · Web Speech 朗诵）
 
 ## 1. 加载链路
 
@@ -18,7 +18,7 @@
         在 app.js 之后加载，独立读取 DOM，不参与打包
 ```
 
-页面不使用任何网络请求（音频为本地文件）；因此必须保持所有资源相对路径，双击 `index.html` 可用。
+页面自身不请求后端；背景音乐是本地文件。朗诵使用浏览器 `speechSynthesis`：在线自然音是否走系统/浏览器网络由浏览器决定，但项目不新增后端或音频文件。所有资源仍保持相对路径，双击 `index.html` 可用（离线时朗读能否出声取决于本机语音包）。
 
 ## 2. 文件职责
 
@@ -26,7 +26,8 @@
 |---|---|---|
 | `index.html` | DOM、CSS、课堂布局、课堂模式 DOM（开始页/章节抽屉/大字幕/控制条）、旁白容器、播放器、季节转盘、`<audio>` | 是 |
 | `src/main.js` | 3D 场景、生成器、时间轴、镜头、粒子、水层、鸟虫、UI 状态、课堂模式、找一找/点认、渲染循环 | 是（主入口，约 4.4k 行） |
-| `src/bgm.js` | 背景音乐播放/暂停/跳转同步、音量、本地偏好、朗读时 ducking | 是 |
+| `src/speech.js` | 浏览器 Web Speech 朗诵器：中文语音排序（在线自然音优先）、voiceschanged 异步加载、无语音降级 reason | 是 |
+| `src/bgm.js` | 背景音乐播放/暂停/跳转同步、音量、本地偏好、朗诵时 ducking | 是 |
 | `app.js` | esbuild 打包产物 | 否，编辑后重新生成 |
 | `lib/three.module.min.js` | Three.js r170 核心包（无 addons、无 EffectComposer） | 否 |
 | `assets/tree-of-seasons-bgm-v3.mp3` | 网页背景音乐 | 替换时同步授权文件 |
@@ -52,7 +53,7 @@
 13. **粒子**：雪、雨、飘落花瓣/落叶。
 14. **镜头与交互**：`cam` 状态（`THETA_MIN/MAX = π/2 ± 0.36`）、指针/滚轮/双指、`CAM_KEYS` 脚本。
 15. **旁白/播放器状态**：`CHAPTERS`、`storyTime`、播放/暂停、进度条、`plant()`（定帧用固定种子 `20240601`）。
-16. **课堂模式**：`#startScreen`、`#classroomTop`、`#subtitleBar`、`#classroomBar`、章节队列、找一找队列（含 bird/insect）、教师提示、四季合影、故事朗读、投影/锁定。
+16. **课堂模式**：`#startScreen`、`#classroomTop`、`#subtitleBar`、`#classroomBar`、章节队列、找一找队列（含 bird/insect）、教师提示、四季合影、故事朗诵、投影/锁定。
 17. **主循环**：`growBranch()`、`animate()`。
 
 新增功能时，优先找到对应阶段插入；不要在 `animate()` 末尾堆一个独立的 `setInterval`，所有随时间变化的内容应统一走 `t` 和 `dt`。

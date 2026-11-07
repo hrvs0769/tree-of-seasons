@@ -22,6 +22,28 @@
         "PERF-06",
         "REL-02"
       ]
+    },
+    {
+      "runId": "20261108-006",
+      "version": "v4.1.0",
+      "label": "第五轮 · 朗诵 Web Speech 语音选择",
+      "commit": "32225e7",
+      "finishedAt": "2026-11-08T07:51:40+08:00",
+      "durationMs": 3255154,
+      "summary": {
+        "total": 109,
+        "auto": 101,
+        "manual": 8,
+        "passed": 99,
+        "failed": 0,
+        "skipped": 2,
+        "passRate": 1
+      },
+      "failed": [],
+      "skipped": [
+        "PERF-06",
+        "REL-02"
+      ]
     }
   ]
 }

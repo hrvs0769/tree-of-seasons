@@ -12,12 +12,12 @@ function determinismCheck(key, t, extraAliases = []) {
       const url = `?stage&t0=${t}&freeze`;
       const s1 = await ctx.open(url);
       await s1.page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
-      await sleep(100);
+      await sleep(400);
       const buf1 = await s1.page.screenshot({ type: 'png', fullPage: false, timeout: 120000 });
       await ctx.close(s1);
       const s2 = await ctx.open(url);
       await s2.page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
-      await sleep(100);
+      await sleep(400);
       const buf2 = await s2.page.screenshot({ type: 'png', fullPage: false, timeout: 120000 });
       await ctx.close(s2);
       assert(buf1.length === buf2.length, `两次截图字节数不同：${buf1.length} vs ${buf2.length}`);

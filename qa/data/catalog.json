@@ -3,7 +3,7 @@
   "project": "一棵树的四季",
   "projectEn": "The Four Seasons of a Tree",
   "updatedAt": "2026-11-08",
-  "version": "v4.0.0",
+  "version": "v4.1.0",
   "modules": [
     {
       "id": "boot",
@@ -38,7 +38,7 @@
       "name": "课堂模式",
       "en": "CLASSROOM",
       "accent": "#A9E8C7",
-      "description": "?class 课堂入口、顶栏 8 工具、字幕、课堂进度、每章暂停、教师提示、退出保留、投影/锁定/朗读、四季合影与结束提示。"
+      "description": "?class 课堂入口、顶栏 8 工具、字幕、课堂进度、每章暂停、教师提示、退出保留、投影/锁定、Web Speech 朗诵（中文在线自然音优先 + 无语音降级）、四季合影与结束提示。"
     },
     {
       "id": "explore",
@@ -1209,9 +1209,9 @@
       "id": "CLASS-11",
       "module": "classroom",
       "title": "故事姐姐朗读",
-      "summary": "朗读开关可用，朗读时 BGM 自动压低到 18%。需人工：确认系统中文语音实际可听。",
-      "goal": "朗读能减轻老师嗓子负担，但语音质量因系统而异，必须真人试听。",
-      "expected": "#classVoiceBtn aria-pressed 切换；speechSynthesis 触发；朗读期间 BGM 音量×0.18。",
+      "summary": "Web Speech 朗诵可用，优先中文在线自然音；朗读时 BGM 自动压低到 18%。需人工：确认实际出声与音质。",
+      "goal": "朗诵能减轻老师嗓子负担，但语音质量因系统而异，必须真人试听。",
+      "expected": "#classVoiceBtn aria-pressed 切换；优先在线自然中文语音；朗读期间 BGM 音量×0.18；无中文音时显示 #voiceNotice 降级提示。",
       "steps": [
         "在 macOS Chrome 打开 ?class",
         "打开朗读并听当前章",
@@ -1289,6 +1289,29 @@
         "交互"
       ],
       "since": "v1.0"
+    },
+    {
+      "id": "CLASS-15",
+      "module": "classroom",
+      "title": "朗诵语音选择与降级提示",
+      "summary": "优先选中文在线自然音；只有本机中文音时可用；无中文音或完全无语音时显示可关闭的降级提示。",
+      "goal": "朗诵必须只依赖浏览器 speechSynthesis，不下载音频；没有语音时要明确告诉老师怎么办，而不是静默失败。",
+      "expected": "中文在线 Natural 音（如 Microsoft Xiaoxiao Online）排在婷婷/Google 前；无语音时 #voiceNotice.show 可见且 aria-pressed 保持 false；仅非中文音时 reason=no-chinese。",
+      "steps": [
+        "打开 ?class&t0=100&freeze",
+        "注入空语音列表并点击朗读",
+        "检查降级提示与按钮状态",
+        "注入含在线自然音/本机中文音/英文的列表",
+        "检查选择顺序与 no-chinese 降级"
+      ],
+      "priority": "P1",
+      "type": "auto",
+      "automationKey": "classroom.voice",
+      "tags": [
+        "教学",
+        "音频"
+      ],
+      "since": "v4.1"
     },
     {
       "id": "EXPLORE-01",

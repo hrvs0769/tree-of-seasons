@@ -1,31 +1,30 @@
 {
   "schemaVersion": 1,
-  "runId": "20261108-004",
-  "version": "v4.0.0",
-  "label": "第四轮 · 可视化测试看板",
-  "commit": "6518080",
+  "runId": "20261108-006",
+  "version": "v4.1.0",
+  "label": "第五轮 · 朗诵 Web Speech 语音选择",
+  "commit": "32225e7",
   "status": "passed",
-  "startedAt": "2026-11-08T02:06:20+08:00",
-  "finishedAt": "2026-11-08T03:17:29+08:00",
-  "durationMs": 1982005,
+  "startedAt": "2026-11-08T06:55:44+08:00",
+  "finishedAt": "2026-11-08T07:51:40+08:00",
+  "durationMs": 3255154,
   "environment": {
     "baseUrl": "https://hrvs0769.github.io/tree-of-seasons/",
     "browser": "Chromium 1208 (145.0.7632.6)",
     "platform": "macOS",
     "viewport": "1440x900",
-    "testedBaseUrl": "http://127.0.0.1:55298",
-    "note": "正式发布目标地址；自动化在本地同一份文件上执行"
+    "testedBaseUrl": "http://127.0.0.1:63702"
   },
   "progress": {
-    "done": 100,
-    "total": 100,
+    "done": 101,
+    "total": 101,
     "currentId": null
   },
   "summary": {
-    "total": 108,
-    "auto": 100,
+    "total": 109,
+    "auto": 101,
     "manual": 8,
-    "passed": 98,
+    "passed": 99,
     "failed": 0,
     "skipped": 2,
     "passRate": 1
@@ -34,7 +33,7 @@
     {
       "id": "BOOT-01",
       "status": "pass",
-      "durationMs": 15458,
+      "durationMs": 14713,
       "message": "冷启动完成，加载层正常退场，无 console error / pageerror",
       "actual": "console.error=0, pageerror=0, #loading display=none",
       "evidence": [
@@ -44,7 +43,7 @@
     {
       "id": "BOOT-02",
       "status": "pass",
-      "durationMs": 13042,
+      "durationMs": 12152,
       "message": "HTML/JS/BGM 等首屏资源全部加载成功",
       "actual": "resource entries=3, 4xx+=0, requestfailed=0",
       "evidence": [
@@ -54,7 +53,7 @@
     {
       "id": "BOOT-03",
       "status": "pass",
-      "durationMs": 14393,
+      "durationMs": 11501,
       "message": "加载层已淡出并 display:none",
       "actual": "display=none, hidden=true, role=status",
       "evidence": [
@@ -64,7 +63,7 @@
     {
       "id": "BOOT-04",
       "status": "pass",
-      "durationMs": 15681,
+      "durationMs": 12622,
       "message": "开场页可见，开始上课/自由观看按钮均可点",
       "actual": "title=一棵树的四季, dialog=ok",
       "evidence": [
@@ -74,7 +73,7 @@
     {
       "id": "BOOT-05",
       "status": "pass",
-      "durationMs": 49998,
+      "durationMs": 32771,
       "message": "点击「开始上课」进入课堂模式",
       "actual": "classroomMode=true, body.classroom-mode, 顶栏可见",
       "evidence": [
@@ -84,9 +83,9 @@
     {
       "id": "BOOT-06",
       "status": "pass",
-      "durationMs": 49894,
+      "durationMs": 37191,
       "message": "自由观看隐藏开场页并开始播放",
-      "actual": "playing=true, storyTime 0.21→0.32",
+      "actual": "playing=true, storyTime 0.18→0.28",
       "evidence": [
         "evidence/BOOT-06.jpg"
       ]
@@ -94,7 +93,7 @@
     {
       "id": "BOOT-07",
       "status": "pass",
-      "durationMs": 20879,
+      "durationMs": 16465,
       "message": "file:// 直接打开 index.html 可正常渲染",
       "actual": "canvas=true, season=夏, pageerror=0",
       "evidence": [
@@ -104,15 +103,15 @@
     {
       "id": "BOOT-08",
       "status": "pass",
-      "durationMs": 2,
+      "durationMs": 1,
       "message": "app.js 与 src/bgm.js 均带一致的 ?v= 缓存版本",
-      "actual": "./app.js?v=round4 / ./src/bgm.js?v=round4",
+      "actual": "./app.js?v=round5 / ./src/bgm.js?v=round5",
       "evidence": []
     },
     {
       "id": "BOOT-09",
       "status": "pass",
-      "durationMs": 16409,
+      "durationMs": 11903,
       "message": "深色主题 meta 与 viewport 配置正确",
       "actual": "theme=#0C100E, viewport=width=device-width, initial-scale=1, viewport-fit=cover, color-scheme=dark",
       "evidence": [
@@ -130,7 +129,7 @@
     {
       "id": "SCENE-01",
       "status": "pass",
-      "durationMs": 15783,
+      "durationMs": 16599,
       "message": "canvas 存在且 WebGL 上下文有效",
       "actual": "webgl2 1440x900, calls=445, renderer=WebKit WebGL",
       "evidence": [
@@ -140,7 +139,7 @@
     {
       "id": "SCENE-02",
       "status": "pass",
-      "durationMs": 121188,
+      "durationMs": 120505,
       "message": "14 章关键帧全部渲染，季节/标题/画面亮度正常",
       "actual": "14/14, 最低 avgLum=120.1, 最低 nonBlack=0.999",
       "evidence": [
@@ -150,7 +149,7 @@
     {
       "id": "SCENE-03",
       "status": "pass",
-      "durationMs": 30574,
+      "durationMs": 23246,
       "message": "第 2 章 16–31s 有雨，120/210s 晴天无雨",
       "actual": "20s=0.508, 30s=0.158, 120s=0, 210s=0",
       "evidence": [
@@ -160,7 +159,7 @@
     {
       "id": "SCENE-04",
       "status": "pass",
-      "durationMs": 20356,
+      "durationMs": 15831,
       "message": "冬章 164/170s 雪与雪帽可见，190s 春章无雪",
       "actual": "164s=snow:0.475/caps:true, 170s=snow:0.95/caps:true, 190s=snow:0/caps:false",
       "evidence": [
@@ -170,7 +169,7 @@
     {
       "id": "SCENE-05",
       "status": "pass",
-      "durationMs": 17499,
+      "durationMs": 14823,
       "message": "第 3 章多条侧根铺开，第 2 年深根抵达含水层",
       "actual": "t44: meshes=28, minY=-4.45; t250: meshes=171, minY=-10.01",
       "evidence": [
@@ -180,7 +179,7 @@
     {
       "id": "SCENE-06",
       "status": "pass",
-      "durationMs": 19491,
+      "durationMs": 13170,
       "message": "t=250 水面/气泡/根尖光点可见，t=120 生长阶段不可见",
       "actual": "250s ripple=1, bubbles=0.5, tip=0.31599668082456284",
       "evidence": [
@@ -190,7 +189,7 @@
     {
       "id": "SCENE-07",
       "status": "pass",
-      "durationMs": 17969,
+      "durationMs": 14349,
       "message": "t=210 五类生物与树荫可见，t=170 无鸟虫/树荫",
       "actual": "summer creatureGroups=4, shade=0.88",
       "evidence": [
@@ -200,7 +199,7 @@
     {
       "id": "SCENE-08",
       "status": "pass",
-      "durationMs": 35039,
+      "durationMs": 34661,
       "message": "?stage&t0=128&freeze 两次独立加载逐字节一致",
       "actual": "Buffer.equals=true, bytes=1450239",
       "evidence": [
@@ -210,7 +209,7 @@
     {
       "id": "SCENE-09",
       "status": "pass",
-      "durationMs": 27599,
+      "durationMs": 22053,
       "message": "?stage&t0=250&freeze 两次独立加载逐字节一致",
       "actual": "Buffer.equals=true, bytes=1293784",
       "evidence": [
@@ -220,7 +219,7 @@
     {
       "id": "SCENE-10",
       "status": "pass",
-      "durationMs": 21377,
+      "durationMs": 16375,
       "message": "定帧 1.5s frame 不增长；seek 变化后恢复渲染",
       "actual": "frame 1→1→2",
       "evidence": [
@@ -230,7 +229,7 @@
     {
       "id": "SCENE-11",
       "status": "pass",
-      "durationMs": 19114,
+      "durationMs": 16546,
       "message": "4 档 resize 后 canvas/#app/camera.aspect/DPR 全部同步",
       "actual": "1024x768:716x666@1.08, 768x1024:768x914@0.84, 390x844:390x734@0.53, 1440x900:1058x786@1.35",
       "evidence": [
@@ -240,7 +239,7 @@
     {
       "id": "SCENE-12",
       "status": "pass",
-      "durationMs": 49085,
+      "durationMs": 38105,
       "message": "固定树种子两次加载一致；再种后新树生成、时间归零、无报错",
       "actual": "identical=true, storyTime=0.00, geometries 435→435",
       "evidence": [
@@ -250,7 +249,7 @@
     {
       "id": "STORY-01",
       "status": "pass",
-      "durationMs": 23952,
+      "durationMs": 18774,
       "message": "章节刻线 14 段，标题与 done/current 状态正确",
       "actual": "count=14; t0 current=0; t210 done=11 current=11",
       "evidence": [
@@ -260,7 +259,7 @@
     {
       "id": "STORY-02",
       "status": "pass",
-      "durationMs": 4546,
+      "durationMs": 5220,
       "message": "时间轴 min=0 / max=259.9 / step=0.1，总时长 04:20",
       "actual": "min=0, max=259.9, step=0.1",
       "evidence": [
@@ -270,7 +269,7 @@
     {
       "id": "STORY-04",
       "status": "pass",
-      "durationMs": 53489,
+      "durationMs": 44856,
       "message": "点击第 12 章卡片后时间/HUD/季节/字幕同步",
       "actual": "t=200.01, season=夏, rail=11/14",
       "evidence": [
@@ -280,7 +279,7 @@
     {
       "id": "STORY-05",
       "status": "pass",
-      "durationMs": 3595,
+      "durationMs": 2759,
       "message": "章节刻线 14 段，标题与 done/current 状态正确",
       "actual": "count=14; t0 current=0; t210 done=11 current=11",
       "evidence": [
@@ -290,7 +289,7 @@
     {
       "id": "STORY-06",
       "status": "pass",
-      "durationMs": 19240,
+      "durationMs": 18340,
       "message": "章节弹层 14 张卡片完整，当前章高亮并带 aria-current",
       "actual": "cards=14, current=1, aria-current=1",
       "evidence": [
@@ -300,7 +299,7 @@
     {
       "id": "STORY-07",
       "status": "pass",
-      "durationMs": 5495,
+      "durationMs": 4575,
       "message": "13 个章节起点刻度位置与标题均正确",
       "actual": "13/13, e.g. 6.15621% 春雨滋润",
       "evidence": [
@@ -310,7 +309,7 @@
     {
       "id": "STORY-08",
       "status": "pass",
-      "durationMs": 18468,
+      "durationMs": 15115,
       "message": "季节转盘 aria-hidden 纯图表，四角标签与年份正确",
       "actual": "labels=春/夏/秋/冬, year=第 2 年",
       "evidence": [
@@ -320,7 +319,7 @@
     {
       "id": "STORY-09",
       "status": "pass",
-      "durationMs": 60636,
+      "durationMs": 72554,
       "message": "结尾回春、HUD「万物发芽·新的轮回」、新芽可见并停在 259.9",
       "actual": "season=春, sub=万物发芽 · 新的轮回, epilogue.scale=1.5",
       "evidence": [
@@ -330,7 +329,7 @@
     {
       "id": "STORY-10",
       "status": "pass",
-      "durationMs": 24107,
+      "durationMs": 24374,
       "message": "字幕与旁白同源，关键词 <em> 高亮、meta 正确",
       "actual": "em=3, meta=第 12 章 · 第二年 · 夏",
       "evidence": [
@@ -340,7 +339,7 @@
     {
       "id": "PLAY-01",
       "status": "pass",
-      "durationMs": 46186,
+      "durationMs": 43458,
       "message": "播放/暂停按钮 dataset.playing 与 aria-label 同步",
       "actual": "0→1→0, aria 播放→暂停→播放",
       "evidence": [
@@ -350,9 +349,9 @@
     {
       "id": "PLAY-02",
       "status": "pass",
-      "durationMs": 37183,
+      "durationMs": 43295,
       "message": "播放中剧情时间持续前进",
-      "actual": "storyTime 100.20→100.32, timecode=01:40 / 04:20",
+      "actual": "storyTime 100.38→100.43, timecode=01:40 / 04:20",
       "evidence": [
         "evidence/PLAY-02.jpg"
       ]
@@ -360,7 +359,7 @@
     {
       "id": "PLAY-03",
       "status": "pass",
-      "durationMs": 98520,
+      "durationMs": 50889,
       "message": "时间轴 input/change 跳转 200s 并同步章节",
       "actual": "storyTime=200, timecode=03:20 / 04:20",
       "evidence": [
@@ -370,7 +369,7 @@
     {
       "id": "PLAY-04",
       "status": "pass",
-      "durationMs": 91364,
+      "durationMs": 59186,
       "message": "播放中拖动松手恢复播放，暂停中拖动保持暂停",
       "actual": "playing: true→true; paused→false",
       "evidence": [
@@ -380,7 +379,7 @@
     {
       "id": "PLAY-05",
       "status": "pass",
-      "durationMs": 41577,
+      "durationMs": 54534,
       "message": "重播回到 0 秒并开始播放",
       "actual": "storyTime=0, playing=true, chapter=种子入土",
       "evidence": [
@@ -390,7 +389,7 @@
     {
       "id": "PLAY-06",
       "status": "pass",
-      "durationMs": 97006,
+      "durationMs": 48533,
       "message": "再种一棵：时间归零、开始播放、canvas 正常",
       "actual": "storyTime=0, timecode=00:00 / 04:20",
       "evidence": [
@@ -400,7 +399,7 @@
     {
       "id": "PLAY-07",
       "status": "pass",
-      "durationMs": 61695,
+      "durationMs": 54988,
       "message": "点击与 M 键均可切换 BGM，aria-pressed/label/audio 状态与宽度同步",
       "actual": "false→true→false, width 81px",
       "evidence": [
@@ -410,7 +409,7 @@
     {
       "id": "PLAY-08",
       "status": "pass",
-      "durationMs": 97065,
+      "durationMs": 96764,
       "message": "音量 42% 同步 audio/#volume/#classVolume，并跨刷新记忆",
       "actual": "stored={\"on\":true,\"volume\":0.42}, afterReload=42/42",
       "evidence": [
@@ -420,7 +419,7 @@
     {
       "id": "PLAY-09",
       "status": "pass",
-      "durationMs": 26680,
+      "durationMs": 26152,
       "message": "?freeze 隐藏播放器/旁白且音频静音",
       "actual": "player=none, audio.paused=true",
       "evidence": [
@@ -430,7 +429,7 @@
     {
       "id": "PLAY-10",
       "status": "pass",
-      "durationMs": 24435,
+      "durationMs": 15073,
       "message": "全局 ←/→ ±5s，PageUp/PageDown 切相邻章",
       "actual": "100→105→100, PageDown=108.0, PageUp=94.0",
       "evidence": [
@@ -440,7 +439,7 @@
     {
       "id": "PLAY-11",
       "status": "pass",
-      "durationMs": 50720,
+      "durationMs": 35982,
       "message": "data-playing 与 aria-label 始终对应，暂停时音频同步暂停",
       "actual": "1/暂停 → 0/播放 → 1/暂停",
       "evidence": [
@@ -450,7 +449,7 @@
     {
       "id": "CLASS-01",
       "status": "pass",
-      "durationMs": 35246,
+      "durationMs": 16413,
       "message": "?class 直接进入课堂模式，顶栏 8 按钮与字幕带可见",
       "actual": "classroomMode=true, topButtons=8",
       "evidence": [
@@ -460,7 +459,7 @@
     {
       "id": "CLASS-02",
       "status": "pass",
-      "durationMs": 1385,
+      "durationMs": 749,
       "message": "课堂顶栏 8 个按钮齐全且全部可见",
       "actual": "8/8: 章节/教师提示/找一找/四季合影/每章停/增亮/锁定/退出",
       "evidence": [
@@ -470,7 +469,7 @@
     {
       "id": "CLASS-03",
       "status": "pass",
-      "durationMs": 57456,
+      "durationMs": 41174,
       "message": "?class&t0=210 显示第 12 章大字幕",
       "actual": "meta=第 12 章 · 第二年 · 夏",
       "evidence": [
@@ -480,7 +479,7 @@
     {
       "id": "CLASS-04",
       "status": "pass",
-      "durationMs": 23151,
+      "durationMs": 5078,
       "message": "#classProgress 具备 slider 语义，aria-valuenow 更新且点击 50%≈130s",
       "actual": "role=slider, now 100→150, click50%=129.9",
       "evidence": [
@@ -490,7 +489,7 @@
     {
       "id": "CLASS-05",
       "status": "pass",
-      "durationMs": 33191,
+      "durationMs": 44780,
       "message": "课堂上一章/下一章首尾禁用状态正确",
       "actual": "start: prev=disabled; end: next=disabled; mid: both enabled",
       "evidence": [
@@ -500,7 +499,7 @@
     {
       "id": "CLASS-06",
       "status": "pass",
-      "durationMs": 76795,
+      "durationMs": 80110,
       "message": "播放到 16s 自动暂停，提示第 1 章结束/下一章春雨滋润，继续可播放",
       "actual": "t=16.00, text=第 1 章结束 · 下一章：春雨滋润继续播放",
       "evidence": [
@@ -510,7 +509,7 @@
     {
       "id": "CLASS-08",
       "status": "pass",
-      "durationMs": 10733,
+      "durationMs": 10124,
       "message": "退出课堂需二次确认，取消不退出，确认后保留进度",
       "actual": "storyTime=100.0, button=继续观看",
       "evidence": [
@@ -520,7 +519,7 @@
     {
       "id": "CLASS-09",
       "status": "pass",
-      "durationMs": 4340,
+      "durationMs": 4380,
       "message": "投影增亮切换 body.projector 与 aria-pressed",
       "actual": "on=true→false",
       "evidence": [
@@ -530,7 +529,7 @@
     {
       "id": "CLASS-10",
       "status": "pass",
-      "durationMs": 5293,
+      "durationMs": 18131,
       "message": "锁定层显示 role=dialog，长按 2s 与 Esc 均可解锁",
       "actual": "lock→hold2s→unlock; lock→Esc→unlock",
       "evidence": [
@@ -540,7 +539,7 @@
     {
       "id": "CLASS-12",
       "status": "pass",
-      "durationMs": 36008,
+      "durationMs": 42244,
       "message": "四季合影生成夏/秋/冬/春 4 张，busy→idle 状态完整",
       "actual": "count=4, captions=夏第 1 年,秋第 1 年,冬第 1 年,春第 2 年",
       "evidence": [
@@ -550,7 +549,7 @@
     {
       "id": "CLASS-13",
       "status": "pass",
-      "durationMs": 85108,
+      "durationMs": 97115,
       "message": "播放结束 toast 提示可回顾四季合影，不强制弹层",
       "actual": "text=本课播放结束 · 可点「四季合影」回顾四季",
       "evidence": [
@@ -560,7 +559,7 @@
     {
       "id": "CLASS-14",
       "status": "pass",
-      "durationMs": 11197,
+      "durationMs": 101700,
       "message": "下一章 → 16s 春雨滋润，上一章 → 0s 种子入土，按钮状态同步",
       "actual": "next=16.01, back=0.01",
       "evidence": [
@@ -568,9 +567,19 @@
       ]
     },
     {
+      "id": "CLASS-15",
+      "status": "pass",
+      "durationMs": 3651,
+      "message": "在线自然音优先、本机中文音可用、无中文音降级提示",
+      "actual": "fallback=no-voices, pick=Microsoft Xiaoxiao Online, local=Tingting, nonChinese=no-chinese",
+      "evidence": [
+        "evidence/CLASS-15.jpg"
+      ]
+    },
+    {
       "id": "EXPLORE-01",
       "status": "pass",
-      "durationMs": 20104,
+      "durationMs": 128504,
       "message": "≤9px 抖动不转镜头（按轻点处理），20px 拖动生效且不弹点认卡",
       "actual": "smallΔ=0.0000, dragΔ=1.043, smallTapCard=true",
       "evidence": [
@@ -580,7 +589,7 @@
     {
       "id": "EXPLORE-02",
       "status": "pass",
-      "durationMs": 20995,
+      "durationMs": 129446,
       "message": "双击画布恢复正面视角并提示「视角已复位」",
       "actual": "movedΔ=4.17, resetΔ=0.000",
       "evidence": [
@@ -590,7 +599,7 @@
     {
       "id": "EXPLORE-03",
       "status": "pass",
-      "durationMs": 39710,
+      "durationMs": 181479,
       "message": "滚轮上滚拉近、下滚拉远，极限滚动仍被限制",
       "actual": "dist 16.747→8.337→39.807, far=39.807, near=7.578",
       "evidence": [
@@ -600,7 +609,7 @@
     {
       "id": "EXPLORE-05",
       "status": "pass",
-      "durationMs": 8725,
+      "durationMs": 7069,
       "message": "画布聚焦后方向键旋转、+ 键缩放有效",
       "actual": "thetaΔ=2.085, zoomΔ=1.740",
       "evidence": [
@@ -610,7 +619,7 @@
     {
       "id": "EXPLORE-06",
       "status": "pass",
-      "durationMs": 42511,
+      "durationMs": 145707,
       "message": "点击树干投影点弹出点认卡，卡片锚定点击点且不出界",
       "actual": "picked=trunk, name=树干, gap≈14",
       "evidence": [
@@ -620,7 +629,7 @@
     {
       "id": "EXPLORE-07",
       "status": "pass",
-      "durationMs": 3845,
+      "durationMs": 15989,
       "message": "第 12 章找一找队列含 bird/insect，任务条正常显示",
       "actual": "available=leaf,branch,trunk,root,bird,insect, target=insect",
       "evidence": [
@@ -630,9 +639,9 @@
     {
       "id": "EXPLORE-08",
       "status": "pass",
-      "durationMs": 55436,
+      "durationMs": 687,
       "message": "点错部位：任务条抖动、底部 toast 提示且与任务条不重叠",
-      "actual": "wrong=trunk, toast=这里不是昆虫，再找找看, overlap=0",
+      "actual": "wrong=trunk, toast=这里不是根，再找找看, overlap=0",
       "evidence": [
         "evidence/EXPLORE-08.jpg"
       ]
@@ -640,7 +649,7 @@
     {
       "id": "EXPLORE-09",
       "status": "pass",
-      "durationMs": 13579,
+      "durationMs": 18541,
       "message": "390×844 点认卡为底部抽屉且不遮字幕",
       "actual": "position=fixed, w=355/390, subtitleOverlap=0",
       "evidence": [
@@ -650,7 +659,7 @@
     {
       "id": "RESP-02",
       "status": "pass",
-      "durationMs": 16757,
+      "durationMs": 23895,
       "message": "五档视口均无横向溢出",
       "actual": "1440:1440/1440, 1280:1280/1280, 1024:1024/1024, 768:768/768, 390:390/390",
       "evidence": [
@@ -660,7 +669,7 @@
     {
       "id": "RESP-03",
       "status": "pass",
-      "durationMs": 1111,
+      "durationMs": 1366,
       "message": "桌面 78px / 移动端 110px，播放器不覆盖 #app",
       "actual": "desktop=78px(78px), mobile=110px(110px)",
       "evidence": [
@@ -670,7 +679,7 @@
     {
       "id": "RESP-04",
       "status": "pass",
-      "durationMs": 563,
+      "durationMs": 689,
       "message": "390×844 课堂顶栏 8 按钮排两行、每个 ≥44×44，顶栏 134px",
       "actual": "rows=2, topHeight=134, --class-top=134px",
       "evidence": [
@@ -696,7 +705,7 @@
     {
       "id": "RESP-07",
       "status": "pass",
-      "durationMs": 2,
+      "durationMs": 1,
       "message": "字体栈全无衬线、无 emoji，图标全部 inline SVG",
       "actual": "font=-apple-system, BlinkMacSystemFont, \"SF Pro SC\", \"S…, emoji=0, svgUse=23",
       "evidence": []
@@ -712,9 +721,9 @@
     {
       "id": "RESP-09",
       "status": "pass",
-      "durationMs": 192,
+      "durationMs": 12761,
       "message": "390×844 课堂字幕/控制条均在 3D 画面之外",
-      "actual": "app=390x556, sub=82, bar=72, overlap=0",
+      "actual": "app=388x553, sub=82, bar=72, overlap=0",
       "evidence": [
         "evidence/RESP-09.jpg"
       ]
@@ -722,7 +731,7 @@
     {
       "id": "RESP-10",
       "status": "pass",
-      "durationMs": 23040,
+      "durationMs": 18889,
       "message": "移动端播放器 5 个关键命中区均 ≥44px",
       "actual": "playBtn=44x44, replayBtn=44x44, musicBtn=44x44, replant=76x44, timelineWrap=366x44",
       "evidence": [
@@ -732,7 +741,7 @@
     {
       "id": "A11Y-01",
       "status": "pass",
-      "durationMs": 15650,
+      "durationMs": 29469,
       "message": "5 个 modal 均为 dialog/aria-modal/aria-labelledby，#partCard 为非模态 dialog",
       "actual": "5/5 modal ok, partCard aria-modal=false",
       "evidence": [
@@ -742,7 +751,7 @@
     {
       "id": "A11Y-02",
       "status": "pass",
-      "durationMs": 2633,
+      "durationMs": 2923,
       "message": "弹层打开时 8 个背景区域 inert，关闭后解除",
       "actual": "open=8/8 inert, closed=0/3",
       "evidence": [
@@ -752,7 +761,7 @@
     {
       "id": "A11Y-03",
       "status": "pass",
-      "durationMs": 2599,
+      "durationMs": 2773,
       "message": "Tab 12 次焦点始终在弹层内循环",
       "actual": "12/12 in modal, sequence=chapter-item current→chapter-item→chapter-item→chapter-item…",
       "evidence": [
@@ -762,7 +771,7 @@
     {
       "id": "A11Y-04",
       "status": "pass",
-      "durationMs": 2042,
+      "durationMs": 2769,
       "message": "Esc 关闭弹层并把焦点还给触发按钮",
       "actual": "focus=chapterBtnNormal",
       "evidence": [
@@ -772,7 +781,7 @@
     {
       "id": "A11Y-05",
       "status": "pass",
-      "durationMs": 15481,
+      "durationMs": 26132,
       "message": "开场页 dialog 语义正确，初始焦点开始上课，Tab 限制在开场页内",
       "actual": "active=startClassBtn, appInert=true",
       "evidence": [
@@ -782,7 +791,7 @@
     {
       "id": "A11Y-06",
       "status": "pass",
-      "durationMs": 18030,
+      "durationMs": 40067,
       "message": "4 个课堂开关均带 aria-pressed 且随点击翻转",
       "actual": "auto true→false, projector false→true",
       "evidence": [
@@ -792,7 +801,7 @@
     {
       "id": "A11Y-07",
       "status": "pass",
-      "durationMs": 3628,
+      "durationMs": 12602,
       "message": "#classProgress aria-valuenow 随 seek 从 100 更新到 210",
       "actual": "100→210",
       "evidence": [
@@ -802,7 +811,7 @@
     {
       "id": "A11Y-08",
       "status": "pass",
-      "durationMs": 27247,
+      "durationMs": 49889,
       "message": "字幕/找一找/暂停/ toast/加载层均具备 status/live 语义",
       "actual": "subtitle, findBanner, pausePrompt, classToast, loading ok",
       "evidence": [
@@ -812,7 +821,7 @@
     {
       "id": "A11Y-10",
       "status": "pass",
-      "durationMs": 34277,
+      "durationMs": 22548,
       "message": "reduced-motion 下 animation/transition 时长压缩到 0.001ms",
       "actual": "startCopy=1e-06s, playBtn=1e-06s",
       "evidence": [
@@ -822,7 +831,7 @@
     {
       "id": "A11Y-11",
       "status": "pass",
-      "durationMs": 33419,
+      "durationMs": 16492,
       "message": "移动端 15 个课堂触控目标均 ≥44×44",
       "actual": "min=44px, count=15",
       "evidence": [
@@ -840,7 +849,7 @@
     {
       "id": "A11Y-13",
       "status": "pass",
-      "durationMs": 15059,
+      "durationMs": 21318,
       "message": "canvas 可聚焦且具备中文操作说明",
       "actual": "tabindex=0, role=application",
       "evidence": [
@@ -850,9 +859,9 @@
     {
       "id": "A11Y-14",
       "status": "pass",
-      "durationMs": 13794,
+      "durationMs": 24963,
       "message": "全部 SVG aria-hidden，所有 button 有可访问名称，sprite 15 图标被使用",
-      "actual": "buttonSvg=18, uses=23, buttons=34, nameless=0",
+      "actual": "buttonSvg=18, uses=23, buttons=35, nameless=0",
       "evidence": [
         "evidence/A11Y-14.jpg"
       ]
@@ -860,7 +869,7 @@
     {
       "id": "PERF-01",
       "status": "pass",
-      "durationMs": 30872,
+      "durationMs": 43249,
       "message": "第 12 章 draw calls 在预算内",
       "actual": "calls=468（450–500）",
       "evidence": [
@@ -870,7 +879,7 @@
     {
       "id": "PERF-02",
       "status": "pass",
-      "durationMs": 29540,
+      "durationMs": 44209,
       "message": "三角面数在 0.65M 预算内",
       "actual": "triangles=630674（≤650000）",
       "evidence": [
@@ -880,7 +889,7 @@
     {
       "id": "PERF-03",
       "status": "pass",
-      "durationMs": 32094,
+      "durationMs": 40463,
       "message": "定帧 2.2 秒 renderer frame 计数不增长（staticKey 生效）",
       "actual": "frame=1→1",
       "evidence": [
@@ -890,7 +899,7 @@
     {
       "id": "PERF-04",
       "status": "pass",
-      "durationMs": 140379,
+      "durationMs": 112033,
       "message": "再种 5 次后 geometry/texture 增量 ≤5，无泄漏",
       "actual": "base=435/21, final=435/21",
       "evidence": [
@@ -900,7 +909,7 @@
     {
       "id": "PERF-05",
       "status": "pass",
-      "durationMs": 81318,
+      "durationMs": 116944,
       "message": "全时间轴 20 点抽样无 pageerror/console.error",
       "actual": "samples=20, 0–259.9s, errors=0",
       "evidence": [
@@ -910,8 +919,8 @@
     {
       "id": "PERF-06",
       "status": "skip",
-      "durationMs": 25564,
-      "message": "软件 GL 环境实测 loadEventEnd=21.09s，超过 3000ms 预算；需真机 GPU 复核（本机 swiftshader 加载 12–25s 属环境限制）",
+      "durationMs": 17549,
+      "message": "软件 GL 环境实测 loadEventEnd=15.44s，超过 3000ms 预算；需真机 GPU 复核（本机 swiftshader 加载 12–25s 属环境限制）",
       "actual": "无法在本环境自动执行",
       "evidence": [
         "evidence/PERF-06.jpg"
@@ -920,7 +929,7 @@
     {
       "id": "PERF-08",
       "status": "pass",
-      "durationMs": 73373,
+      "durationMs": 74207,
       "message": "全时间轴 20 点跳播后 geometry/texture 增量 ≤2",
       "actual": "geometries 464→464, textures 30→30",
       "evidence": [
@@ -930,7 +939,7 @@
     {
       "id": "PERF-09",
       "status": "pass",
-      "durationMs": 13185,
+      "durationMs": 15484,
       "message": "实例化批次充足：InstancedMesh=17, Points=7",
       "actual": "maxInstances=24513, grass=16000",
       "evidence": [
@@ -940,39 +949,39 @@
     {
       "id": "REL-01",
       "status": "pass",
-      "durationMs": 10,
-      "message": "首页 HTTP 200 且标题正确（http://127.0.0.1:54068）",
-      "actual": "status=200, 69KB",
+      "durationMs": 16,
+      "message": "首页 HTTP 200 且标题正确（http://127.0.0.1:61775）",
+      "actual": "status=200, 71KB",
       "evidence": []
     },
     {
       "id": "REL-02",
       "status": "skip",
       "durationMs": 0,
-      "message": "需线上环境：当前 baseUrl=http://127.0.0.1:55298，不是 https://hrvs0769.github.io/tree-of-seasons/",
+      "message": "需线上环境：当前 baseUrl=http://127.0.0.1:63702，不是 https://hrvs0769.github.io/tree-of-seasons/",
       "actual": "无法在本环境自动执行",
       "evidence": []
     },
     {
       "id": "REL-03",
       "status": "pass",
-      "durationMs": 18,
+      "durationMs": 28,
       "message": "docs/01–11 头部均为真实 7–40 位十六进制提交哈希，无占位符",
-      "actual": "11 docs, hashes=54137d0",
+      "actual": "11 docs, hashes=32225e7,6518080",
       "evidence": []
     },
     {
       "id": "REL-04",
       "status": "pass",
-      "durationMs": 109,
+      "durationMs": 131,
       "message": "pre-round2 / round2-v1 回退标签存在且可解析",
-      "actual": "tags=15, include pre-round2 & round2-v1",
+      "actual": "tags=17, include pre-round2 & round2-v1",
       "evidence": []
     },
     {
       "id": "REL-05",
       "status": "pass",
-      "durationMs": 1,
+      "durationMs": 2,
       "message": "README 含线上地址、?class、视觉审查命令与 docs/01–11 索引",
       "actual": "onlineUrl + ?class + visual-audit + 11 docs links",
       "evidence": []
@@ -988,7 +997,7 @@
     {
       "id": "REL-07",
       "status": "pass",
-      "durationMs": 12,
+      "durationMs": 10,
       "message": "BGM 授权 CC0/Yoiyami/来源/SHA-256 全部可追溯且与文件一致",
       "actual": "sha256=3b32bec1ad263dd6…, size=3870327",
       "evidence": []
@@ -996,9 +1005,9 @@
     {
       "id": "REL-08",
       "status": "pass",
-      "durationMs": 3,
+      "durationMs": 5,
       "message": "qa/ 看板入口 200 且引用 catalog.json",
-      "actual": "status=200, size=17.1KB",
+      "actual": "status=200, size=17.2KB",
       "evidence": []
     }
   ]

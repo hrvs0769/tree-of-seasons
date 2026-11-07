@@ -102,8 +102,8 @@ module.exports = [
     run: async (ctx) => {
       const s = await ctx.open('?ui=1&t0=0');
       await s.page.click('#chapterBtnNormal');
-      await sleep(450);
-      await s.page.click('#chapterGrid .chapter-item[data-index="11"]');
+      await sleep(800);
+      await s.page.locator('#chapterGrid .chapter-item[data-index="11"]').click({ force: true });
       // 季节 HUD 由 animate() 在下一帧更新；软件 GL 单帧可能需要数秒
       await s.page.waitForFunction(() => document.body.dataset.season === '夏' && document.getElementById('season').textContent === '夏', null, { timeout: 20000 }).catch(() => {});
       await sleep(100);

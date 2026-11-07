@@ -2,7 +2,7 @@
 
 > 本文解决：怎么重新打包、哪些文件是生成物、怎么发布到 GitHub Pages、怎么更新缓存，以及部署时别漏哪些资源。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-08 · 对应代码：`6518080`（第四轮 · 可视化测试看板）
+> 最后更新：2026-11-08 · 对应代码：`32225e7`（第五轮 · Web Speech 朗诵）
 
 ## 1. 本地运行
 
@@ -32,6 +32,7 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 | 文件 | 来源 |
 |---|---|
 | `app.js` | `src/main.js` + `lib/three.module.min.js` 打包 |
+| `src/speech.js` | 朗诵器，随 `src/main.js` 一起被 esbuild 打进 `app.js` |
 | `src/bgm.js` | 不会被 esbuild 打包；`index.html` 直接 `<script>` 加载 |
 | `assets/tree-of-seasons-bgm-v3.mp3` | 直接引用，不处理 |
 | 其余 `assets/` | 授权说明等静态文件 |
@@ -59,6 +60,8 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 | **`round3-v1`** | 第三轮 UI 现代化（深色设计系统 / 交互与动效）完成点 |
 | **`pre-round4`** | 第四轮测试看板改动前的干净版本 |
 | **`round4-v1`** | **第四轮完成点**（可视化测试看板 / 自动化回归 / 108 测试点） |
+| **`pre-round5`** | 第五轮朗诵 Web Speech 改动前的干净版本 |
+| **`round5-v1`** | **第五轮完成点**（Web Speech 朗诵 / 中文在线自然音优先 / 无语音降级） |
 
 ```bash
 git tag                                  # 查看已有回退点
@@ -142,7 +145,7 @@ JSON
 
 ## 5. 缓存
 
-- 浏览器/平台可能缓存 `app.js`、`index.html`。第三轮起 `index.html` 对 `app.js` / `src/bgm.js` 加了 `?v=round3`；第四轮起改为 `?v=round4`。发布新版本时同步递增该参数（如 `?v=round5`）即可强制刷新构建产物。看板数据文件由 runner 带 `no-store` 请求，通常无需额外缓存参数。
+- 浏览器/平台可能缓存 `app.js`、`index.html`。第三轮起 `index.html` 对 `app.js` / `src/bgm.js` 加了 `?v=round3`；第四轮改为 `?v=round4`；第五轮改为 `?v=round5`。发布新版本时同步递增该参数即可强制刷新构建产物。看板数据文件由 runner 带 `no-store` 请求，通常无需额外缓存参数。
 - 更新后让用户访问带版本查询参数的 URL，例如：
   `https://hrvs0769.github.io/tree-of-seasons/?v=7`
 - 本地调试同样可在 URL 加 `?v=时间戳`。
@@ -156,6 +159,7 @@ JSON
 index.html
 app.js
 lib/three.module.min.js
+src/speech.js           （第五轮：朗诵器）
 src/bgm.js              （音频控制）
 assets/tree-of-seasons-bgm-v3.mp3
 assets/MUSIC-LICENSE.md
