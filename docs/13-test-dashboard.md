@@ -66,14 +66,22 @@ open http://127.0.0.1:8777/qa/
 
 `tools/qa-run.js` 每完成一条就原子写入 `qa/data/results.json`，状态为 `running` 并带 `progress.done/total/currentId`。看板检测到 `running` 后每 2 秒轮询一次，所以打开 `http://127.0.0.1:8777/qa/` 就能看到实时进度、当前用例和单项 PASS/FAIL。
 
-### 4.3 结束后
+### 4.3 中途中断 / 只补跑失败项
+
+```bash
+node tools/qa-run.js --version v4.1.0 --label "第五轮 · 本轮主题" --retry-failed
+```
+
+`--retry-failed` 会读取现有 `qa/data/results.json`，保留已通过项，只补跑 fail/skip 项并在最后合并成一次完整结果；适合网络中断、浏览器崩溃或先跑单模块后补全。
+
+### 4.4 结束后
 
 - 退出码：`0` = P0/P1 全部通过；`1` = 有 P0/P1 失败；`2` = 其它（配置/启动错误）。
 - `results.json` 变为 `passed` / `failed`，`history.json` 追加一条大版本记录。
 - 看板「最近运行」与「历史趋势」自动更新；失败项默认展开，可看 `message` / `actual` / 证据截图。
 - **只有 P0 阻断项为 0 才建议上课。** P1 失败可以评估是否影响本轮目标；P2 可以排期。
 
-### 4.4 发布到 GitHub Pages
+### 4.5 发布到 GitHub Pages
 
 按 [`06-build-and-deploy.md`](06-build-and-deploy.md) 的流程同步；`qa/` 与 `tools/qa-run.js`、`tools/qa/` 属于「推荐一起部署」的内容，这样线上也能直接打开 `/qa/` 看最新报告与历史。`shots/` 仍然不入库。
 
