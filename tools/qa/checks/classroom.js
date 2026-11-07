@@ -321,17 +321,74 @@ module.exports = [
   {
     key: 'class.voiceAria',
     aliases: ['classroom.voice', 'class.voice', 'class.readAloud'],
-    title: '朗读按钮 aria-pressed 状态',
+    title: '朗诵语音选择与无语音降级',
     run: async (ctx) => {
       const s = await ctx.open('?class&t0=100&freeze');
-      const before = await s.page.evaluate(() => document.getElementById('classVoiceBtn').getAttribute('aria-pressed'));
+      // 1) 空语音列表：点击朗读必须降级提示，且不把 aria-pressed 误置为 true
+      await s.page.evaluate(() => window.__classroom.speech.setVoicesForTest([]));
+      const before = await s.page.evaluate(() => ({
+        pressed: document.getElementById('classVoiceBtn').getAttribute('aria-pressed'),
+        title: document.getElementById('classVoiceBtn').title,
+      }));
       await s.page.click('#classVoiceBtn');
-      await sleep(200);
-      const after = await s.page.evaluate(() => document.getElementById('classVoiceBtn').getAttribute('aria-pressed'));
+      await sleep(350);
+      const fallback = await s.page.evaluate(() => {
+        const n = document.getElementById('voiceNotice');
+        const st = window.__classroom.speech.state();
+        return {
+          pressed: document.getElementById('classVoiceBtn').getAttribute('aria-pressed'),
+          shown: n.classList.contains('show') && !n.hidden,
+          text: document.getElementById('voiceNoticeText').textContent,
+          available: st.available,
+          reason: st.reason,
+          title: document.getElementById('classVoiceBtn').title,
+        };
+      });
+      assert(before.pressed === 'false', `初始 aria-pressed=${before.pressed}`);
+      assert(!fallback.available && fallback.reason === 'no-voices', `空语音列表状态=${JSON.stringify(fallback)}`);
+      assert(fallback.pressed === 'false', `无语音时点击后 aria-pressed 不应变为 true：${fallback.pressed}`);
+      assert(fallback.shown, '无语音时未显示 #voiceNotice 降级提示');
+      assert(/语音|朗读/.test(fallback.text) && /Chrome|Edge|系统/.test(fallback.text), `降级提示文案不完整：${fallback.text}`);
+
+      // 2) 排序：中文在线自然音 > 本机中文音 > 英文
+      const ranked = await s.page.evaluate(() => {
+        window.__classroom.speech.setVoicesForTest([
+          { name: 'Tingting', lang: 'zh-CN', voiceURI: 'Tingting', localService: true, default: true },
+          { name: 'Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)', lang: 'zh-CN', voiceURI: 'Microsoft Xiaoxiao Online (Natural) - Chinese (Mainland)', localService: false },
+          { name: 'Microsoft Yunxi Online (Natural) - Chinese (Mainland)', lang: 'zh-CN', voiceURI: 'Microsoft Yunxi Online (Natural) - Chinese (Mainland)', localService: false },
+          { name: 'Google 普通话（中国大陆）', lang: 'zh-CN', voiceURI: 'Google 普通话（中国大陆）', localService: true },
+          { name: 'English (United States)', lang: 'en-US', voiceURI: 'en-US', localService: true },
+        ]);
+        return window.__classroom.speech.state();
+      });
+      assert(ranked.available && ranked.voice, `在线自然音列表不可用：${JSON.stringify(ranked)}`);
+      assert(/Xiaoxiao/i.test(ranked.voice.rawName || ranked.voice.name), `未优先选择 Xiaoxiao Online：${ranked.voice.name}`);
+      assert(ranked.voice.online && ranked.voice.natural, `首选音不是在线自然音：${JSON.stringify(ranked.voice)}`);
+
+      // 3) 只有本机中文音时仍可用，且标记为 local
+      const local = await s.page.evaluate(() => {
+        window.__classroom.speech.setVoicesForTest([
+          { name: 'Tingting', lang: 'zh-CN', voiceURI: 'Tingting', localService: true, default: true },
+          { name: 'English (United States)', lang: 'en-US', voiceURI: 'en-US', localService: true },
+        ]);
+        return window.__classroom.speech.state();
+      });
+      assert(local.available && /Tingting/i.test(local.voice.rawName || local.voice.name), `本机中文音回退失败：${JSON.stringify(local)}`);
+      assert(local.voice.online === false, `本机中文音不应标记为 online：${JSON.stringify(local.voice)}`);
+
+      // 4) 只有非中文音：明确 no-chinese，而不是拿英文声音硬读中文
+      const nonChinese = await s.page.evaluate(() => {
+        window.__classroom.speech.setVoicesForTest([{ name: 'English (United States)', lang: 'en-US', voiceURI: 'en-US', localService: true }]);
+        return window.__classroom.speech.state();
+      });
+      assert(!nonChinese.available && nonChinese.reason === 'no-chinese', `仅非中文音状态=${JSON.stringify(nonChinese)}`);
+
+      await s.page.evaluate(() => window.__classroom.speech.resetForTest());
       await ctx.close(s);
-      assert(before === 'true' || before === 'false', `初始 aria-pressed=${before}`);
-      assert(after !== before, `点击朗读后 aria-pressed 未变化：${before}`);
-      return { message: '朗读开关 aria-pressed 随点击翻转', actual: `${before}→${after}` };
+      return {
+        message: '在线自然音优先、本机中文音可用、无中文音降级提示',
+        actual: `fallback=${fallback.reason}, pick=${ranked.voice.name}, local=${local.voice.name}, nonChinese=${nonChinese.reason}`,
+      };
     },
   },
   {

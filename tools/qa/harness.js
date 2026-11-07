@@ -182,6 +182,7 @@ class QaContext {
     await session.page.evaluate(({ baseT, isClass }) => {
       const c = window.__classroom;
       try { c.stopFindGame(); } catch (e) {}
+      try { if (c.speech && c.speech.resetForTest) c.speech.resetForTest(); } catch (e) {}
       document.querySelectorAll('.modal.show, .modal.closing').forEach((m) => m.classList.remove('show', 'closing'));
       const part = document.getElementById('partCard');
       if (part) part.classList.remove('show');
