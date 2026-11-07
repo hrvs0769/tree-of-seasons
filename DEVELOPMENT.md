@@ -2,7 +2,7 @@
 
 > **给新会话的 AI / 新开发者：先读这份主文档。**
 > 这里只放项目概况、架构、文件索引、关键约定和常见任务。需要改某个模块时，再按下方文档索引进入对应子文档，不要先通读整个 `src/main.js`。
-> 最后更新：2026-11-07 · 对应代码：`17c3454`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-07 · 对应代码：`54137d0`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
 
 ---
 
@@ -21,14 +21,14 @@
 | 技术栈 | Three.js r170（本地 `lib/three.module.min.js`）、原生 JavaScript、HTML/CSS、Canvas 程序化贴图、esbuild |
 | 3D 资源 | 全部程序化生成；没有外部模型、图片或字体依赖 |
 | 随机基线 | `APP_SEED = 0x5EED2024` 的固定 `mulberry32` 覆盖 `Math.random`；定帧/课堂/舞台/视频用固定树种子 `20240601` |
-| 界面系统（第三轮） | 暖纸色 `--paper #F4F2ED` + 墨色 `--ink #14181A` + 单一森林绿 `--accent #246B4E`；全站无衬线、内联 SVG 图标、1px 细线、圆角 9/14/20；设计 token 与验收见 `docs/11` |
+| 界面系统（第三轮） | 深炭黑 `--paper #0C100E` + 雾白 `--ink #F2F4F0` + 单一薄荷绿 `--accent #7BD6A6`；全站无衬线、内联 SVG 图标、1px 细线、圆角 9/14/20；设计 token 与验收见 `docs/11` |
 | 音乐 | Yoiyami《The Budding of Consciousness》，CC0，见 `assets/MUSIC-LICENSE.md` |
 
-当前版本包含两种观看方式：默认是「左侧编辑式讲解栏 + 右侧浮动圆角 3D 画框 + 底部播放条」的自由观看布局；点「开始上课」或访问 `?class` 后进入**幼儿园课堂模式**（浅色顶栏、白色大字幕带、白色控制条、每章自动暂停、章节卡片、点认/找一找、细环季节转盘与四季合影、故事姐姐朗读、投影增亮、屏幕锁定）。
+当前版本包含两种观看方式：默认是「左侧编辑式讲解栏 + 右侧浮动圆角 3D 画框 + 底部播放条」的自由观看布局；点「开始上课」或访问 `?class` 后进入**幼儿园课堂模式**（深色顶栏、深色大字幕带、深色控制条、每章自动暂停、章节卡片、点认/找一找、细环季节转盘与四季合影、故事姐姐朗读、投影增亮、屏幕锁定）。
 
 第二轮优化后，画面新增：6 层土壤剖面与地下水层、扎到含水层的深根、真正可见的云、远处偶尔飞过的鸟群、栖息的小鸟与蝴蝶/蜜蜂/瓢虫、树荫光斑、云影、飞絮、结尾新芽；所有章节文案提到的元素都能在画面里找到。
 
-**第三轮（本轮）重做界面与交互，不改 3D 场景**：全站改为暖纸色 `#F4F2ED` + 墨色 `#14181A` + 单一森林绿 `#246B4E`，无衬线系统字体、1px 细线、9/14/20px 圆角与轻投影，emoji 换成 15 个内联 SVG symbol。播放器加 36px 进度命中区与 hover 时间气泡，镜头加 14Hz 缓动 / 9px 拖拽死区 / 松手惯性 / 双击复位 / 键盘可达；课堂模式补细进度条 `#classProgress`、课堂音量、退出确认（保留 `storyTime`）与 `aria-pressed` 状态；5 个弹层补齐 dialog 语义、`inert`、焦点循环与 180ms 退场；点认卡锚定点击位置、找一找错误 toast 移到底部、章节与字幕 300–450ms 淡入、新增 `?` 快捷键面板与纸色加载页。设计 token、组件清单、动效规范与逐条验收见 [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md)。
+**第三轮（本轮）重做界面与交互，不改 3D 场景**：全站改为深炭黑 `#0C100E` + 雾白 `#F2F4F0` + 单一薄荷绿 `#7BD6A6`，无衬线系统字体、1px 细线、9/14/20px 圆角与轻投影，emoji 换成 15 个内联 SVG symbol。播放器加 36px 进度命中区与 hover 时间气泡，镜头加 14Hz 缓动 / 9px 拖拽死区 / 松手惯性 / 双击复位 / 键盘可达；课堂模式补细进度条 `#classProgress`、课堂音量、退出确认（保留 `storyTime`）与 `aria-pressed` 状态；5 个弹层补齐 dialog 语义、`inert`、焦点循环与 180ms 退场；点认卡锚定点击位置、找一找错误 toast 移到底部、章节与字幕 300–450ms 淡入、新增 `?` 快捷键面板与深色加载页。设计 token、组件清单、动效规范与逐条验收见 [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md)。
 
 ---
 
@@ -117,22 +117,22 @@ tools/
 
 | 文档 | 最后更新 | 对应代码 / 说明 |
 |---|---|---|
-| [`README.md`](README.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 界面与交互段落、本轮新增 |
-| `DEVELOPMENT.md` | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 主索引、文件表与文档表 |
-| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 架构（确定性 / rootAge / 水层 / 静态对象） |
-| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 时间表与镜头（第二轮结论保留） |
-| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 树体与根系（第二轮结论保留） |
-| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 环境（第二轮结论保留） |
-| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · **整篇重写**：布局 / 组件 / 事件表 / 快捷键 / 课堂流程 / BGM |
-| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 构建与部署（结论保留） |
-| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 测试与调试（结论保留） |
-| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
-| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 第二轮问题清单（历史） |
-| [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
-| [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 2026-11-07 | `17c3454` · 第三轮 UI 现代化 · **新建**：设计 token / 组件 / 动效 / 交互映射 / a11y / 逐条验收 |
+| [`README.md`](README.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 界面与交互段落、本轮新增 |
+| `DEVELOPMENT.md` | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 主索引、文件表与文档表 |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 架构（确定性 / rootAge / 水层 / 静态对象） |
+| [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 时间表与镜头（第二轮结论保留） |
+| [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 树体与根系（第二轮结论保留） |
+| [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 环境（第二轮结论保留） |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · **整篇重写**：布局 / 组件 / 事件表 / 快捷键 / 课堂流程 / BGM |
+| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 构建与部署（结论保留） |
+| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 测试与调试（结论保留） |
+| [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
+| [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 第二轮问题清单（历史） |
+| [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
+| [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 2026-11-07 | `54137d0` · 第三轮 UI 现代化 · **新建**：设计 token / 组件 / 动效 / 交互映射 / a11y / 逐条验收 |
 | [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-07 | 历史记录追加 r32；功能说明以本文件为准 |
 
-维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `17c3454` 占位符，提交后由维护者全局替换为真实哈希。
+维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `54137d0` 占位符，提交后由维护者全局替换为真实哈希。
 
 ---
 

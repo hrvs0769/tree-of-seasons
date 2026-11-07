@@ -1,6 +1,6 @@
 # 视觉迭代记录（自截图 → 图像分析 → 自我改进）
 
-> 最后更新：2026-11-07 · 对应代码：`17c3454`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
+> 最后更新：2026-11-07 · 对应代码：`54137d0`（第三轮 UI 现代化 · 现代设计系统 · 交互与动效）
 >
 > 历史记录 · 当前功能说明以 `DEVELOPMENT.md` 为准
 
@@ -462,8 +462,8 @@ HR 连续四次否定自制配乐（正弦合成 → 采样编曲 → 悠然版 
 
 改：
 
-- **设计系统**：`:root` 重做为暖纸色 `--paper #F4F2ED` / `--surface #FBFAF7` + 墨色 `--ink #14181A` / `--ink-2 #5D635E` / `--ink-3 #6A706A`（AA）+ 单一森林绿 `--accent #246B4E`，四季色由 `body[data-season]` 写入 `--season`；1px `--line`、圆角 9/14/20px、`--shadow-sm/md/lg`、`--ease cubic-bezier(.22,.9,.28,1)` / `--ease-out cubic-bezier(.16,1,.3,1)`；全站无衬线系统字体栈（无宋体、无网络字体）。图标换成 15 个内联 SVG symbol（`#i-play / #i-pause / #i-replay / #i-music / #i-volume / #i-chapters / #i-grid / #i-present / #i-close / #i-lock / #i-keyboard / …`），状态用 `data-playing` / `aria-pressed` / class，不再依赖 textContent。
-- **布局**：左侧改为编辑式讲解栏（品牌 + 季节 54–70px 大字 + 14 段 `#chapterRail` + 旁白 + `#sidebarTools` + 两行 `#tips`），右侧 3D 舞台变 `--gutter 18px` 留白的浮动圆角画框（圆角 18px + 阴影），底部播放条浮在纸面上；课堂模式改浅色顶栏 + 白色字幕带 + 白色控制条；开场页左右分栏，右下「年轮四季」SVG 插画带 46s 缓慢环绕的小圆点；`#loading` 改纸色 logo + 生长进度线，加载完 `.hidden` 500ms 级淡出。
+- **设计系统**：`:root` 重做为深炭黑 `--paper #0C100E` / `--surface #151B18` + 雾白 `--ink #F2F4F0` / `--ink-2 #AEB6AF` / `--ink-3 #8A928B`（AA）+ 单一薄荷绿 `--accent #7BD6A6`，四季色由 `body[data-season]` 写入 `--season`；1px `--line`、圆角 9/14/20px、`--shadow-sm/md/lg`、`--ease cubic-bezier(.22,.9,.28,1)` / `--ease-out cubic-bezier(.16,1,.3,1)`；全站无衬线系统字体栈（无宋体、无网络字体）。图标换成 15 个内联 SVG symbol（`#i-play / #i-pause / #i-replay / #i-music / #i-volume / #i-chapters / #i-grid / #i-present / #i-close / #i-lock / #i-keyboard / …`），状态用 `data-playing` / `aria-pressed` / class，不再依赖 textContent。
+- **布局**：左侧改为编辑式讲解栏（品牌 + 季节 54–70px 大字 + 14 段 `#chapterRail` + 旁白 + `#sidebarTools` + 两行 `#tips`），右侧 3D 舞台变 `--gutter 18px` 留白的浮动圆角画框（圆角 18px + 阴影），底部播放条浮在纸面上；课堂模式改深色顶栏 + 深色字幕带 + 深色控制条；开场页左右分栏，右下「年轮四季」SVG 插画带 46s 缓慢环绕的小圆点；`#loading` 改深色 logo + 生长进度线，加载完 `.hidden` 500ms 级淡出。
 - **播放器**：SVG 播放/暂停由 `setPlayUI()` 写 `data-playing` 与 `aria-label`；`#timelineWrap / #timeline` 36px 命中区（移动端 44px）+ `#scrubTip`「mm:ss · 章名」气泡；`beginScrub/endScrub` 用 `scrubResume` 保留并恢复原播放状态；`#musicBtn` 固定文案「音乐」+ `.status-dot` + `aria-pressed`；`syncPlayer()` 用 `_syncCache` 差异写入，暂停时几乎零 DOM 操作；首尾章自动 `disabled`。
 - **镜头**：新增 `camSmooth` + `camEase = 1 - exp(-realDt*14)`（14Hz 缓动，定帧/视频/合影 `snapCam` 直接吸附保证可复现）；9px 拖拽死区、松手 `camVel` 惯性、双击复位 `1.46/1.46/12.5`、滚轮平滑缩放；canvas 加 `tabindex=0 / role=application / 中文 aria-label`，方向键旋转、`+/-` 缩放、`Enter` 点认画面中心；`REDUCED_MOTION` 关自动环绕，CSS `@media (prefers-reduced-motion: reduce)` 把动画时长压到 `.001ms`；viewport 去掉 `maximum-scale=1 / user-scalable=no`。
 - **课堂模式**：顶栏 8 个工具（移动端 `flex: 0 0 calc(25% - 3px)` + `height:44px` 两行，退出按钮 danger 色 + 确认）；新增 `#classProgress`（`role=slider aria-valuemin/max/now`，点击 / 拖动 / 键盘 ←→，同样保留播放状态）与 `#classVolume`；`updateClassroomButtons()` 为每章停 / 朗读 / 增亮 / 锁定写 `aria-pressed` 且文案固定；`#exitConfirm` 二次确认，`exitClassroomMode()` **不再归零 `storyTime`**，`#freeViewBtn` 变「继续观看」；结束不再自动弹四季合影，只 toast 提示；`#classTimecode` 移动端保留。
