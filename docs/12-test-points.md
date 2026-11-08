@@ -2,7 +2,7 @@
 
 > 本文与 `qa/data/catalog.json` 同步维护、内容逐条一致；修改测试点请先改 catalog，再同步本文。
 > 唯一契约见 [`../qa/CONTRACT.md`](../qa/CONTRACT.md)；可视化看板入口见 `qa/index.html`。
-> 最后更新：2026-11-08 · 对应版本：v4.1.0 · 对应代码：`f5bad43` · 共 109 条测试点
+> 最后更新：2026-11-08 · 对应版本：v4.1.0 · 对应代码：`5b1c469` · 共 109 条测试点
 
 ## 1. 总览
 
@@ -32,7 +32,7 @@
 - **scene · 3D 场景与确定性（SCENE）**：画布与 WebGL、四季环境、雨雪、根系水层、鸟虫树荫，以及定帧像素确定性与静态重绘。
 - **story · 叙事与章节（STORY）**：14 章章节数据、文案、章节切换、章节栏与弹层、季节轮盘和结尾回春。
 - **player · 播放器与音频（PLAYER）**：播放/暂停、时间码、进度拖动、重播与再种、BGM 开关音量记忆、快捷键与定帧静音。
-- **classroom · 课堂模式（CLASSROOM）**：?class 课堂入口、顶栏 8 工具、字幕、课堂进度、每章暂停、教师提示、退出保留、投影/锁定、Web Speech 朗诵（中文在线自然音优先 + 无语音降级）、四季合影与结束提示。
+- **classroom · 课堂模式（CLASSROOM）**：?class 课堂入口、顶栏 7 工具（锁定已移除）、字幕、课堂进度、可选的每章暂停、教师提示、退出保留、投影、Web Speech 朗诵（中文在线自然音优先 + 无语音降级）、四季合影与结束提示。
 - **explore · 探索与点认（EXPLORE）**：画布拖动死区与惯性、双击复位、滚轮/双指缩放、键盘环顾、点认卡定位、找一找队列与错误提示、移动端抽屉。
 - **responsive · 响应式与视觉（RESPONSIVE）**：1440/1280/1024/768/390 五档断点、无横向溢出、播放器与课堂顶栏布局、深色 token、对比度、无衬线无 emoji、SVG sprite。
 - **a11y · 无障碍（ACCESSIBILITY）**：dialog 语义、inert、焦点陷阱与恢复、开场页模态、aria-pressed、slider 语义、live region、焦点可见、reduced-motion、44px 触控、viewport 缩放、canvas 标签。
@@ -110,15 +110,15 @@
 | ID | 测试点 | 优先级 | 类型 | 预期 |
 |---|---|---|---|---|
 | CLASS-01 | ?class 直接进入课堂 | P0 | 自动 | body.classroom-mode；#startScreen.hidden；#classroomTop/#subtitleBar/#classroomBar 可见；固定树种子。 |
-| CLASS-02 | 顶栏 8 个工具按钮 | P1 | 自动 | 8 个按钮 id 齐全且可见；role=toolbar；aria-label=课堂工具。 |
+| CLASS-02 | 顶栏 7 个工具按钮 | P1 | 自动 | 7 个按钮 id 齐全且可见；role=toolbar；aria-label=课堂工具；无锁定。 |
 | CLASS-03 | 课堂大字幕 | P1 | 自动 | #subtitleText 文本与章节一致；含 em 关键词；aria-live=polite aria-atomic=true；meta 第 N 章。 |
 | CLASS-04 | 课堂进度条 | P0 | 自动 | role=slider；aria-valuemin=0 max=260 now 正确；点击 50% → storyTime≈130；←→ ±5s。 |
 | CLASS-05 | 首尾章按钮禁用 | P2 | 自动 | t=0 时 #classPrevBtn.disabled=true；t=250 时 #classNextBtn.disabled=true。 |
-| CLASS-06 | 每章结束自动暂停 | P0 | 自动 | storyTime 停在 16.0；#pausePrompt 显示第 1 章结束与下一章；点 #pauseContinue 后 playing=true。 |
+| CLASS-06 | 每章结束自动暂停（可选） | P0 | 自动 | 开启 #classAutoBtn 后 storyTime 停在 16.0；#pausePrompt 显示第 1 章结束与下一章；点 #pauseContinue 后 playing=true。 |
 | CLASS-07 | 教师提示弹层 | P1 | 人工 | #teacherTitle 第 N 章标题；#teacherBody 含两个内容块；关闭后回到原焦点。 |
 | CLASS-08 | 退出确认与保留进度 | P0 | 自动 | #exitConfirm.show；取消仍在课堂；确认后 storyTime≈100、#freeViewBtn=继续观看。 |
 | CLASS-09 | 投影增亮 | P1 | 自动 | body.classList 含 projector；canvas 亮度提升；#classProjectorBtn aria-pressed 同步。 |
-| CLASS-10 | 屏幕锁定与长按解锁 | P2 | 自动 | #lockOverlay.show；长按 2s 后消失；aria-pressed true→false。 |
+| CLASS-10 | 锁定功能已移除 | P2 | 自动 | #classLockBtn 与 #lockOverlay 不存在；state 无 touchLocked；按 L 无反应。 |
 | CLASS-11 | 故事姐姐朗诵 | P1 | 人工 | #classVoiceBtn aria-pressed 切换；优先在线自然中文语音；朗读期间 BGM 音量×0.18；无中文音时显示 #voiceNotice 降级提示。 |
 | CLASS-12 | 四季合影忙碌态 | P1 | 自动 | 点击后 #classQuartetBtn.disabled + aria-busy=true + .busy；完成后 4 个 img，object-fit:contain。 |
 | CLASS-13 | 结束提示不弹合影 | P2 | 自动 | storyTime=259.9；playing=false；#classToast 文本含「四季合影」；无 .modal.show。 |
@@ -163,7 +163,7 @@
 | A11Y-03 | 弹层焦点陷阱 | P0 | 自动 | activeElement 始终在 .modal.show 内；Shift+Tab 从首项到末项；Tab 从末项到首项。 |
 | A11Y-04 | 关闭弹层焦点恢复 | P1 | 自动 | 从 #chapterBtnNormal 打开再关闭，activeElement===#chapterBtnNormal。 |
 | A11Y-05 | 开场页模态 | P0 | 自动 | role=dialog；背景 4 个容器 inert；activeElement=#startClassBtn；Tab 不离开开场页。 |
-| A11Y-06 | 开关按钮 aria-pressed | P1 | 自动 | 5 类按钮属性存在；切换后 true↔false；文案固定。 |
+| A11Y-06 | 开关按钮 aria-pressed | P1 | 自动 | 4 类按钮属性存在；切换后 true↔false；文案固定。 |
 | A11Y-07 | 滑杆 aria 语义 | P1 | 自动 | classProgress role=slider aria-valuemin=0 max=260 now=秒；timeline aria-label=播放进度。 |
 | A11Y-08 | 状态播报 live region | P1 | 自动 | #findBanner/#pausePrompt/#classToast role=status；#subtitleText aria-live=polite aria-atomic=true。 |
 | A11Y-09 | 焦点可见 | P1 | 人工 | getComputedStyle 的 outline 宽度≈2px、颜色 accent；画布 focus-visible 有描边。 |
@@ -271,14 +271,14 @@
 | automationKey | 用例 | 检查内容 |
 |---|---|---|
 | `classroom.enter` | CLASS-01 ?class 直接进入课堂 | 访问 ?class 直接进入课堂模式：顶栏/字幕/底栏显示，开场页隐藏。 |
-| `classroom.topbar` | CLASS-02 顶栏 8 个工具按钮 | 顶栏含章节、教师提示、找一找、四季合影、每章停、增亮、锁定、退出 8 个按钮。 |
+| `classroom.topbar` | CLASS-02 顶栏 7 个工具按钮 | 顶栏含章节、教师提示、找一找、四季合影、每章停、增亮、退出 7 个按钮；无锁定。 |
 | `classroom.subtitle` | CLASS-03 课堂大字幕 | 字幕显示当前章节全文，关键词高亮，aria-live 播报。 |
 | `classroom.progress` | CLASS-04 课堂进度条 | #classProgress 为 slider，可点击/拖动/键盘跳转并保留播放状态。 |
 | `classroom.prevNext` | CLASS-05 首尾章按钮禁用 | 第 1 章「上一章」禁用，第 14 章「下一章」禁用。 |
-| `classroom.autoPause` | CLASS-06 每章结束自动暂停 | 从 15.5s 播放到 16s 自动停在章节边界，提示下一章并可继续。 |
+| `classroom.autoPause` | CLASS-06 每章结束自动暂停（可选） | 开启 #classAutoBtn 后从 14.8s 播放到 16s 自动停在章节边界，提示下一章并可继续。 |
 | `classroom.exit` | CLASS-08 退出确认与保留进度 | 退出先确认，取消可返回，确认后保留 storyTime 并显示继续观看。 |
 | `classroom.projector` | CLASS-09 投影增亮 | 增亮按钮切换 body.projector，画面明显变亮且 aria-pressed 同步。 |
-| `classroom.lock` | CLASS-10 屏幕锁定与长按解锁 | 锁定后全屏遮罩出现，长按 2 秒解锁，锁定按钮 aria-pressed 同步。 |
+| `classroom.lock` | CLASS-10 锁定功能已移除 | 断言锁定按钮/遮罩/touchLocked/L 快捷键全部不存在。 |
 | `classroom.quartet` | CLASS-12 四季合影忙碌态 | 生成合影时按钮进入 busy/aria-busy，完成后 4 张图按原比例完整显示。 |
 | `classroom.end` | CLASS-13 结束提示不弹合影 | 到 259.9s 自动停止，仅 toast 提示可点四季合影，不自动打开弹层。 |
 | `classroom.nextPrev` | CLASS-14 上一章与下一章 | 上一章/下一章按钮跳到相邻章节起点，边界章按钮禁用。 |
@@ -303,7 +303,7 @@
 |---|---|---|
 | `responsive.noOverflow` | RESP-02 五档无横向溢出 | 1440/1280/1024/768/390 五档无横向溢出、无滚动条。 |
 | `responsive.playerHeight` | RESP-03 播放器高度与舞台让位 | 桌面播放器高 78px、移动端 110px，#app 底部正确让位不重叠。 |
-| `responsive.classTopbarMobile` | RESP-04 课堂顶栏移动端两行 | 390 宽下课堂 8 个按钮排成 4+4 两行，每个高度≥44px。 |
+| `responsive.classTopbarMobile` | RESP-04 课堂顶栏移动端两行 | 390 宽下课堂 7 个按钮排成两行，每个高度≥44px。 |
 | `responsive.darkTokens` | RESP-05 深色设计 token | 页面背景 #0C100E、卡片 #151B18、文字 #F2F4F0、强调 #7BD6A6。 |
 | `responsive.contrast` | RESP-06 文本对比度 AA | 主文/次文/辅助文在深色底上对比度均达到 WCAG AA。 |
 | `responsive.noSerifEmoji` | RESP-07 无衬线且无 emoji 图标 | 全站字体栈无衬线，按钮与状态不使用 emoji，图标全部内联 SVG。 |
@@ -320,7 +320,7 @@
 | `a11y.focusTrap` | A11Y-03 弹层焦点陷阱 | Tab 在打开弹层内循环，首尾互相 wrap，不会跑到背景。 |
 | `a11y.escRestoreFocus` | A11Y-04 关闭弹层焦点恢复 | 关闭弹层后焦点回到触发按钮。 |
 | `a11y.startDialog` | A11Y-05 开场页模态 | 开场页为 dialog aria-modal，背景 inert，焦点在开始按钮。 |
-| `a11y.ariaPressed` | A11Y-06 开关按钮 aria-pressed | 音乐与课堂每章停/朗读/增亮/锁定按钮均写 aria-pressed 且与状态一致。 |
+| `a11y.ariaPressed` | A11Y-06 开关按钮 aria-pressed | 音乐与课堂每章停/朗读/增亮按钮均写 aria-pressed 且与状态一致。 |
 | `a11y.progressAria` | A11Y-07 滑杆 aria 语义 | #classProgress 与 #timeline 的 slider/aria 属性完整。 |
 | `a11y.liveRegions` | A11Y-08 状态播报 live region | 找一找、暂停提示、toast、字幕均为 role=status/aria-live，变化可被播报。 |
 | `a11y.reducedMotion` | A11Y-10 减少动态效果 | reduce 时动画时长压到 .001ms，并关闭自动环绕。 |

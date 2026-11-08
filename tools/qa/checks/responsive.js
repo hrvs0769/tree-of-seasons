@@ -66,7 +66,7 @@ function viewportCheck(vp) {
       if (cls) assert(cls.scrollWidth <= cls.innerWidth + 1, `课堂模式 ${vp.w}×${vp.h} 横向溢出：${cls.scrollWidth} > ${cls.innerWidth}`);
       assert(info.play && info.timeline && info.replay && info.music && info.replant, `关键播放控件不可见：${JSON.stringify(info)}`);
       assert(info.playerRect.bottom <= vp.h + 1, `播放器底部溢出 ${info.playerRect.bottom} > ${vp.h}`);
-      if (cls) assert(cls.buttons.length === 8 && cls.buttons.every((b) => b.w > 0 && b.h > 0), '课堂顶栏按钮不可见');
+      if (cls) assert(cls.buttons.length === 7 && cls.buttons.every((b) => b.w > 0 && b.h > 0), '课堂顶栏按钮不可见');
       if (vp.w <= 980) {
         assert(info.volumeDisplay === 'none', `${vp.w}px 下 #volumeWrap 应隐藏，实际 ${info.volumeDisplay}`);
       }
@@ -109,7 +109,7 @@ module.exports = [
   {
     key: 'responsive.classTopbarMobile',
     aliases: ['responsive.classTopbar', 'responsive.topbarRows', 'responsive.mobileTopbar'],
-    title: '移动端课堂顶栏两行 8 按钮',
+    title: '移动端课堂顶栏两行 7 按钮',
     run: async (ctx) => {
       const s = await ctx.open('?class&t0=210&freeze', { viewport: { width: 390, height: 844 } });
       await sleep(400);
@@ -128,12 +128,12 @@ module.exports = [
         };
       });
       await ctx.close(s);
-      assert(info.buttons.length === 8, `按钮数=${info.buttons.length}`);
+      assert(info.buttons.length === 7, `按钮数=${info.buttons.length}`);
       assert(info.rows >= 2, `顶栏行数=${info.rows}，期望 2 行`);
       assert(info.buttons.every((b) => b.h >= 44 && b.w >= 44), `按钮尺寸不足：${info.buttons.map((b) => `${b.text}=${b.w}x${b.h}`).join(', ')}`);
       assert(info.scrollWidth <= info.innerWidth + 1, `顶栏横向溢出 ${info.scrollWidth}>${info.innerWidth}`);
       assert(info.classTopVar === '134px', `移动端 --class-top=${info.classTopVar}，期望 134px`);
-      return { message: '390×844 课堂顶栏 8 按钮排两行、每个 ≥44×44，顶栏 134px', actual: `rows=${info.rows}, topHeight=${info.topHeight}, --class-top=${info.classTopVar}` };
+      return { message: '390×844 课堂顶栏 7 按钮排两行、每个 ≥44×44，顶栏 134px', actual: `rows=${info.rows}, topHeight=${info.topHeight}, --class-top=${info.classTopVar}` };
     },
   },
 ];

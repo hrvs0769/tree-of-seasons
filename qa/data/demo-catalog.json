@@ -37,7 +37,7 @@
       "id": "classroom",
       "name": "课堂模式",
       "en": "CLASSROOM",
-      "description": "课堂顶栏、字幕、进度、每章停、朗读、锁定与退出确认。",
+      "description": "课堂顶栏、字幕、进度、可选每章停、朗读与退出确认。",
       "accent": "#7BCB8E"
     },
     {

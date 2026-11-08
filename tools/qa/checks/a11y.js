@@ -168,7 +168,7 @@ module.exports = [
     title: '课堂开关按钮 aria-pressed',
     run: async (ctx) => {
       const s = await ctx.open('?class&t0=100&freeze');
-      const read = () => s.page.evaluate(() => ['classAutoBtn', 'classVoiceBtn', 'classProjectorBtn', 'classLockBtn'].map((id) => ({ id, pressed: document.getElementById(id).getAttribute('aria-pressed') })));
+      const read = () => s.page.evaluate(() => ['classAutoBtn', 'classVoiceBtn', 'classProjectorBtn'].map((id) => ({ id, pressed: document.getElementById(id).getAttribute('aria-pressed') })));
       const before = await read();
       await s.page.click('#classAutoBtn');
       await sleep(150);
@@ -183,7 +183,7 @@ module.exports = [
       const projAfter = after.find((b) => b.id === 'classProjectorBtn').pressed;
       assert(autoBefore !== autoAfter, '每章停 aria-pressed 未翻转');
       assert(projBefore !== projAfter, '增亮 aria-pressed 未翻转');
-      return { message: '4 个课堂开关均带 aria-pressed 且随点击翻转', actual: `auto ${autoBefore}→${autoAfter}, projector ${projBefore}→${projAfter}` };
+      return { message: '3 个课堂开关均带 aria-pressed 且随点击翻转', actual: `auto ${autoBefore}→${autoAfter}, projector ${projBefore}→${projAfter}` };
     },
   },
   {

@@ -566,7 +566,6 @@
   }
   .class-small-btn:hover { background: var(--surface-2); color: var(--ink); }
   .class-small-btn.on { background: var(--accent-soft); border-color: transparent; color: var(--accent-2); font-weight: 600; }
-  .voice-status { max-width: 132px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: var(--ink-3); letter-spacing: .02em; }
 
   /* ---------------- 弹层 ---------------- */
   .modal {
@@ -762,22 +761,6 @@
     to { transform: translateX(-50%) translateY(0); }
   }
 
-  /* ---------------- 屏幕锁定 ---------------- */
-  #lockOverlay {
-    position: fixed; inset: 0; z-index: 45; display: none; align-items: center; justify-content: center;
-    background: rgba(12, 16, 14, .80); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-    color: var(--ink); text-align: center; user-select: none;
-  }
-  #lockOverlay.show { display: flex; animation: fadeIn .25s var(--ease) both; }
-  .lock-inner { padding: 30px 42px; border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-lg); }
-  .lock-icon { width: 44px; height: 44px; margin: 0 auto; border-radius: 13px; background: var(--surface-2); color: var(--ink-2); display: grid; place-items: center; }
-  .lock-icon .icon { width: 21px; height: 21px; }
-  .lock-title { margin-top: 14px; font-size: 19px; font-weight: 620; letter-spacing: -.01em; }
-  .lock-sub { margin-top: 6px; font-size: 11.5px; letter-spacing: .02em; color: var(--ink-3); }
-  .lock-progress { width: 168px; height: 3px; margin: 20px auto 0; border-radius: 99px; background: var(--line-2); overflow: hidden; }
-  .lock-progress i { display: block; width: 0; height: 100%; background: var(--accent); border-radius: 99px; transition: width 2s linear; }
-  #lockOverlay.holding .lock-progress i { width: 100%; }
-
   /* ---------------- 快捷键弹层 ---------------- */
   .shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 22px; }
   .shortcut-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 10px 2px; border-bottom: 1px solid var(--line); }
@@ -797,7 +780,6 @@
     #volume { display: none; }
     #chapterGrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   }
-  @media (max-width: 980px) { .voice-status { display: none; } }
   @media (max-width: 980px) {
     :root { --side: 0px; --gutter: 0px; --player-h: 110px; --stage-radius: 0px; --class-top: 72px; }
     .class-top-actions button { height: 44px; padding: 0 8px; font-size: 10.5px; }
@@ -889,7 +871,6 @@
     #pausePrompt { font-size: 11.5px; padding: 8px 8px 8px 13px; max-width: calc(100vw - 20px); white-space: normal; flex-wrap: wrap; justify-content: center; top: calc(var(--class-top) + 10px); }
     #classToast { max-width: calc(100vw - 24px); white-space: normal; text-align: center; font-size: 11px; transition: none; }
     #voiceNotice { display: none !important; }
-    .voice-status { display: none; }
   }
 
   /* 截图/缩略图模式：只保留 3D 舞台 */
@@ -1086,7 +1067,6 @@
     <button id="classQuartetBtn" title="生成四季合影（Q）">四季合影</button>
     <button id="classAutoBtn" title="每章结束自动暂停">每章停</button>
     <button id="classProjectorBtn" title="投影增亮（P）">增亮</button>
-    <button id="classLockBtn" title="锁定屏幕，防止小朋友误触">锁定</button>
     <button id="classExitBtn" title="退出课堂模式">退出</button>
   </div>
 </div>
@@ -1127,7 +1107,6 @@
     <button id="classMusicBtn" class="class-small-btn" title="背景音乐开关（M）">音乐</button>
     <div id="classVolumeWrap"><svg class="icon" aria-hidden="true"><use href="#i-volume"/></svg><input id="classVolume" type="range" min="0" max="100" step="1" value="85" aria-label="背景音乐音量"></div>
     <button id="classVoiceBtn" class="class-small-btn" title="故事姐姐朗读">朗读</button>
-    <span id="voiceStatus" class="voice-status" aria-live="polite"></span>
     <button id="classReplayBtn" class="class-small-btn"><svg class="icon" style="width:12px;height:12px" aria-hidden="true"><use href="#i-replay"/></svg>重播</button>
   </div>
 </div>
@@ -1196,7 +1175,6 @@
       <div class="shortcut-row"><span>教师提示</span><kbd>T</kbd></div>
       <div class="shortcut-row"><span>四季合影</span><kbd>Q</kbd></div>
       <div class="shortcut-row"><span>投影增亮</span><kbd>P</kbd></div>
-      <div class="shortcut-row"><span>锁定屏幕</span><kbd>L</kbd></div>
       <div class="shortcut-row"><span>背景音乐</span><kbd>M</kbd></div>
       <div class="shortcut-row"><span>快捷键面板</span><kbd>?</kbd></div>
     </div>
@@ -1254,16 +1232,6 @@
   <button id="voiceNoticeClose" type="button" aria-label="关闭朗读提示">×</button>
 </div>
 
-<!-- 屏幕锁定 -->
-<div id="lockOverlay" role="dialog" aria-modal="true" aria-label="屏幕已锁定" tabindex="-1">
-  <div class="lock-inner">
-    <div class="lock-icon"><svg class="icon" aria-hidden="true"><use href="#i-lock"/></svg></div>
-    <div class="lock-title">屏幕已锁定</div>
-    <div class="lock-sub">长按屏幕 2 秒解锁</div>
-    <div class="lock-progress"><i></i></div>
-  </div>
-</div>
-
 <div id="vignette"></div>
 
 <div id="loading" role="status" aria-live="polite" aria-label="正在加载">
@@ -1275,7 +1243,7 @@
 </div>
 
 <audio id="bgm" src="./assets/tree-of-seasons-bgm-v3.mp3" preload="auto"></audio>
-<script src="./app.js?v=round5b"></script>
-<script src="./src/bgm.js?v=round5b"></script>
+<script src="./app.js?v=round5c"></script>
+<script src="./src/bgm.js?v=round5c"></script>
 </body>
 </html>

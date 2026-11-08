@@ -2,7 +2,7 @@
 
 > 本文解决：页面如何加载、由哪些层组成、每帧按什么顺序更新，以及新增模块应该插在哪里。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-08 · 对应代码：`f5bad43`（第五轮 · Web Speech 朗诵）
+> 最后更新：2026-11-08 · 对应代码：`5b1c469`（第五轮 · Web Speech 朗诵）
 
 ## 1. 加载链路
 
@@ -53,7 +53,7 @@
 13. **粒子**：雪、雨、飘落花瓣/落叶。
 14. **镜头与交互**：`cam` 状态（`THETA_MIN/MAX = π/2 ± 0.36`）、指针/滚轮/双指、`CAM_KEYS` 脚本。
 15. **旁白/播放器状态**：`CHAPTERS`、`storyTime`、播放/暂停、进度条、`plant()`（定帧用固定种子 `20240601`）。
-16. **课堂模式**：`#startScreen`、`#classroomTop`、`#subtitleBar`、`#classroomBar`、章节队列、找一找队列（含 bird/insect）、教师提示、四季合影、故事朗诵、投影/锁定。
+16. **课堂模式**：`#startScreen`、`#classroomTop`、`#subtitleBar`、`#classroomBar`、章节队列、找一找队列（含 bird/insect）、教师提示、四季合影、故事朗诵、投影。
 17. **主循环**：`growBranch()`、`animate()`。
 
 新增功能时，优先找到对应阶段插入；不要在 `animate()` 末尾堆一个独立的 `setInterval`，所有随时间变化的内容应统一走 `t` 和 `dt`。

@@ -3,7 +3,7 @@
 > 本文解决：新版界面（v3 现代设计系统）由哪些 DOM 与组件组成、每个交互背后是哪个事件与函数、快捷键/课堂流程怎么走，以及背景音乐 `src/bgm.js` 如何与画面时间同步。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
 > 设计 token、组件清单、动效规范、交互映射与验收结果见 [`11-round3-ui-system.md`](11-round3-ui-system.md)；整改前的问题清单见 [`10-round3-ui-plan.md`](10-round3-ui-plan.md)。
-> 最后更新：2026-11-08 · 对应代码：`f5bad43`（第五轮 · Web Speech 朗诵）
+> 最后更新：2026-11-08 · 对应代码：`5b1c469`（第五轮 · Web Speech 朗诵）
 
 > **本轮变更摘要**：第三轮彻底重做了界面语言与交互层。去掉宋体、金棕、深绿渐变、点状纹理、装饰光晕、胶囊按钮与 emoji 图标；改为深炭黑 + 雾白 + 单一薄荷绿 + 全站无衬线 + 1px 细线 + 统一圆角与轻投影。3D 舞台变成浮动圆角画框，课堂模式改为深色顶栏 / 深色字幕带 / 深色控制条。播放器、镜头、弹层、点认卡、找一找、自动暂停、快捷键面板全部补齐状态语义与键盘可达性。**3D 场景、14 章文案、章节时序、BGM 音频文件均未改动。**
 
@@ -48,7 +48,7 @@
 ├─ #startScreen                           开场页（左右分栏）
 ├─ #classroomTop / #seasonWheel / #subtitleBar / #classroomBar   课堂层
 ├─ .modal ×5: #chapterDrawer / #teacherPanel / #quartetOverlay / #shortcutPanel / #exitConfirm
-├─ #partCard / #findBanner / #pausePrompt / #classToast / #lockOverlay
+├─ #partCard / #findBanner / #pausePrompt / #classToast
 └─ #loading                               加载层（深色 logo + 生长进度线）
 <audio id="bgm"> + app.js + src/bgm.js
 ```
@@ -73,7 +73,7 @@
 |---|---|
 | ≤1180px | 收紧侧栏/课堂顶栏排版 |
 | ≤980px | `#volumeWrap`、`#classVolumeWrap` 隐藏；课堂顶栏开始换行 |
-| ≤700px | `:root` 覆盖 `--class-top:134px / --class-bar-h:72px / --class-sub-h:82px`；顶栏 8 个按钮 `flex: 0 0 calc(25% - 3px)`、`height:44px` 排成两行；`#sidebarTools button` 44px；`#playBtn / #replayBtn / #musicBtn / #timelineWrap / #timeline / #replant` 全部 ≥44px；`#timelineWrap` 换行独占一行 `height:44px`；`#marks` 下移到 30px；`#partCard` 固定底部；`.modal-close` 44px；章节弹层 2 列 |
+| ≤700px | `:root` 覆盖 `--class-top:134px / --class-bar-h:72px / --class-sub-h:82px`；顶栏 7 个按钮 `flex: 0 0 calc(25% - 3px)`、`height:44px` 排成两行；`#sidebarTools button` 44px；`#playBtn / #replayBtn / #musicBtn / #timelineWrap / #timeline / #replant` 全部 ≥44px；`#timelineWrap` 换行独占一行 `height:44px`；`#marks` 下移到 30px；`#partCard` 固定底部；`.modal-close` 44px；章节弹层 2 列 |
 
 `#classToast` 在课堂模式固定在 `bottom: calc(var(--class-bottom) + 18px)`，不再与顶部任务条抢位置。
 
@@ -112,7 +112,6 @@
 | `#classExitBtn` | `click` | `showExitConfirm()` | 打开 `#exitConfirm`，不直接退出 |
 | `#exitCancelBtn / #exitConfirmBtn` | `click` | `closeModal` / `exitClassroomMode()` | 取消或确认退出（保留 `storyTime`） |
 | `#partClose` / `#findClose` | `click` | `hidePartCard()` / `stopFindGame()` | 关闭浮层 |
-| `#lockOverlay` | `pointerdown` + 2s 长按 | `unlockScreen()` | 长按解锁，配合 `.lock-progress i` 2s 进度 |
 | `window` | `resize` | `refreshViewport()` | 同步 canvas 尺寸与相机 |
 
 ## 8. 镜头交互
@@ -142,11 +141,10 @@
 | `T` | 教师提示 | `openModal(teacherPanelEl)` |
 | `Q` | 四季合影 | `captureQuartet()`，按钮进入 `busy` + `aria-busy` |
 | `P` | 投影增亮 | `toggleProjector()` |
-| `L` | 锁定 / 解锁 | `toggleLock()` |
 | `M` | 背景音乐开关 | **在 `src/bgm.js` 里处理**（`toggleMusic()`），不在 `main.js` 的 keydown 中 |
 | `?`（或 `Shift+/`） | 快捷键面板 | `openModal(shortcutPanelEl)` |
 | `R` | 再种一棵 | 新种子 + 时间归零 |
-| `Esc` | 分层关闭 | 弹层 → 点认卡 → 找一找 → 暂停提示 → 课堂退出确认；锁定态下 Esc 只解锁 |
+| `Esc` | 分层关闭 | 弹层 → 点认卡 → 找一找 → 暂停提示 → 课堂退出确认 |
 
 **弹层打开时全局快捷键全部挂起**（`hasOpenModal()` 分支只处理 Esc/Tab），Space/←→/C/T/Q 不会再改动 `playing`、`storyTime` 或叠出第二层弹层。
 
@@ -156,28 +154,28 @@
 
 ### 9.3 `#shortcutPanel`
 
-按 `?` 打开，12 行 `<kbd>` 表（播放/暂停、快退快进、上下章、首尾、全屏、章节、教师提示、四季合影、增亮、锁定、音乐、快捷键面板），底部有触控说明（单指拖动 / 双指缩放 / 双击复位 / 拖拽不误触点认）。移动端 `.shortcut-grid` 变单列。
+按 `?` 打开，11 行 `<kbd>` 表（播放/暂停、快退快进、上下章、首尾、全屏、章节、教师提示、四季合影、增亮、音乐、快捷键面板），底部有触控说明（单指拖动 / 双指缩放 / 双击复位 / 拖拽不误触点认）。移动端 `.shortcut-grid` 变单列。
 
 ## 10. 课堂模式
 
 入口：默认开场页点「开始上课」、侧栏 `#classEnterBtn`、或 `index.html?class`（可配合 `?t0=N`）。`body.classroom-mode` 切换布局，所有控件都在 3D 舞台之外。
 
 ```
-#classroomTop     深色顶栏 64px：#classChapterIndex / #classChapterTitle / #classSeason + 8 个工具按钮
+#classroomTop     深色顶栏 64px：#classChapterIndex / #classChapterTitle / #classSeason + 7 个工具按钮
 #app              中间浮动 3D 画框（top: --class-top；bottom: --class-bottom）
 #seasonWheel      右上细环季节转盘
 #subtitleBar      白色大字幕带（88px）：#subtitleText（aria-live=polite aria-atomic）+ #subtitleMeta
 #classroomBar     白色底部控制条（84px）：#classProgressRow + 主控件 + 右侧小按钮
 ```
 
-- **顶栏 8 个按钮**：`#classChapterBtn / #classTeacherBtn / #classFindBtn / #classQuartetBtn / #classAutoBtn / #classProjectorBtn / #classLockBtn / #classExitBtn`。桌面一行；移动端两行、每个 `44px` 高。「退出」用 `[title*="退出"]` 单独给 `color: var(--ink-3)`，hover 变 `--danger`；真正退出前有确认弹层，避免紧邻误触。
+- **顶栏 7 个按钮**：`#classChapterBtn / #classTeacherBtn / #classFindBtn / #classQuartetBtn / #classAutoBtn / #classProjectorBtn / #classExitBtn`。桌面一行；移动端两行、每个 `44px` 高。「退出」用 `[title*="退出"]` 单独给 `color: var(--ink-3)`，hover 变 `--danger`；真正退出前有确认弹层，避免紧邻误触。
 - **`#classProgress`**：`role="slider"`、`aria-label="课堂播放进度"`、`aria-valuemin=0 / aria-valuemax=260 / aria-valuenow`、`tabindex=0`，细轨道 + `<i>` 进度 + 圆形 thumb。支持点击 / 拖动（`setPointerCapture`）/ 键盘 `← →` 各 5 秒；`syncPlayer()` 按 `--cp` 与 `aria-valuenow` 增量更新。
 - **`#classVolume`**：课堂底栏右侧 `#classVolumeWrap` 内的音量滑杆，与 `#volume` 双向同步（≤980px 隐藏）。
 - **`#classTimecode`**：`mm:ss / mm:ss`，移动端仍保留（9px 紧凑排版）。
-- **状态型按钮**：`#classAutoBtn / #classVoiceBtn / #classProjectorBtn / #classLockBtn` 由 `updateClassroomButtons()` 切 `.on` 并写 **`aria-pressed="true/false"`**；文案固定（不再出现「每章停 ✓」这种撑宽文字）。
+- **状态型按钮**：`#classAutoBtn / #classVoiceBtn / #classProjectorBtn` 由 `updateClassroomButtons()` 切 `.on` 并写 **`aria-pressed="true/false"`**；文案固定（不再出现「每章停 ✓」这种撑宽文字）。
 - **主控件**：`#classPrevBtn / #classPlayBtn / #classNextBtn`（播放键同样用 `data-playing` 切 SVG），首尾章自动 `disabled`；右侧 `#classMusicBtn / #classVoiceBtn / #classReplayBtn`。
 - **退出确认 `#exitConfirm`**：点「退出」→ `showExitConfirm()` 打开弹层（"当前进度会保留，下次进入课堂模式可以继续"）→ `#exitCancelBtn` 取消 / `#exitConfirmBtn` 调 `exitClassroomMode()`。`exitClassroomMode()` **不再把 `storyTime` 归零**；`freeViewBtn` 文案改为「继续观看」，重新进入课堂（或自由观看）可接着看。Esc 在课堂模式也会打开这个确认层。
-- **章节自动暂停**：`animate()` 在 `classroomMode && autoPauseAtChapter` 且跨章时停在 `CHAPTERS[i].end`，`showPausePrompt()` 给出「第 X 章结束 · 下一章：…」+「继续播放」按钮；`chapterIndexAt` 此时已指向下一章，点继续或空格从下一章接着播。
+- **章节自动暂停（默认关闭）**：`animate()` 在 `classroomMode && autoPauseAtChapter` 且跨章时停在 `CHAPTERS[i].end`，`showPausePrompt()` 给出「第 X 章结束 · 下一章：…」+「继续播放」按钮；`chapterIndexAt` 此时已指向下一章，点继续或空格从下一章接着播。
 - **结束行为**：到 `STORY_END` 不再自动弹出四季合影，只 `showToast('本课播放结束 · 可点「四季合影」回顾四季')`，由老师决定。
 - 进入/退出都调用 `refreshViewport()`；`requestWakeLock()` / `releaseWakeLock()` 保持常亮；`resetIdle()` 控制 `body.idle` 隐藏光标。
 
@@ -245,10 +243,10 @@
 
 1. 打开页面 → `#loading` 淡出 → `#startScreen`；点「开始上课」请求全屏并 `enterClassroomMode({reset:true, fullscreen:true, autoplay:true})`。
 2. 顶栏 / 字幕带 / 底栏依次 `chromeDown .42s`、`chromeUp .45s` 进入；`setAutoPause(true)`、`setProjector(false)`、`requestWakeLock()`。
-3. 每章结束自动停 → `#pausePrompt` 出现 → 老师提问（可点「教师提示」看「可以问 / 可以动」）→ 点「继续播放」或空格继续。
+3. 如需每章停：点顶栏「每章停」开启 → 到章末 `#pausePrompt` 出现 → 老师提问（可点「教师提示」看「可以问 / 可以动」）→ 点「继续播放」或空格继续。
 4. 想重讲某句：拖 `#classProgress` 或按 `←/→`；想换章：顶栏「章节」或 `C` / `PageUp` / `PageDown`。
 5. 「找一找」按当前章节可见部位出题（含 bird / insect），点中出点认卡；「四季合影」`Q` 生成四张（按钮期间 `busy`）。
-6. 需要时「增亮」（投影）、「锁定」（长按 2s 解锁）、「朗诵」（浏览器 Web Speech，中文在线自然音优先；无语音时降级提示；BGM 自动 duck 到 18%）。
+6. 需要时「增亮」（投影）、「朗诵」（浏览器 Web Speech，中文在线自然音优先；无语音时降级提示；BGM 自动 duck 到 18%）。
 7. 结束：到 04:20 自动停并 toast 提示可回顾合影（不强制弹层）；点「退出」→ `#exitConfirm` 确认 → 保留 `storyTime` 回到开场页，按钮变「继续观看」。
 8. 任意时刻 `?` 打开快捷键面板；`Esc` 按「弹层 → 点认卡 → 找一找 → 暂停提示 → 退出确认」逐层关闭。
 
@@ -275,7 +273,6 @@
 - 选择顺序：中文语音 → 在线（`localService === false`）→ 名称含 Natural / Online / Neural / Google / Xiaoxiao / Yunxi 等在线自然音 → 本机中文音（婷婷 / 美嘉 / 善怡等）；非中文声音不参与。
 - 语音列表可能异步返回：监听 `voiceschanged`，并在初始化后短暂轮询；用户点「朗诵」时最多等 1.2s。
 - 无语音 / 无中文语音 / 浏览器不支持时：桌面显示 `#voiceNotice`（`role=alert`，可关闭），说明安装中文语音或换 Chrome / Edge；手机 / 微信内置浏览器只显示一句轻提示（不弹大面板），文字旁白继续可用。
-- 桌面课堂底栏「朗读」旁有 `#voiceStatus`，会显示 `本机 · 婷婷` 或 `在线自然 · Microsoft Xiaoxiao Online`；如果显示「本机」，说明当前浏览器只有本机语音，不代表代码没换。
 - `#classVoiceBtn` 默认关闭（避免自动出声）；始终可点：没有语音时保持 `aria-pressed=false`，不会把「开启但无声」伪装成成功；按钮有 `.warn` 状态和动态 `title`。
 - 调试：`window.__classroom.speech.state()` 看当前语音、`setVoicesForTest([...])` / `resetForTest()` 可注入假语音列表做自动化回归。
 
