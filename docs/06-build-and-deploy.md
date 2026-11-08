@@ -61,7 +61,8 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 | **`pre-round4`** | 第四轮测试看板改动前的干净版本 |
 | **`round4-v1`** | **第四轮完成点**（可视化测试看板 / 自动化回归 / 108 测试点） |
 | **`pre-round5`** | 第五轮朗诵 Web Speech 改动前的干净版本 |
-| **`round5-v1`** | **第五轮完成点**（Web Speech 朗诵 / 中文在线自然音优先 / 无语音降级） |
+| **`pre-round5b`** | 手机端降级提示修补前的版本 |
+| **`round5-v1`** | **第五轮完成点**（Web Speech 朗诵 / 中文在线自然音优先 / 手机轻提示 / QA 冒烟） |
 
 ```bash
 git tag                                  # 查看已有回退点
