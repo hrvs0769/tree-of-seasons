@@ -13,3 +13,4 @@ shots/
 /tmp/
 __pycache__/
 qa/data/results-smoke.json
+qa/data/results-release.json

@@ -25,7 +25,7 @@
 ## 本轮新增（2026-11-08 · 第四轮 可视化测试看板）
 
 - **独立质量看板 `/qa/`**：深色工程控制台，10 个模块、109 个测试点（P0 22 / P1 62 / P2 25）、自动 101 / 人工 8；支持搜索与模块/优先级/状态/类型筛选、测试点详情、证据截图、历史通过率趋势与运行中实时进度。
-- **自动化测试 Runner**：`node tools/qa-run.js --version v4.1.0 --label "..."` 用 Playwright 跑 101 条自动检查，逐条落盘 `qa/data/results.json`，并把每次大版本摘要写入 `qa/data/history.json`；P0/P1 有失败时退出码非 0。日常小改用 `--only CLASS,A11Y` 或 `--smoke`（只写 `results-smoke.json`，5–10 分钟），不要每次跑全量。
+- **自动化测试 Runner**：`node tools/qa-run.js --version v4.1.0 --label "..."` 用 Playwright 跑 101 条自动检查，逐条落盘 `qa/data/results.json`，并把每次大版本摘要写入 `qa/data/history.json`；P0/P1 有失败时退出码非 0。日常小改用 `--only CLASS,A11Y` 或 `--smoke`（只写 `results-smoke.json`，约 4–5 分钟）；发布前用 `--release-fast`（全部 P0，实测约 10 分钟，写 `results-release.json`），全量只在版本收尾/大改时跑。
 - **一条命令发布前检查**：`./tools/qa-release.sh v4.1.0 "第五轮 · 主题"` 会先构建 `app.js` 再跑全量；测试点总表见 [`docs/12-test-points.md`](docs/12-test-points.md)，使用手册见 [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md)。
 
 ## 本轮新增（2026-11-07 · 第三轮 UI 现代化）

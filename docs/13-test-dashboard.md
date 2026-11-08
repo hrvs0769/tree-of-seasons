@@ -45,10 +45,11 @@
 | 场景 | 命令 | 预计 | 是否覆盖正式看板 |
 |---|---|---|---|
 | 只改一个模块 | `node tools/qa-run.js --only CLASS,A11Y` | 3–8 分钟 | 否，写 `qa/data/results-smoke.json` |
-| 改完想做核心自检 | `node tools/qa-run.js --smoke` | 5–10 分钟 | 否，写 `qa/data/results-smoke.json` |
-| 大版本 / 发布前 | `./tools/qa-release.sh v4.1.0 "本轮主题"` | 40–60 分钟 | 是，写 `qa/data/results.json` |
+| 改完想做核心自检 | `node tools/qa-run.js --smoke` | 约 4–5 分钟（实测 4m10s） | 否，写 `qa/data/results-smoke.json` |
+| **发布前高风险门禁** | `node tools/qa-run.js --release-fast` | **实测 9m57s（22 条 P0 全过）** | 否，写 `qa/data/results-release.json` |
+| 大版本 / 需要完整覆盖 | `./tools/qa-release.sh v4.1.0 "本轮主题"` | 40–60 分钟（全量 109 条） | 是，写 `qa/data/results.json` |
 
-`--only` 和 `--smoke` 都不会覆盖正式 `results.json`/`history.json`，所以可以放心日常跑；只有全量运行才更新看板基线。
+`--only`、`--smoke` 和 `--release-fast` 都不会覆盖正式 `results.json`/`history.json`，所以可以放心日常/发布前跑；只有全量运行才更新看板基线。
 
 ### 4.1 一条命令（推荐，发布前）
 
@@ -93,6 +94,14 @@ node tools/qa-run.js --smoke
 ```
 
 只跑核心链路 12 条（冷启动、课堂入口、章节切换、播放/重播、自动暂停、朗诵选择、弹层 aria 等），结果写 `qa/data/results-smoke.json`；适合「改一点点」先确认没有大面积回归。确认无问题后，发布前再跑一次全量。
+
+### 4.3.2 发布前 10 分钟门禁
+
+```bash
+node tools/qa-run.js --release-fast
+```
+
+自动跑全部 **P0 22 条**（阻断级：启动、定帧确定性、章节、播放、课堂、探索、响应式、无障碍、发布），结果写 `qa/data/results-release.json`。这是「约 10 分钟」的发布门禁（实测 9m57s），不替代 109 条全量覆盖；全量可放在版本收尾、季度检查或动到渲染内核时。
 
 ### 4.4 结束后
 
