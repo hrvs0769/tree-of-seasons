@@ -2800,7 +2800,6 @@ const classFindBtn = document.getElementById('classFindBtn');
 const classQuartetBtn = document.getElementById('classQuartetBtn');
 const classAutoBtn = document.getElementById('classAutoBtn');
 const classProjectorBtn = document.getElementById('classProjectorBtn');
-const classLockBtn = document.getElementById('classLockBtn');
 const classExitBtn = document.getElementById('classExitBtn');
 const seasonWheelEl = document.getElementById('seasonWheel');
 const wheelNeedleEl = document.getElementById('wheelNeedle');
@@ -2812,7 +2811,6 @@ const classPrevBtn = document.getElementById('classPrevBtn');
 const classPlayBtn = document.getElementById('classPlayBtn');
 const classNextBtn = document.getElementById('classNextBtn');
 const classVoiceBtn = document.getElementById('classVoiceBtn');
-const voiceStatusEl = document.getElementById('voiceStatus');
 const classReplayBtn = document.getElementById('classReplayBtn');
 const chapterDrawerEl = document.getElementById('chapterDrawer');
 const chapterGridEl = document.getElementById('chapterGrid');
@@ -2837,7 +2835,6 @@ const classToastEl = document.getElementById('classToast');
 const voiceNoticeEl = document.getElementById('voiceNotice');
 const voiceNoticeTextEl = document.getElementById('voiceNoticeText');
 const voiceNoticeCloseEl = document.getElementById('voiceNoticeClose');
-const lockOverlayEl = document.getElementById('lockOverlay');
 const chapterBtnNormal = document.getElementById('chapterBtnNormal');
 const quartetBtnNormal = document.getElementById('quartetBtnNormal');
 const classEnterBtn = document.getElementById('classEnterBtn');
@@ -2860,14 +2857,13 @@ function setPlayUI(btn, isPlaying) {
 let currentSeasonLabel = '';
 let currentChapter = -1;
 let classroomMode = false;
-let autoPauseAtChapter = true;
+let autoPauseAtChapter = false;   // 默认不自动每章停，需要时老师手动开启
 const speechReader = createSpeechReader();
 const speechSupported = speechReader.supported;
 let voiceOn = false;              // 默认关闭：老师点「朗读」再开口，避免无声状态被误认为已开启
 let voiceNoticeTimer = 0;
 let voiceChecking = false;
 let projectorBright = false;
-let touchLocked = false;
 let startScreenVisible = false;
 let autoPausePending = false;
 let findTarget = null;
@@ -2879,7 +2875,6 @@ let findRound = 1;
 let lastSpokenChapter = -1;
 let wakeLock = null;
 let idleTimer = 0;
-let lockPressTimer = 0;
 let quartetBusy = false;
 let quartetAutoDone = false;
 let quartetShooting = false;   // 四季合影期间关掉深根取景，保证四张照片构图一致
@@ -3191,12 +3186,6 @@ const VOICE_MOBILE_TEXT = {
   'no-chinese': '当前浏览器无中文语音，文字旁白可正常使用。',
   error: '朗读启动失败，文字旁白可正常使用。',
 };
-function voiceLabel(v) {
-  if (!v) return '朗读';
-  const kind = v.online && v.natural ? '在线自然语音' : (v.online ? '在线语音' : '本机中文语音');
-  const name = String(v.name || '').length > 26 ? String(v.name).slice(0, 24) + '…' : String(v.name || '');
-  return kind + ' · ' + name;
-}
 function isCompactUI() {
   try { return window.matchMedia('(max-width: 700px)').matches; } catch (e) { return window.innerWidth <= 700; }
 }
@@ -3366,20 +3355,11 @@ function updateClassroomButtons() {
     classVoiceBtn.setAttribute('aria-pressed', voiceOn ? 'true' : 'false');
     if (!vs.supported) classVoiceBtn.title = '当前浏览器不支持朗读（Web Speech API）';
     else if (!vs.available) classVoiceBtn.title = '未检测到中文语音，点击查看降级说明';
-    else classVoiceBtn.title = '朗读：' + voiceLabel(vs.voice) + (vs.voice.online && vs.voice.natural ? '' : '（当前浏览器无在线自然音）');
-    if (voiceStatusEl) {
-      if (!vs.supported) voiceStatusEl.textContent = '语音不可用';
-      else if (!vs.available) voiceStatusEl.textContent = '无中文语音';
-      else voiceStatusEl.textContent = (vs.voice.online && vs.voice.natural ? '在线自然' : (vs.voice.online ? '在线' : '本机')) + ' · ' + vs.voice.name;
-    }
+    else classVoiceBtn.title = '故事姐姐朗读';
   }
   if (classProjectorBtn) {
     classProjectorBtn.classList.toggle('on', projectorBright);
     classProjectorBtn.setAttribute('aria-pressed', projectorBright ? 'true' : 'false');
-  }
-  if (classLockBtn) {
-    classLockBtn.classList.toggle('on', touchLocked);
-    classLockBtn.setAttribute('aria-pressed', touchLocked ? 'true' : 'false');
   }
 }
 function setAutoPause(v) {
@@ -3459,7 +3439,7 @@ async function toggleVoice() {
     voiceOn = true;
     updateClassroomButtons();
     hideVoiceNotice();
-    showToast('朗读已开启 · ' + voiceLabel(checked.voice), 2800);
+    showToast('朗读已开启', 1800);
     if (classroomMode && playing) speakCurrentChapter();
   } finally {
     voiceChecking = false;
@@ -3470,31 +3450,13 @@ speechReader.subscribe(() => updateClassroomButtons());
 if (voiceNoticeCloseEl) voiceNoticeCloseEl.addEventListener('click', hideVoiceNotice);
 window.addEventListener('beforeunload', () => speechReader.cancel());
 
-/* ---- 屏幕锁定 / 光标隐藏 / 屏幕常亮 ---- */
-function lockScreen() {
-  touchLocked = true;
-  hidePartCard();
-  stopFindGame();
-  lockOverlayEl.classList.add('show');
-  requestAnimationFrame(() => { try { lockOverlayEl.focus({ preventScroll: true }); } catch (e) {} });
-  updateClassroomButtons();
-}
-function unlockScreen() {
-  touchLocked = false;
-  lockOverlayEl.classList.remove('show', 'holding');
-  clearTimeout(lockPressTimer);
-  updateClassroomButtons();
-  showToast('屏幕已解锁');
-}
-function toggleLock() {
-  if (touchLocked) unlockScreen(); else lockScreen();
-}
+/* ---- 光标隐藏 / 屏幕常亮 ---- */
 function resetIdle() {
   document.body.classList.remove('idle');
   clearTimeout(idleTimer);
   if (!classroomMode) return;
   idleTimer = setTimeout(() => {
-    if (!hasOpenModal() && !startScreenVisible && !touchLocked) document.body.classList.add('idle');
+    if (!hasOpenModal() && !startScreenVisible) document.body.classList.add('idle');
   }, 2600);
 }
 async function requestWakeLock() {
@@ -3549,7 +3511,7 @@ function enterClassroomMode(opts = {}) {
   }
   if (freeViewBtn) freeViewBtn.textContent = '自由观看';
   playing = false;
-  setAutoPause(true);
+  setAutoPause(false);
   setProjector(false);
   updateClassroomButtons();
   updateChapterUI(storyTime);
@@ -3571,8 +3533,6 @@ function exitClassroomMode() {
   resetFindBag();
   hidePartCard();
   hidePausePrompt();
-  touchLocked = false;
-  lockOverlayEl.classList.remove('show', 'holding');
   releaseWakeLock();
   classroomMode = false;
   document.body.classList.remove('classroom-mode', 'idle', 'projector');
@@ -3837,7 +3797,7 @@ function stopFindGame() {
   if (findBannerEl) findBannerEl.classList.remove('show', 'shake');
 }
 function handleCanvasTap(clientX, clientY) {
-  if (startScreenVisible || touchLocked) return;
+  if (startScreenVisible) return;
   const part = pickPartAt(clientX, clientY);
   if (findActive) {
     const nearTarget = isNearFindTarget(clientX, clientY);
@@ -4036,7 +3996,6 @@ classFindBtn.addEventListener('click', startFindGame);
 classQuartetBtn.addEventListener('click', captureQuartet);
 classAutoBtn.addEventListener('click', toggleAutoPause);
 classProjectorBtn.addEventListener('click', toggleProjector);
-classLockBtn.addEventListener('click', toggleLock);
 classExitBtn.addEventListener('click', showExitConfirm);
 document.getElementById('exitCancelBtn').addEventListener('click', () => closeModal(document.getElementById('exitConfirm')));
 document.getElementById('exitConfirmBtn').addEventListener('click', () => { closeModal(document.getElementById('exitConfirm')); exitClassroomMode(); });
@@ -4060,18 +4019,6 @@ document.querySelectorAll('.modal').forEach((m) => {
 document.querySelectorAll('[data-close]').forEach((b) => {
   b.addEventListener('click', () => closeModal(document.getElementById(b.dataset.close)));
 });
-lockOverlayEl.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  lockOverlayEl.classList.add('holding');
-  clearTimeout(lockPressTimer);
-  lockPressTimer = setTimeout(unlockScreen, 2000);
-});
-['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => {
-  lockOverlayEl.addEventListener(ev, () => {
-    lockOverlayEl.classList.remove('holding');
-    clearTimeout(lockPressTimer);
-  });
-});
 window.addEventListener('pointermove', resetIdle, { passive: true });
 window.addEventListener('pointerdown', resetIdle, { passive: true });
 document.addEventListener('visibilitychange', () => {
@@ -4079,10 +4026,6 @@ document.addEventListener('visibilitychange', () => {
 });
 
 window.addEventListener('keydown', (e) => {
-  if (touchLocked) {
-    if (e.key === 'Escape') { e.preventDefault(); unlockScreen(); }
-    return;
-  }
   // 弹层打开时只保留 Esc 与 Tab，全局快捷键全部挂起
   if (hasOpenModal()) {
     if (e.key === 'Escape') { e.preventDefault(); closeAllModals(); }
@@ -4106,7 +4049,6 @@ window.addEventListener('keydown', (e) => {
   else if (e.key === 't' || e.key === 'T') { e.preventDefault(); openModal(teacherPanelEl); }
   else if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); captureQuartet(); }
   else if (e.key === 'p' || e.key === 'P') { e.preventDefault(); toggleProjector(); }
-  else if (e.key === 'l' || e.key === 'L') { e.preventDefault(); toggleLock(); }
   else if (e.key === '?' || (e.key === '/' && e.shiftKey)) { e.preventDefault(); openModal(shortcutPanelEl); }
   else if (e.key === 'Escape') {
     if (partCardEl.classList.contains('show')) { e.preventDefault(); hidePartCard(); }
@@ -4897,7 +4839,7 @@ if (CLASSROOM_PARAM) {
 window.__classroom = {
   enter: enterClassroomMode,
   exit: exitClassroomMode,
-  state: () => ({ classroomMode, autoPauseAtChapter, voiceOn, projectorBright, touchLocked, storyTime, playing, currentChapter }),
+  state: () => ({ classroomMode, autoPauseAtChapter, voiceOn, projectorBright, storyTime, playing, currentChapter }),
   speech: {
     state: () => speechReader.state(),
     setVoicesForTest: (list) => speechReader.setVoicesForTest(list),

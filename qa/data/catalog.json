@@ -38,7 +38,7 @@
       "name": "课堂模式",
       "en": "CLASSROOM",
       "accent": "#A9E8C7",
-      "description": "?class 课堂入口、顶栏 8 工具、字幕、课堂进度、每章暂停、教师提示、退出保留、投影/锁定、Web Speech 朗诵（中文在线自然音优先 + 无语音降级）、四季合影与结束提示。"
+      "description": "?class 课堂入口、顶栏 7 工具（锁定已移除）、字幕、课堂进度、可选的每章暂停、教师提示、退出保留、投影、Web Speech 朗诵（中文在线自然音优先 + 无语音降级）、四季合影与结束提示。"
     },
     {
       "id": "explore",
@@ -1017,14 +1017,14 @@
     {
       "id": "CLASS-02",
       "module": "classroom",
-      "title": "顶栏 8 个工具按钮",
-      "summary": "顶栏含章节、教师提示、找一找、四季合影、每章停、增亮、锁定、退出 8 个按钮。",
+      "title": "顶栏 7 个工具按钮",
+      "summary": "顶栏含章节、教师提示、找一找、四季合影、每章停、增亮、退出 7 个按钮；锁定已移除。",
       "goal": "课堂工具是老师授课的操作台，少一个功能就少一种教学手段。",
-      "expected": "8 个按钮 id 齐全且可见；role=toolbar；aria-label=课堂工具。",
+      "expected": "7 个按钮 id 齐全且可见；role=toolbar；aria-label=课堂工具；无锁定按钮。",
       "steps": [
         "打开 ?class",
         "统计 .class-top-actions button",
-        "核对 8 个 id"
+        "核对 7 个 id"
       ],
       "priority": "P1",
       "type": "auto",
@@ -1102,11 +1102,12 @@
       "id": "CLASS-06",
       "module": "classroom",
       "title": "每章结束自动暂停",
-      "summary": "从 15.5s 播放到 16s 自动停在章节边界，提示下一章并可继续。",
-      "goal": "每章暂停是幼儿园课堂的核心节奏，老师要在这里提问互动。",
-      "expected": "storyTime 停在 16.0；#pausePrompt 显示第 1 章结束与下一章；点 #pauseContinue 后 playing=true。",
+      "summary": "默认关闭；需要时点「每章停」开启，然后从 15.5s 播放到 16s 自动停在章节边界，提示下一章并可继续。",
+      "goal": "每章暂停是幼儿园课堂的可选节奏，老师可按课堂需要开启并提问互动。",
+      "expected": "默认 autoPauseAtChapter=false；开启 #classAutoBtn 后 storyTime 停在 16.0；#pausePrompt 显示第 1 章结束与下一章；点 #pauseContinue 后 playing=true。",
       "steps": [
-        "打开 ?class&t0=15.5",
+        "打开 ?class&t0=14.8",
+        "点 #classAutoBtn 开启每章停",
         "等待跨越 16s",
         "读取暂停位置与提示",
         "点击继续播放"
@@ -1145,7 +1146,7 @@
       "module": "classroom",
       "title": "退出确认与保留进度",
       "summary": "退出先确认，取消可返回，确认后保留 storyTime 并显示继续观看。",
-      "goal": "退出按钮紧邻锁定，误触必须可撤销，且老师处理事情后要能接着讲。",
+      "goal": "退出按钮在顶栏最右，误触必须可撤销，且老师处理事情后要能接着讲。",
       "expected": "#exitConfirm.show；取消仍在课堂；确认后 storyTime≈100、#freeViewBtn=继续观看。",
       "steps": [
         "打开 ?class&t0=100",
@@ -1186,15 +1187,14 @@
     {
       "id": "CLASS-10",
       "module": "classroom",
-      "title": "屏幕锁定与长按解锁",
-      "summary": "锁定后全屏遮罩出现，长按 2 秒解锁，锁定按钮 aria-pressed 同步。",
-      "goal": "小朋友乱点会打乱课堂，锁定是课堂秩序保障。",
-      "expected": "#lockOverlay.show；长按 2s 后消失；aria-pressed true→false。",
+      "title": "锁定功能已移除",
+      "summary": "课堂不再提供锁定按钮、遮罩、touchLocked 状态和 L 快捷键。",
+      "goal": "锁定没有实际教学价值，留着只会增加误触和布局负担。",
+      "expected": "#classLockBtn 与 #lockOverlay 均不存在；state 无 touchLocked；按 L 不出现遮罩。",
       "steps": [
         "打开 ?class",
-        "点击锁定",
-        "长按遮罩 2 秒",
-        "检查遮罩与按钮状态"
+        "检查按钮/遮罩/state",
+        "按 L 检查无反应"
       ],
       "priority": "P2",
       "type": "auto",
@@ -1567,12 +1567,12 @@
       "id": "RESP-04",
       "module": "responsive",
       "title": "课堂顶栏移动端两行",
-      "summary": "390 宽下课堂 8 个按钮排成 4+4 两行，每个高度≥44px。",
+      "summary": "390 宽下课堂 7 个按钮排成两行，每个高度≥44px。",
       "goal": "老师用手机或平板控制课堂时，小按钮根本点不准。",
       "expected": "按钮两行分布；每个高≥44；#classroomTop 桌面 64px、移动 134px。",
       "steps": [
         "390×844 打开 ?class",
-        "读取 8 个按钮的 rect",
+        "读取 7 个按钮的 rect",
         "检查换行与高度"
       ],
       "priority": "P1",
@@ -1813,11 +1813,11 @@
       "id": "A11Y-06",
       "module": "a11y",
       "title": "开关按钮 aria-pressed",
-      "summary": "音乐与课堂每章停/朗读/增亮/锁定按钮均写 aria-pressed 且与状态一致。",
+      "summary": "音乐与课堂每章停/朗读/增亮按钮均写 aria-pressed 且与状态一致。",
       "goal": "读屏用户靠 aria-pressed 判断开关状态，缺失就不知道当前是否开启。",
-      "expected": "5 类按钮属性存在；切换后 true↔false；文案固定。",
+      "expected": "4 类按钮属性存在；切换后 true↔false；文案固定。",
       "steps": [
-        "读取 #musicBtn 与 4 个课堂开关",
+        "读取 #musicBtn 与 3 个课堂开关",
         "逐个切换并检查 aria-pressed"
       ],
       "priority": "P1",
@@ -1911,7 +1911,7 @@
       "id": "A11Y-11",
       "module": "a11y",
       "title": "44px 触控命中",
-      "summary": "390 宽下课堂 8 按钮、播放器 6 控件与进度条命中区均≥44px。",
+      "summary": "390 宽下课堂 7 按钮、播放器 6 控件与进度条命中区均≥44px。",
       "goal": "幼儿园老师单手持机操作，小按钮必然误触。",
       "expected": "每个 rect 宽高≥44；#timelineWrap 高度≥44；#classProgress 命中区≥44。",
       "steps": [

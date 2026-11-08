@@ -25,20 +25,20 @@ module.exports = [
       assert(info.cls && info.body, '?class 未进入课堂模式');
       assert(info.startHidden, '?class 下开场页未隐藏');
       assert(info.topVisible, '课堂顶栏不可见');
-      assert(info.topButtons === 8, `课堂顶栏按钮=${info.topButtons}，期望 8`);
+      assert(info.topButtons === 7, `课堂顶栏按钮=${info.topButtons}，期望 7（锁定已移除）`);
       assert(info.toolbar && info.toolbar.role === 'toolbar' && info.toolbar.label === '课堂工具', `顶栏 toolbar 语义=${JSON.stringify(info.toolbar)}`);
       assert(info.subtitleVisible, '字幕带不可见');
-      return { message: '?class 直接进入课堂模式，顶栏 8 按钮与字幕带可见', actual: `classroomMode=true, topButtons=8` };
+      return { message: '?class 直接进入课堂模式，顶栏 7 按钮与字幕带可见', actual: `classroomMode=true, topButtons=7` };
     },
   },
   {
-    key: 'class.topButtons8',
+    key: 'class.topButtons7',
     aliases: ['classroom.topbar', 'class.topbar', 'class.toolbar', 'class.topButtons'],
-    title: '课堂顶栏 8 个工具按钮齐全',
+    title: '课堂顶栏 7 个工具按钮齐全',
     run: async (ctx) => {
       const s = await ctx.open('?class&t0=100&freeze');
       const info = await s.page.evaluate(() => {
-        const ids = ['classChapterBtn', 'classTeacherBtn', 'classFindBtn', 'classQuartetBtn', 'classAutoBtn', 'classProjectorBtn', 'classLockBtn', 'classExitBtn'];
+        const ids = ['classChapterBtn', 'classTeacherBtn', 'classFindBtn', 'classQuartetBtn', 'classAutoBtn', 'classProjectorBtn', 'classExitBtn'];
         return ids.map((id) => {
           const el = document.getElementById(id);
           const r = el.getBoundingClientRect();
@@ -47,12 +47,12 @@ module.exports = [
       });
       await ctx.close(s);
       assert(info.every((b) => b.exists && b.w > 0 && b.h > 0), `按钮缺失/不可见：${JSON.stringify(info.filter((b) => !b.exists || b.w === 0))}`);
-      assert(info.length === 8, `按钮数=${info.length}`);
+      assert(info.length === 7, `按钮数=${info.length}`);
       const names = info.map((b) => b.text).join('/');
-      for (const k of ['章节', '教师提示', '找一找', '四季合影', '每章停', '增亮', '锁定', '退出']) {
+      for (const k of ['章节', '教师提示', '找一找', '四季合影', '每章停', '增亮', '退出']) {
         assert(names.includes(k), `缺少按钮文案「${k}」，实际：${names}`);
       }
-      return { message: '课堂顶栏 8 个按钮齐全且全部可见', actual: `8/8: ${names}` };
+      return { message: '课堂顶栏 7 个按钮齐全且全部可见', actual: `7/7: ${names}` };
     },
   },
   {
@@ -128,8 +128,10 @@ module.exports = [
     aliases: ['classroom.autoPause', 'class.chapterAutoPause', 'class.autoPauseAtChapter'],
     title: '每章结束自动暂停并提示',
     run: async (ctx) => {
-      const s = await ctx.open('?class&t0=15.9', { readyTimeout: 30000 });
-      await s.page.waitForFunction(() => document.getElementById('pausePrompt').classList.contains('show'), null, { timeout: 15000 });
+      const s = await ctx.open('?class&t0=14.8', { readyTimeout: 30000 });
+      // 本轮默认不开启每章停，测试里显式打开再验证；从 14.8s 起跑，软件 GL 下也只需跨过 16s 章节边界
+      await s.page.click('#classAutoBtn');
+      await s.page.waitForFunction(() => document.getElementById('pausePrompt').classList.contains('show'), null, { timeout: 30000 });
       const pause = await s.page.evaluate(() => ({
         text: document.getElementById('pausePrompt').textContent,
         state: window.__classroom.state(),
@@ -216,32 +218,23 @@ module.exports = [
   {
     key: 'class.lockOverlay',
     aliases: ['classroom.lock', 'class.lock', 'class.lockScreen'],
-    title: '锁定层与 Esc 解锁',
+    title: '锁定功能已移除',
     run: async (ctx) => {
       const s = await ctx.open('?class&t0=100&freeze');
-      await s.page.click('#classLockBtn');
-      await sleep(300);
-      const locked = await s.page.evaluate(() => {
-        const o = document.getElementById('lockOverlay');
-        return { shown: o.classList.contains('show'), role: o.getAttribute('role'), aria: o.getAttribute('aria-label'), touchLocked: window.__classroom.state().touchLocked };
-      });
-      const overlay = await s.page.locator('#lockOverlay').boundingBox();
-      await s.page.mouse.move(overlay.x + overlay.width / 2, overlay.y + overlay.height / 2);
-      await s.page.mouse.down();
-      await sleep(2300);
-      await s.page.mouse.up();
-      const unlocked = await s.page.evaluate(() => ({ shown: document.getElementById('lockOverlay').classList.contains('show'), touchLocked: window.__classroom.state().touchLocked }));
-      await s.page.click('#classLockBtn');
-      await sleep(250);
-      await s.page.keyboard.press('Escape');
-      await sleep(300);
-      const escUnlocked = await s.page.evaluate(() => ({ shown: document.getElementById('lockOverlay').classList.contains('show'), touchLocked: window.__classroom.state().touchLocked }));
+      const info = await s.page.evaluate(() => ({
+        btn: !!document.getElementById('classLockBtn'),
+        overlay: !!document.getElementById('lockOverlay'),
+        stateHasLock: Object.prototype.hasOwnProperty.call(window.__classroom.state(), 'touchLocked'),
+        buttons: document.querySelectorAll('#classroomTop button').length,
+      }));
+      await s.page.keyboard.press('l');
+      await sleep(150);
+      const after = await s.page.evaluate(() => ({ overlay: !!document.getElementById('lockOverlay'), bodyLocked: document.body.classList.contains('locked') }));
       await ctx.close(s);
-      assert(locked.shown && locked.touchLocked, '锁定层未显示');
-      assert(locked.role === 'dialog' && locked.aria === '屏幕已锁定', `锁定层语义 role=${locked.role}, aria=${locked.aria}`);
-      assert(!unlocked.shown && !unlocked.touchLocked, '长按 2s 未解锁');
-      assert(!escUnlocked.shown && !escUnlocked.touchLocked, 'Esc 未解锁');
-      return { message: '锁定层显示 role=dialog，长按 2s 与 Esc 均可解锁', actual: 'lock→hold2s→unlock; lock→Esc→unlock' };
+      assert(!info.btn && !info.overlay && !info.stateHasLock, `锁定痕迹仍存在：${JSON.stringify(info)}`);
+      assert(info.buttons === 7, `顶栏按钮=${info.buttons}，期望 7`);
+      assert(!after.overlay && !after.bodyLocked, '按 L 后仍出现锁定层');
+      return { message: '锁定按钮/遮罩/状态/快捷键均已移除', actual: 'classLockBtn=null, lockOverlay=null, L=no-op' };
     },
   },
   {
