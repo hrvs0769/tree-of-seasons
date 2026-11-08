@@ -12,3 +12,4 @@ shots/
 *.map
 /tmp/
 __pycache__/
+qa/data/results-smoke.json

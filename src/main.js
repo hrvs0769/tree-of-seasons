@@ -2812,6 +2812,7 @@ const classPrevBtn = document.getElementById('classPrevBtn');
 const classPlayBtn = document.getElementById('classPlayBtn');
 const classNextBtn = document.getElementById('classNextBtn');
 const classVoiceBtn = document.getElementById('classVoiceBtn');
+const voiceStatusEl = document.getElementById('voiceStatus');
 const classReplayBtn = document.getElementById('classReplayBtn');
 const chapterDrawerEl = document.getElementById('chapterDrawer');
 const chapterGridEl = document.getElementById('chapterGrid');
@@ -3183,15 +3184,32 @@ const VOICE_FALLBACK_TEXT = {
   'no-chinese': '没有检测到中文语音，朗读无法正确读出中文。请在系统语音设置中安装中文（普通话）语音后重试；文字旁白仍可正常使用。',
   error: '朗读启动失败，可能是系统语音服务暂时不可用。请稍后重试，或改用 Chrome / Edge 并检查中文语音包；文字旁白仍可正常使用。',
 };
+/* 手机屏幕小：只保留一句不挡画面的提示 */
+const VOICE_MOBILE_TEXT = {
+  unsupported: '当前浏览器不支持朗读，文字旁白可正常使用。',
+  'no-voices': '当前浏览器无中文语音，文字旁白可正常使用。',
+  'no-chinese': '当前浏览器无中文语音，文字旁白可正常使用。',
+  error: '朗读启动失败，文字旁白可正常使用。',
+};
 function voiceLabel(v) {
   if (!v) return '朗读';
   const kind = v.online && v.natural ? '在线自然语音' : (v.online ? '在线语音' : '本机中文语音');
   const name = String(v.name || '').length > 26 ? String(v.name).slice(0, 24) + '…' : String(v.name || '');
   return kind + ' · ' + name;
 }
+function isCompactUI() {
+  try { return window.matchMedia('(max-width: 700px)').matches; } catch (e) { return window.innerWidth <= 700; }
+}
 function showVoiceNotice(reasonOrText, ms = 14000) {
-  if (!voiceNoticeEl || !voiceNoticeTextEl) return;
   const text = VOICE_FALLBACK_TEXT[reasonOrText] || String(reasonOrText || VOICE_FALLBACK_TEXT['no-voices']);
+  // 手机/微信内置浏览器没有语音包时，不再用大面板挡住整棵树的画面，只给一条轻提示。
+  if (isCompactUI()) {
+    hideVoiceNotice();
+    const brief = VOICE_MOBILE_TEXT[reasonOrText] || '当前浏览器朗读不可用，文字旁白可正常使用。';
+    showToast(brief, 2800);
+    return;
+  }
+  if (!voiceNoticeEl || !voiceNoticeTextEl) return;
   voiceNoticeTextEl.textContent = text;
   voiceNoticeEl.hidden = false;
   voiceNoticeEl.classList.add('show');
@@ -3348,7 +3366,12 @@ function updateClassroomButtons() {
     classVoiceBtn.setAttribute('aria-pressed', voiceOn ? 'true' : 'false');
     if (!vs.supported) classVoiceBtn.title = '当前浏览器不支持朗读（Web Speech API）';
     else if (!vs.available) classVoiceBtn.title = '未检测到中文语音，点击查看降级说明';
-    else classVoiceBtn.title = '朗读：' + voiceLabel(vs.voice);
+    else classVoiceBtn.title = '朗读：' + voiceLabel(vs.voice) + (vs.voice.online && vs.voice.natural ? '' : '（当前浏览器无在线自然音）');
+    if (voiceStatusEl) {
+      if (!vs.supported) voiceStatusEl.textContent = '语音不可用';
+      else if (!vs.available) voiceStatusEl.textContent = '无中文语音';
+      else voiceStatusEl.textContent = (vs.voice.online && vs.voice.natural ? '在线自然' : (vs.voice.online ? '在线' : '本机')) + ' · ' + vs.voice.name;
+    }
   }
   if (classProjectorBtn) {
     classProjectorBtn.classList.toggle('on', projectorBright);
