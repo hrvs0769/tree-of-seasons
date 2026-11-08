@@ -48,7 +48,7 @@ const SMOKE_IDS = [
 ];
 
 function parseArgs(argv) {
-  const args = { version: 'v4.1.0', label: '', baseUrl: '', only: '', headed: false, evidence: true, timeout: 45000, retryFailed: false, smoke: false };
+  const args = { version: 'v4.1.0', label: '', baseUrl: '', only: '', headed: false, evidence: true, timeout: 45000, retryFailed: false, smoke: false, releaseFast: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const next = () => argv[++i];
@@ -60,6 +60,7 @@ function parseArgs(argv) {
     else if (a === '--no-evidence') args.evidence = false;
     else if (a === '--retry-failed') args.retryFailed = true;
     else if (a === '--smoke') args.smoke = true;
+    else if (a === '--release-fast') args.releaseFast = true;
     else if (a === '--timeout') args.timeout = parseInt(next(), 10) || 45000;
     else if (a === '--help' || a === '-h') { printUsage(); process.exit(0); }
     else if (a.startsWith('--')) { console.error(`未知参数: ${a}`); printUsage(); process.exit(3); }
@@ -78,6 +79,7 @@ function printUsage() {
   --headed            有头模式（默认 headless）
   --no-evidence       不生成证据截图
   --smoke             快速冒烟：只跑核心 12 条，写入 results-smoke.json
+  --release-fast      发布前高风险门禁：只跑全部 P0（约 10 分钟），写入 results-release.json
   --timeout <ms>      单条用例超时（默认 45000）
 `);
 }
@@ -181,11 +183,15 @@ async function main() {
   const allCases = catalog.cases;
   const autoCases = allCases.filter((c) => c.type === 'auto');
   const commit = gitCommit();
-  const partialRun = !!(args.only || args.smoke);
-  const outFile = partialRun ? path.join(DATA_DIR, 'results-smoke.json') : RESULTS_FILE;
-  const allSelected = args.smoke
-    ? autoCases.filter((c) => SMOKE_IDS.includes(c.id))
-    : selectCases(autoCases, args.only);
+  const partialRun = !!(args.only || args.smoke || args.releaseFast);
+  const outFile = args.releaseFast
+    ? path.join(DATA_DIR, 'results-release.json')
+    : (partialRun ? path.join(DATA_DIR, 'results-smoke.json') : RESULTS_FILE);
+  const allSelected = args.releaseFast
+    ? autoCases.filter((c) => c.priority === 'P0')
+    : (args.smoke
+      ? autoCases.filter((c) => SMOKE_IDS.includes(c.id))
+      : selectCases(autoCases, args.only));
   const prevResults = args.retryFailed ? readJson(RESULTS_FILE) : null;
   const cachedPass = new Map();
   if (prevResults && Array.isArray(prevResults.cases)) {
@@ -421,7 +427,7 @@ async function main() {
   console.log(`version    ${args.version}${args.label ? ' · ' + args.label : ''}`);
   console.log(`commit     ${results.commit}`);
   console.log(`environment ${browserLabel} · ${results.environment.platform} · ${baseUrl}`);
-  if (partialRun) console.log(`output      ${outFile}（快速/局部运行，不改正式 results.json）`);
+  if (partialRun) console.log(`output      ${outFile}（${args.releaseFast ? '发布前 P0 门禁' : '快速/局部运行'}，不改正式 results.json）`);
   console.log(`catalog    total=${totals.total} auto=${totals.auto} manual=${totals.manual}`);
   console.log(`executed   pass=${s.passed} fail=${s.failed} skip=${s.skipped} · passRate=${pct}%`);
   console.log(`duration   ${durText}`);
