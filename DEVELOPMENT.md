@@ -2,7 +2,7 @@
 
 > **给新会话的 AI / 新开发者：先读这份主文档。**
 > 这里只放项目概况、架构、文件索引、关键约定和常见任务。需要改某个模块时，再按下方文档索引进入对应子文档，不要先通读整个 `src/main.js`。
-> 最后更新：2026-11-08 · 对应代码：`f5bad43`（第五轮 · Web Speech 朗诵）
+> 最后更新：2026-11-08 · 对应代码：`5b1c469`（第五轮 · Web Speech 朗诵）
 
 ---
 
@@ -25,7 +25,7 @@
 | 界面系统（第三轮） | 深炭黑 `--paper #0C100E` + 雾白 `--ink #F2F4F0` + 单一薄荷绿 `--accent #7BD6A6`；全站无衬线、内联 SVG 图标、1px 细线、圆角 9/14/20；设计 token 与验收见 `docs/11` |
 | 音乐 | Yoiyami《The Budding of Consciousness》，CC0，见 `assets/MUSIC-LICENSE.md` |
 
-当前版本包含两种观看方式：默认是「左侧编辑式讲解栏 + 右侧浮动圆角 3D 画框 + 底部播放条」的自由观看布局；点「开始上课」或访问 `?class` 后进入**幼儿园课堂模式**（深色顶栏、深色大字幕带、深色控制条、每章自动暂停、章节卡片、点认/找一找、细环季节转盘与四季合影、故事姐姐朗诵、投影增亮、屏幕锁定）。
+当前版本包含两种观看方式：默认是「左侧编辑式讲解栏 + 右侧浮动圆角 3D 画框 + 底部播放条」的自由观看布局；点「开始上课」或访问 `?class` 后进入**幼儿园课堂模式**（深色顶栏、深色大字幕带、深色控制条、可选每章暂停、章节卡片、点认/找一找、细环季节转盘与四季合影、故事姐姐朗诵、投影增亮）。
 
 第二轮优化后，画面新增：6 层土壤剖面与地下水层、扎到含水层的深根、真正可见的云、远处偶尔飞过的鸟群、栖息的小鸟与蝴蝶/蜜蜂/瓢虫、树荫光斑、云影、飞絮、结尾新芽；所有章节文案提到的元素都能在画面里找到。
 
@@ -143,15 +143,15 @@ tools/
 
 | 文档 | 最后更新 | 对应代码 / 说明 |
 |---|---|---|
-| [`README.md`](README.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 增加朗诵说明与文件表 |
-| `DEVELOPMENT.md` | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 主索引、文件表与文档表 |
-| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 文件职责新增 speech.js |
+| [`README.md`](README.md) | 2026-11-08 | `5b1c469` · 第五轮 · Web Speech 朗诵 · 增加朗诵说明与文件表 |
+| `DEVELOPMENT.md` | 2026-11-08 | `5b1c469` · 第五轮 · Web Speech 朗诵 · 主索引、文件表与文档表 |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-08 | `5b1c469` · 第五轮 · Web Speech 朗诵 · 文件职责新增 speech.js |
 | [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 时间表与镜头（第二轮结论保留） |
 | [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 树体与根系（第二轮结论保留） |
 | [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 环境（第二轮结论保留） |
-| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 新增 §20.1 朗诵器 |
-| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 缓存版本与回退点更新 |
-| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 测试点 109 与朗诵人工步骤 |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-08 | `5b1c469` · 第五轮 · Web Speech 朗诵 · 新增 §20.1 朗诵器 |
+| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-08 | `5b1c469` · 第五轮 · Web Speech 朗诵 · 缓存版本与回退点更新 |
+| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-08 | `5b1c469` · 第五轮 · Web Speech 朗诵 · 测试点 109 与朗诵人工步骤 |
 | [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
 | [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 第二轮问题清单（历史） |
 | [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
@@ -160,7 +160,7 @@ tools/
 | [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 2026-11-08 | v4.1.0 · 第五轮 · 基线同步 109 条 |
 | [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-08 | 历史记录追加 r33/r34；功能说明以本文件为准 |
 
-维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `f5bad43`（第五轮代码提交）；后续若代码再改，再全局替换为最终哈希。
+维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `5b1c469`（第五轮代码提交）；后续若代码再改，再全局替换为最终哈希。
 
 ---
 

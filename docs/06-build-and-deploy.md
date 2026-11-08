@@ -2,7 +2,7 @@
 
 > 本文解决：怎么重新打包、哪些文件是生成物、怎么发布到 GitHub Pages、怎么更新缓存，以及部署时别漏哪些资源。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
-> 最后更新：2026-11-08 · 对应代码：`f5bad43`（第五轮 · Web Speech 朗诵）
+> 最后更新：2026-11-08 · 对应代码：`5b1c469`（第五轮 · Web Speech 朗诵）
 
 ## 1. 本地运行
 
@@ -146,7 +146,7 @@ JSON
 
 ## 5. 缓存
 
-- 浏览器/平台可能缓存 `app.js`、`index.html`。第三轮起 `index.html` 对 `app.js` / `src/bgm.js` 加了 `?v=round3`；第四轮改为 `?v=round4`；第五轮改为 `?v=round5b`（本轮补丁再递增，避免缓存旧包）。发布新版本时同步递增该参数即可强制刷新构建产物。看板数据文件由 runner 带 `no-store` 请求，通常无需额外缓存参数。
+- 浏览器/平台可能缓存 `app.js`、`index.html`。第三轮起 `index.html` 对 `app.js` / `src/bgm.js` 加了 `?v=round3`；第四轮改为 `?v=round4`；第五轮改为 `?v=round5c`（每轮补丁递增，避免缓存旧包）。发布新版本时同步递增该参数即可强制刷新构建产物。看板数据文件由 runner 带 `no-store` 请求，通常无需额外缓存参数。
 - 更新后让用户访问带版本查询参数的 URL，例如：
   `https://hrvs0769.github.io/tree-of-seasons/?v=7`
 - 本地调试同样可在 URL 加 `?v=时间戳`。
