@@ -3,7 +3,7 @@
 /**
  * 「一棵树的四季」自动化测试 Runner
  * 用法:
- *   node tools/qa-run.js --version v4.0.0 --label "第四轮 · 可视化测试看板" \
+ *   node tools/qa-run.js --version v4.1.0 --label "第五轮 · Web Speech 朗诵" \
  *     [--base-url http://127.0.0.1:8777] [--only BOOT,PLAY] [--headed] [--no-evidence]
  *
  * 契约见 qa/CONTRACT.md §4–§6。
@@ -37,8 +37,18 @@ const MODULE_ALIASES = {
   REL: 'release', RELEASE: 'release', DEPLOY: 'release',
 };
 
+/* --smoke：只跑核心链路，用于日常小改动自检；不会覆盖正式 results.json。 */
+const SMOKE_IDS = [
+  'BOOT-01', 'BOOT-05',
+  'STORY-01', 'STORY-04',
+  'PLAY-01', 'PLAY-05',
+  'CLASS-01', 'CLASS-06', 'CLASS-15',
+  'A11Y-01', 'A11Y-06',
+  'REL-03',
+];
+
 function parseArgs(argv) {
-  const args = { version: 'v4.0.0', label: '', baseUrl: '', only: '', headed: false, evidence: true, timeout: 45000, retryFailed: false };
+  const args = { version: 'v4.1.0', label: '', baseUrl: '', only: '', headed: false, evidence: true, timeout: 45000, retryFailed: false, smoke: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const next = () => argv[++i];
@@ -49,6 +59,7 @@ function parseArgs(argv) {
     else if (a === '--headed') args.headed = true;
     else if (a === '--no-evidence') args.evidence = false;
     else if (a === '--retry-failed') args.retryFailed = true;
+    else if (a === '--smoke') args.smoke = true;
     else if (a === '--timeout') args.timeout = parseInt(next(), 10) || 45000;
     else if (a === '--help' || a === '-h') { printUsage(); process.exit(0); }
     else if (a.startsWith('--')) { console.error(`未知参数: ${a}`); printUsage(); process.exit(3); }
@@ -57,15 +68,16 @@ function parseArgs(argv) {
 }
 
 function printUsage() {
-  console.log(`用法: node tools/qa-run.js --version v4.0.0 --label "第四轮 · 可视化测试看板" [选项]
+  console.log(`用法: node tools/qa-run.js --version v4.1.0 --label "第五轮 · Web Speech 朗诵" [选项]
 
 选项:
-  --version <v>       版本号（默认 v4.0.0）
+  --version <v>       版本号（默认 v4.1.0）
   --label <text>      本次运行标签
   --base-url <url>    使用已有静态服务器（默认自动启动随机端口）
   --only <list>       只跑指定模块/ID，逗号分隔，如 BOOT,PLAY 或 BOOT-01,SCENE-02
   --headed            有头模式（默认 headless）
   --no-evidence       不生成证据截图
+  --smoke             快速冒烟：只跑核心 12 条，写入 results-smoke.json
   --timeout <ms>      单条用例超时（默认 45000）
 `);
 }
@@ -169,7 +181,11 @@ async function main() {
   const allCases = catalog.cases;
   const autoCases = allCases.filter((c) => c.type === 'auto');
   const commit = gitCommit();
-  const allSelected = selectCases(autoCases, args.only);
+  const partialRun = !!(args.only || args.smoke);
+  const outFile = partialRun ? path.join(DATA_DIR, 'results-smoke.json') : RESULTS_FILE;
+  const allSelected = args.smoke
+    ? autoCases.filter((c) => SMOKE_IDS.includes(c.id))
+    : selectCases(autoCases, args.only);
   const prevResults = args.retryFailed ? readJson(RESULTS_FILE) : null;
   const cachedPass = new Map();
   if (prevResults && Array.isArray(prevResults.cases)) {
@@ -242,7 +258,7 @@ async function main() {
     summary: { total: totals.total, auto: totals.auto, manual: totals.manual, passed: cachedPass.size, failed: 0, skipped: 0, passRate: cachedPass.size ? 1 : 0 },
     cases: autoCases.filter((c) => cachedPass.has(c.id)).map((c) => cachedPass.get(c.id)),
   };
-  writeJsonAtomic(RESULTS_FILE, results);
+  writeJsonAtomic(outFile, results);
 
   console.log(`▶ Run ${runId} · ${args.version}${args.label ? ' · ' + args.label : ''} · auto ${selected.length}/${totals.auto} · commit ${results.commit}`);
   console.log(`▶ 浏览器: ${browserLabel}`);
@@ -256,7 +272,7 @@ async function main() {
       const c = selected[i];
       const impl = registry.resolve(c.automationKey);
       results.progress.currentId = c.id;
-      writeJsonAtomic(RESULTS_FILE, results);
+      writeJsonAtomic(outFile, results);
       process.stdout.write(`[${i + 1}/${selected.length}] ${c.id} `);
 
       let entry;
@@ -326,7 +342,7 @@ async function main() {
       s.failed = results.cases.filter((x) => x.status === 'fail').length;
       s.skipped = results.cases.filter((x) => x.status === 'skip').length;
       s.passRate = s.passed + s.failed === 0 ? 0 : +(s.passed / (s.passed + s.failed)).toFixed(3);
-      writeJsonAtomic(RESULTS_FILE, results);
+      writeJsonAtomic(outFile, results);
 
       if (entry.status === 'fail') {
         failedCases.push({ id: c.id, priority: c.priority, title: c.title, message: entry.message });
@@ -363,34 +379,36 @@ async function main() {
   results.durationMs = (prevResults && prevResults.durationMs ? prevResults.durationMs : 0) + durationMs;
   results.progress.done = results.cases.length;
   results.progress.currentId = null;
-  writeJsonAtomic(RESULTS_FILE, results);
+  writeJsonAtomic(outFile, results);
 
-  const history = readJson(HISTORY_FILE) || { schemaVersion: 1, runs: [] };
-  if (!Array.isArray(history.runs)) history.runs = [];
-  const historyEntry = {
-    runId,
-    version: args.version,
-    label: args.label,
-    commit: results.commit,
-    finishedAt: results.finishedAt,
-    durationMs: results.durationMs,
-    summary: results.summary,
-    failed: failedCases.map((f) => f.id),
-    skipped: skippedCases.map((s) => s.id),
-  };
-  const sameIdx = (() => {
-    for (let i = history.runs.length - 1; i >= 0; i--) {
-      const r = history.runs[i];
-      if (r.version === args.version && r.commit === results.commit) return i;
-    }
-    return -1;
-  })();
-  if (sameIdx >= 0) history.runs[sameIdx] = historyEntry;
-  else history.runs.push(historyEntry);
-  history.runs.sort((a, b) => String(a.finishedAt).localeCompare(String(b.finishedAt)));
-  history.runs = history.runs.slice(-30);
-  history.schemaVersion = 1;
-  writeJsonAtomic(HISTORY_FILE, history);
+  if (!partialRun) {
+    const history = readJson(HISTORY_FILE) || { schemaVersion: 1, runs: [] };
+    if (!Array.isArray(history.runs)) history.runs = [];
+    const historyEntry = {
+      runId,
+      version: args.version,
+      label: args.label,
+      commit: results.commit,
+      finishedAt: results.finishedAt,
+      durationMs: results.durationMs,
+      summary: results.summary,
+      failed: failedCases.map((f) => f.id),
+      skipped: skippedCases.map((s) => s.id),
+    };
+    const sameIdx = (() => {
+      for (let i = history.runs.length - 1; i >= 0; i--) {
+        const r = history.runs[i];
+        if (r.version === args.version && r.commit === results.commit) return i;
+      }
+      return -1;
+    })();
+    if (sameIdx >= 0) history.runs[sameIdx] = historyEntry;
+    else history.runs.push(historyEntry);
+    history.runs.sort((a, b) => String(a.finishedAt).localeCompare(String(b.finishedAt)));
+    history.runs = history.runs.slice(-30);
+    history.schemaVersion = 1;
+    writeJsonAtomic(HISTORY_FILE, history);
+  }
 
   // 5) 控制台汇总
   const s = results.summary;
@@ -403,6 +421,7 @@ async function main() {
   console.log(`version    ${args.version}${args.label ? ' · ' + args.label : ''}`);
   console.log(`commit     ${results.commit}`);
   console.log(`environment ${browserLabel} · ${results.environment.platform} · ${baseUrl}`);
+  if (partialRun) console.log(`output      ${outFile}（快速/局部运行，不改正式 results.json）`);
   console.log(`catalog    total=${totals.total} auto=${totals.auto} manual=${totals.manual}`);
   console.log(`executed   pass=${s.passed} fail=${s.failed} skip=${s.skipped} · passRate=${pct}%`);
   console.log(`duration   ${durText}`);

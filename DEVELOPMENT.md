@@ -2,7 +2,7 @@
 
 > **给新会话的 AI / 新开发者：先读这份主文档。**
 > 这里只放项目概况、架构、文件索引、关键约定和常见任务。需要改某个模块时，再按下方文档索引进入对应子文档，不要先通读整个 `src/main.js`。
-> 最后更新：2026-11-08 · 对应代码：`32225e7`（第五轮 · Web Speech 朗诵）
+> 最后更新：2026-11-08 · 对应代码：`f5bad43`（第五轮 · Web Speech 朗诵）
 
 ---
 
@@ -73,7 +73,8 @@ open http://127.0.0.1:8777/qa/
 - **`pre-round4` 标签：第四轮测试看板改动前（回滚本轮全部改动用这个）**；
 - **`round4-v1` 标签：第四轮完成点（可视化测试看板 / 自动化回归 / 108 测试点）**；
 - **`pre-round5` 标签：第五轮朗诵 Web Speech 改动前（回滚本轮全部改动用这个）**；
-- **`round5-v1` 标签：第五轮完成点（Web Speech 朗诵 / 中文在线自然音优先 / 无语音降级）**；
+- **`pre-round5b` 标签：手机端降级提示修补前**；
+- **`round5-v1` 标签：第五轮完成点（Web Speech 朗诵 / 中文在线自然音优先 / 手机轻提示 / QA 冒烟）**；
 - 如果后续改坏了，可以 `git switch main` 回到稳定版本，或 `git checkout pre-round2` 查看本轮之前的状态。
 
 ### 开发调试 URL
@@ -142,15 +143,15 @@ tools/
 
 | 文档 | 最后更新 | 对应代码 / 说明 |
 |---|---|---|
-| [`README.md`](README.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 增加朗诵说明与文件表 |
-| `DEVELOPMENT.md` | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 主索引、文件表与文档表 |
-| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 文件职责新增 speech.js |
+| [`README.md`](README.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 增加朗诵说明与文件表 |
+| `DEVELOPMENT.md` | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 主索引、文件表与文档表 |
+| [`docs/01-architecture.md`](docs/01-architecture.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 文件职责新增 speech.js |
 | [`docs/02-timeline-and-camera.md`](docs/02-timeline-and-camera.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 时间表与镜头（第二轮结论保留） |
 | [`docs/03-tree-and-roots.md`](docs/03-tree-and-roots.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 树体与根系（第二轮结论保留） |
 | [`docs/04-environment.md`](docs/04-environment.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 环境（第二轮结论保留） |
-| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 新增 §20.1 朗诵器 |
-| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 缓存版本与回退点更新 |
-| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-08 | `32225e7` · 第五轮 · Web Speech 朗诵 · 测试点 109 与朗诵人工步骤 |
+| [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 新增 §20.1 朗诵器 |
+| [`docs/06-build-and-deploy.md`](docs/06-build-and-deploy.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 缓存版本与回退点更新 |
+| [`docs/07-testing-and-debugging.md`](docs/07-testing-and-debugging.md) | 2026-11-08 | `f5bad43` · 第五轮 · Web Speech 朗诵 · 测试点 109 与朗诵人工步骤 |
 | [`docs/08-visual-standard.md`](docs/08-visual-standard.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 追加「第三轮 UI 评分见 docs/11」，audit-r2 结论不改 |
 | [`docs/09-round2-plan.md`](docs/09-round2-plan.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 第二轮问题清单（历史） |
 | [`docs/10-round3-ui-plan.md`](docs/10-round3-ui-plan.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · 顶部加「v3 整改状态见 docs/11」说明，清单原样保留 |
@@ -159,7 +160,7 @@ tools/
 | [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 2026-11-08 | v4.1.0 · 第五轮 · 基线同步 109 条 |
 | [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-08 | 历史记录追加 r33/r34；功能说明以本文件为准 |
 
-维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `32225e7`（第五轮代码提交）；后续若代码再改，再全局替换为最终哈希。
+维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `f5bad43`（第五轮代码提交）；后续若代码再改，再全局替换为最终哈希。
 
 ---
 

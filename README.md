@@ -2,7 +2,7 @@
 
 纯代码生成的 3D 树木生命周期演示（Three.js）。剖面视角：地上看发芽长叶，地下看生根、一直扎到含水层。配课堂旁白、暂停和可拖动进度条，项目自身不加载任何外部素材；朗诵使用浏览器 Web Speech。
 
-> 最后更新：2026-11-08 · 对应代码：`32225e7`（第五轮 · Web Speech 朗诵）
+> 最后更新：2026-11-08 · 对应代码：`f5bad43`（第五轮 · Web Speech 朗诵）
 
 线上课堂模式直达：https://hrvs0769.github.io/tree-of-seasons/?class
 
@@ -18,13 +18,14 @@
 
 - **朗诵改用浏览器 Web Speech API**：`src/speech.js` 只调用 `speechSynthesis`，不加载 MP3/WAV、不需要后端；中文语音优先，中文里再优先在线自然音（Microsoft Xiaoxiao / Yunxi Online Natural、Google 普通话等），其次本机中文音（如 macOS 婷婷）。
 - **无语音降级提示**：没有可用语音 / 没有中文语音 / 浏览器不支持时，显示可关闭的 `#voiceNotice`，明确说明安装中文语音或改用 Chrome / Edge，文字旁白仍可用；朗读按钮不会被误显示为已开启。
+- **手机不挡画面**：手机 / 微信内置浏览器没有语音包时只显示一条轻提示，不弹大面板；桌面课堂底栏会显示「本机 · 婷婷」或「在线自然 · Microsoft Xiaoxiao Online」，方便确认当前实际音色。
 - **回归测试**：新增 `CLASS-15` 自动检查（语音排序 + 无语音降级）；全量 QA 109 条（auto 101 / manual 8），99 通过 / 0 失败 / 2 跳过（跳过项为软件 GL 首屏预算与线上 md5 环境限制）。
 - 细节与调试入口见 [`docs/05-ui-and-audio.md`](docs/05-ui-and-audio.md) §20.1。
 
 ## 本轮新增（2026-11-08 · 第四轮 可视化测试看板）
 
 - **独立质量看板 `/qa/`**：深色工程控制台，10 个模块、109 个测试点（P0 22 / P1 62 / P2 25）、自动 101 / 人工 8；支持搜索与模块/优先级/状态/类型筛选、测试点详情、证据截图、历史通过率趋势与运行中实时进度。
-- **自动化测试 Runner**：`node tools/qa-run.js --version v4.1.0 --label "..."` 用 Playwright 跑 101 条自动检查，逐条落盘 `qa/data/results.json`，并把每次大版本摘要写入 `qa/data/history.json`；P0/P1 有失败时退出码非 0。
+- **自动化测试 Runner**：`node tools/qa-run.js --version v4.1.0 --label "..."` 用 Playwright 跑 101 条自动检查，逐条落盘 `qa/data/results.json`，并把每次大版本摘要写入 `qa/data/history.json`；P0/P1 有失败时退出码非 0。日常小改用 `--only CLASS,A11Y` 或 `--smoke`（只写 `results-smoke.json`，5–10 分钟），不要每次跑全量。
 - **一条命令发布前检查**：`./tools/qa-release.sh v4.1.0 "第五轮 · 主题"` 会先构建 `app.js` 再跑全量；测试点总表见 [`docs/12-test-points.md`](docs/12-test-points.md)，使用手册见 [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md)。
 
 ## 本轮新增（2026-11-07 · 第三轮 UI 现代化）

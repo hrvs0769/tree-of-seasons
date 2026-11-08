@@ -12,7 +12,7 @@
 const CHINESE_LANG_RE = /^(zh|cmn|yue)([-_]|$)/i;
 const CHINESE_TEXT_RE = /chinese|mandarin|中文|普通话|国语|國語|粤语|粵語/i;
 const NATURAL_RE = /(^|[^a-z])(online|natural|neural|premium|enhanced)([^a-z]|$)|云端|在线|自然|神经/i;
-const NEURAL_NAME_RE = /xiaoxiao|xiaoyi|yunjian|yunxi|yunyang|xiaohan|xiaomo|xiaoxuan|xiaorui|yunfeng|xiaobei|xiaoni|yunye|xiaochen|xiaoshuang/i;
+const NEURAL_NAME_RE = /xiaoxiao|xiaoyi|yunjian|yunxi|yunyang|xiaohan|xiaomo|xiaoxuan|xiaorui|yunfeng|xiaobei|xiaoni|yunye|xiaochen|xiaoshuang|siri/i;
 const LOCAL_GOOD_RE = /tingting|meijia|sinji|huihui|kangkang|yaoyao|li[-_ ]?mu/i;
 /* 系统里的趣味音/低质量紧凑音，名称命中就强烈降权 */
 const BAD_RE = /compact|eloquence|whisper|novelty|bells|boing|bubbles|cellos|trinoids|zarvox|albert|bad news|good news|jester|organ|superstar|wobble|bahh|deranged|hysterical|pipe organ|rocko|junior|ralph|fred|kathy|princess|agnes|victoria|alex|daniel|samantha|karen|moira|tessa/i;
