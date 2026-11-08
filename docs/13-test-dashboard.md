@@ -3,7 +3,7 @@
 > 本文解决：看板在哪里、每个区域看什么、测试点如何维护、每次大版本更新如何跑自动化、结果与历史如何解读，以及常见问题。
 > 入口：**https://hrvs0769.github.io/tree-of-seasons/qa/** （本地 `http://127.0.0.1:8777/qa/`）
 > 测试点总表：[`12-test-points.md`](12-test-points.md)；数据契约：[`../qa/CONTRACT.md`](../qa/CONTRACT.md)
-> 最后更新：2026-11-08 · 对应版本：v4.1.0（第五轮 · Web Speech 朗诵） · 对应代码：`32225e7`
+> 最后更新：2026-11-08 · 对应版本：v4.1.0（第五轮 · Web Speech 朗诵） · 对应代码：`f5bad43`
 
 ## 1. 它是什么
 
@@ -38,7 +38,19 @@
 
 ## 4. 每次大版本更新怎么跑
 
-### 4.1 一条命令（推荐）
+### 4.0 先分层：不要每次小改都跑全量
+
+全量自动化在软件 GL（无 GPU）环境约 40–60 分钟，**只适合大版本、发布前或动到核心渲染/播放内核时**。日常改动按影响范围选择：
+
+| 场景 | 命令 | 预计 | 是否覆盖正式看板 |
+|---|---|---|---|
+| 只改一个模块 | `node tools/qa-run.js --only CLASS,A11Y` | 3–8 分钟 | 否，写 `qa/data/results-smoke.json` |
+| 改完想做核心自检 | `node tools/qa-run.js --smoke` | 5–10 分钟 | 否，写 `qa/data/results-smoke.json` |
+| 大版本 / 发布前 | `./tools/qa-release.sh v4.1.0 "本轮主题"` | 40–60 分钟 | 是，写 `qa/data/results.json` |
+
+`--only` 和 `--smoke` 都不会覆盖正式 `results.json`/`history.json`，所以可以放心日常跑；只有全量运行才更新看板基线。
+
+### 4.1 一条命令（推荐，发布前）
 
 ```bash
 cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
@@ -73,6 +85,14 @@ node tools/qa-run.js --version v4.1.0 --label "第五轮 · 本轮主题" --retr
 ```
 
 `--retry-failed` 会读取现有 `qa/data/results.json`，保留已通过项，只补跑 fail/skip 项并在最后合并成一次完整结果；适合网络中断、浏览器崩溃或先跑单模块后补全。
+
+### 4.3.1 日常快速冒烟
+
+```bash
+node tools/qa-run.js --smoke
+```
+
+只跑核心链路 12 条（冷启动、课堂入口、章节切换、播放/重播、自动暂停、朗诵选择、弹层 aria 等），结果写 `qa/data/results-smoke.json`；适合「改一点点」先确认没有大面积回归。确认无问题后，发布前再跑一次全量。
 
 ### 4.4 结束后
 

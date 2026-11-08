@@ -3,7 +3,7 @@
 > 本文解决：新版界面（v3 现代设计系统）由哪些 DOM 与组件组成、每个交互背后是哪个事件与函数、快捷键/课堂流程怎么走，以及背景音乐 `src/bgm.js` 如何与画面时间同步。
 > 主文档见 [`../DEVELOPMENT.md`](../DEVELOPMENT.md)。
 > 设计 token、组件清单、动效规范、交互映射与验收结果见 [`11-round3-ui-system.md`](11-round3-ui-system.md)；整改前的问题清单见 [`10-round3-ui-plan.md`](10-round3-ui-plan.md)。
-> 最后更新：2026-11-08 · 对应代码：`32225e7`（第五轮 · Web Speech 朗诵）
+> 最后更新：2026-11-08 · 对应代码：`f5bad43`（第五轮 · Web Speech 朗诵）
 
 > **本轮变更摘要**：第三轮彻底重做了界面语言与交互层。去掉宋体、金棕、深绿渐变、点状纹理、装饰光晕、胶囊按钮与 emoji 图标；改为深炭黑 + 雾白 + 单一薄荷绿 + 全站无衬线 + 1px 细线 + 统一圆角与轻投影。3D 舞台变成浮动圆角画框，课堂模式改为深色顶栏 / 深色字幕带 / 深色控制条。播放器、镜头、弹层、点认卡、找一找、自动暂停、快捷键面板全部补齐状态语义与键盘可达性。**3D 场景、14 章文案、章节时序、BGM 音频文件均未改动。**
 
@@ -274,7 +274,8 @@
 - 只使用 `window.speechSynthesis`，**不请求后端、不加载音频文件**；`speech.js` 被 esbuild 打进 `app.js`。
 - 选择顺序：中文语音 → 在线（`localService === false`）→ 名称含 Natural / Online / Neural / Google / Xiaoxiao / Yunxi 等在线自然音 → 本机中文音（婷婷 / 美嘉 / 善怡等）；非中文声音不参与。
 - 语音列表可能异步返回：监听 `voiceschanged`，并在初始化后短暂轮询；用户点「朗诵」时最多等 1.2s。
-- 无语音 / 无中文语音 / 浏览器不支持时，显示 `#voiceNotice`（`role=alert`，可关闭），说明安装中文语音或换 Chrome / Edge；文字旁白继续可用。
+- 无语音 / 无中文语音 / 浏览器不支持时：桌面显示 `#voiceNotice`（`role=alert`，可关闭），说明安装中文语音或换 Chrome / Edge；手机 / 微信内置浏览器只显示一句轻提示（不弹大面板），文字旁白继续可用。
+- 桌面课堂底栏「朗读」旁有 `#voiceStatus`，会显示 `本机 · 婷婷` 或 `在线自然 · Microsoft Xiaoxiao Online`；如果显示「本机」，说明当前浏览器只有本机语音，不代表代码没换。
 - `#classVoiceBtn` 默认关闭（避免自动出声）；始终可点：没有语音时保持 `aria-pressed=false`，不会把「开启但无声」伪装成成功；按钮有 `.warn` 状态和动态 `title`。
 - 调试：`window.__classroom.speech.state()` 看当前语音、`setVoicesForTest([...])` / `resetForTest()` 可注入假语音列表做自动化回归。
 
