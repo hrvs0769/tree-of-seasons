@@ -62,7 +62,7 @@
 
 ## 4. 开场页 `#startScreen`
 
-- 左右分栏 `.start-shell`：左侧 `.start-copy`（eyebrow「自然观察课 · 幼儿园课堂版」、两行大标题「一棵树的 / 四季」、引导语、`#startClassBtn` 主按钮 + `#freeViewBtn` 次按钮、`14 章 / 4 分 20 秒 / 自动全屏 · 每章暂停` 元信息），右侧 `.start-visual` 是纯 SVG「年轮四季」插画（`#canopySoft` 滤镜、`.art-orbit` 缓慢环绕的小圆点，`orbitSpin 46s linear infinite`）。
+- 左右分栏 `.start-shell`：左侧 `.start-copy`（eyebrow「自然观察课 · 幼儿园课堂版」、两行大标题「一棵树的 / 四季」、引导语、`#startClassBtn` 主按钮 + `#freeViewBtn` 次按钮、`14 章 / 4 分 20 秒 / 自动全屏 · 可选每章停` 元信息），右侧 `.start-visual` 是纯 SVG「年轮四季」插画（`#canopySoft` 滤镜、`.art-orbit` 缓慢环绕的小圆点，`orbitSpin 46s linear infinite`）。
 - `#startClassBtn` → `enterClassroomMode({reset:true, fullscreen:true, autoplay:true})`；`#freeViewBtn` → 隐藏开场页并 `playing=true`。若上次退出课堂时保留过进度，按钮文案会变成「继续观看」。
 - 入场动效：`.start-copy > *` 用 `riseIn .7s var(--ease-out)` 依次上移淡入，`.start-visual` 用 `fadeIn .9s`；`#startScreen.hidden` 用 `opacity/visibility .55s` 淡出（不是 `display:none` 硬切）。
 - `overflow:auto` + `overscroll-behavior:contain`，矮屏/横屏可滚动兜底。
