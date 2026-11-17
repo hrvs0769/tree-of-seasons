@@ -1,8 +1,8 @@
 'use strict';
 /**
  * QA Runner 浏览器 harness：
- * - 从固定路径加载 playwright-core
- * - Chromium 候选（CHROME_BIN → ms-playwright chromium-1208 → /Applications/Google Chrome）
+ * - playwright-core 优先 PLAYWRIGHT_CORE_PATH / 本地依赖，失败再回退旧本机路径
+ * - Chromium 候选（CHROME_BIN → PLAYWRIGHT_BROWSERS_PATH 下的 chromium-* → 旧本机缓存 → 系统 Chrome）
  * - 每条 case 使用独立 BrowserContext，避免 cookie/localStorage/页面状态互相污染
  * - 自动收集 console error / pageerror / requestfailed / response status
  * - 证据截图 qa/evidence/<ID>.jpg（JPEG quality 80，viewport 截图，宽 ≤1440）
@@ -13,22 +13,77 @@ const os = require('os');
 const http = require('http');
 const https = require('https');
 
-const PLAYWRIGHT_PATH = '/Users/liuhuirong/.dsh/profiles/web/node_modules/playwright-core';
+const LEGACY_PLAYWRIGHT_PATH = '/Users/liuhuirong/.dsh/profiles/web/node_modules/playwright-core';
 
 function loadPlaywright() {
-  try {
-    return require(PLAYWRIGHT_PATH);
-  } catch (e) {
-    throw new Error(`无法加载 playwright-core（${PLAYWRIGHT_PATH}）：${e.message}`);
+  const candidates = [];
+  if (process.env.PLAYWRIGHT_CORE_PATH) candidates.push(process.env.PLAYWRIGHT_CORE_PATH);
+  candidates.push('playwright-core');
+  candidates.push(LEGACY_PLAYWRIGHT_PATH);
+
+  const failures = [];
+  for (const id of candidates) {
+    try {
+      return require(id);
+    } catch (e) {
+      failures.push(`  - ${id}: ${e.message}`);
+    }
   }
+  throw new Error(
+    '无法加载 playwright-core：请先在项目根运行 npm ci（或设置 PLAYWRIGHT_CORE_PATH 指向 playwright-core 包目录）。\n' +
+    '已尝试：\n' + failures.join('\n')
+  );
+}
+
+/** 扫描 Playwright browsers 目录下的 chromium-* 与 chrome-* 子目录，返回可执行文件候选（不写死版本号）。 */
+function chromiumCandidatesFromBrowsersDir(baseDir) {
+  if (!baseDir || baseDir === '0') return [];
+  let entries;
+  try {
+    entries = fs.readdirSync(baseDir, { withFileTypes: true });
+  } catch (e) {
+    return [];
+  }
+  const candidates = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !/^chromium-/.test(entry.name)) continue;
+    const chromiumDir = path.join(baseDir, entry.name);
+    let subdirs;
+    try {
+      subdirs = fs.readdirSync(chromiumDir, { withFileTypes: true });
+    } catch (e) {
+      continue;
+    }
+    for (const sub of subdirs) {
+      if (!sub.isDirectory() || !/^chrome-/.test(sub.name)) continue;
+      const dir = path.join(chromiumDir, sub.name);
+      candidates.push(
+        path.join(dir, 'Google Chrome for Testing.app', 'Contents', 'MacOS', 'Google Chrome for Testing'),
+        path.join(dir, 'chrome'),
+        path.join(dir, 'chrome.exe'),
+        path.join(dir, 'headless_shell')
+      );
+    }
+  }
+  return candidates;
 }
 
 function chromiumCandidates() {
-  return [
-    process.env.CHROME_BIN,
-    path.join(os.homedir(), 'Library/Caches/ms-playwright/chromium-1208/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
+  const candidates = [];
+  if (process.env.CHROME_BIN) candidates.push(process.env.CHROME_BIN);
+  if (process.env.PLAYWRIGHT_BROWSERS_PATH) {
+    candidates.push(...chromiumCandidatesFromBrowsersDir(process.env.PLAYWRIGHT_BROWSERS_PATH));
+  }
+  // 旧本机 Playwright 缓存兼容：扫描任意 chromium-*，不再写死 chromium-1208。
+  candidates.push(...chromiumCandidatesFromBrowsersDir(path.join(os.homedir(), 'Library/Caches/ms-playwright')));
+  candidates.push(
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  ].filter(Boolean);
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser'
+  );
+  return [...new Set(candidates.filter(Boolean))];
 }
 
 function findChromium() {

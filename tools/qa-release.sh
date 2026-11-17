@@ -1,18 +1,23 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 # 大版本自动化发布检查：构建 app.js → 全量 QA → 只有 P0/P1 全过才提示可以部署。
 # 用法: ./tools/qa-release.sh [version] [label]
 #   例: ./tools/qa-release.sh v4.0.0 "第四轮 · 可视化测试看板"
 set -u
 
-ROOT="/Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons"
-ESBUILD="/Users/liuhuirong/Desktop/我的电脑/dsh/solar-system/node_modules/.bin/esbuild"
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VERSION="${1:-v4.0.0}"
 LABEL="${2:-大版本发布检查}"
 
 cd "$ROOT" || { echo "✖ 无法进入项目根：$ROOT"; exit 2; }
 
-if [ ! -x "$ESBUILD" ]; then
-  echo "✖ 找不到 esbuild：$ESBUILD"
+# esbuild：优先项目本地依赖（npm ci 安装），其次 PATH；都没有时明确提示如何安装。
+ESBUILD=""
+if [ -x "$ROOT/node_modules/.bin/esbuild" ]; then
+  ESBUILD="$ROOT/node_modules/.bin/esbuild"
+elif command -v esbuild >/dev/null 2>&1; then
+  ESBUILD="$(command -v esbuild)"
+else
+  echo "✖ 找不到 esbuild：请先在项目根运行 npm ci（或全局安装 esbuild 后确保其在 PATH 中）"
   exit 2
 fi
 

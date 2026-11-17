@@ -6,15 +6,47 @@
  * actions 例:
  *   '[{"click":"#classChapterBtn","wait":300},{"eval":"window.__classroom.seekForTest(210)","wait":200}]'
  */
-const path = require('path');
-const os = require('os');
-const { chromium } = require('/Users/liuhuirong/.dsh/profiles/web/node_modules/playwright-core');
+const fs = require('fs');
 
-const CANDIDATES = [
-  process.env.CHROME_BIN,
-  path.join(os.homedir(), 'Library/Caches/ms-playwright/chromium-1208/chrome-mac-x64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing'),
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-].filter(Boolean);
+const LEGACY_PLAYWRIGHT_PATH = '/Users/liuhuirong/.dsh/profiles/web/node_modules/playwright-core';
+
+function loadPlaywright() {
+  const candidates = [];
+  if (process.env.PLAYWRIGHT_CORE_PATH) candidates.push(process.env.PLAYWRIGHT_CORE_PATH);
+  candidates.push('playwright-core');
+  candidates.push(LEGACY_PLAYWRIGHT_PATH);
+
+  const failures = [];
+  for (const id of candidates) {
+    try {
+      return require(id);
+    } catch (e) {
+      failures.push(`  - ${id}: ${e.message}`);
+    }
+  }
+  throw new Error(
+    '无法加载 playwright-core：请先在项目根运行 npm ci（或设置 PLAYWRIGHT_CORE_PATH 指向 playwright-core 包目录）。\n' +
+    '已尝试：\n' + failures.join('\n')
+  );
+}
+
+const { chromium } = loadPlaywright();
+
+function chromiumCandidates() {
+  const candidates = [];
+  if (process.env.CHROME_BIN) candidates.push(process.env.CHROME_BIN);
+  candidates.push(
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser'
+  );
+  try {
+    if (typeof chromium.executablePath === 'function') candidates.push(chromium.executablePath());
+  } catch (e) { /* Playwright 浏览器未安装时忽略 */ }
+  return [...new Set(candidates.filter(Boolean))];
+}
 
 const [, , url, out, w = '1280', h = '800', actions = '[]', waitMs = '900'] = process.argv;
 if (!url || !out) {
@@ -24,8 +56,8 @@ if (!url || !out) {
 
 (async () => {
   let executablePath = null;
-  for (const c of CANDIDATES) { if (require('fs').existsSync(c)) { executablePath = c; break; } }
-  if (!executablePath) throw new Error('找不到 Chromium/Chrome，可设置 CHROME_BIN');
+  for (const c of chromiumCandidates()) { if (fs.existsSync(c)) { executablePath = c; break; } }
+  if (!executablePath) throw new Error('找不到 Chromium/Chrome，可设置 CHROME_BIN 或安装 Playwright 浏览器（npx playwright install chromium）');
   const browser = await chromium.launch({
     executablePath,
     headless: true,

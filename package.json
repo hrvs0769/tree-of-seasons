@@ -1,0 +1,16 @@
+{
+  "name": "tree-of-seasons",
+  "version": "4.1.0",
+  "private": true,
+  "description": "「一棵树的四季」互动课堂 Web 应用",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --minify --alias:three=./lib/three.module.min.js --outfile=app.js --log-level=warning",
+    "build:check": "esbuild src/main.js --bundle --format=iife --minify --alias:three=./lib/three.module.min.js --outfile=/tmp/tree-of-seasons-app-check.js --log-level=warning && cmp app.js /tmp/tree-of-seasons-app-check.js",
+    "qa": "node tools/qa-run.js",
+    "qa:smoke": "node tools/qa-run.js --smoke"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "playwright-core": "1.63.0"
+  }
+}

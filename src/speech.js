@@ -182,15 +182,23 @@ function createSpeechReader(options = {}) {
     u.volume = typeof opts.volume === 'number' ? opts.volume : 1;
 
     let settled = false;
+    let started = false;
+    let watchdog = 0;
+    const clearWatchdog = () => {
+      if (watchdog) { clearTimeout(watchdog); watchdog = 0; }
+    };
     const finish = (detail) => {
       if (settled || current !== u) return;
       settled = true;
+      clearWatchdog();
       current = null;
       emitVoice(false);
       if (opts.onend) { try { opts.onend(detail); } catch (e) { /* ignore */ } }
     };
     u.onstart = () => {
       if (current !== u) return;
+      started = true;
+      clearWatchdog();
       emitVoice(true);
       if (opts.onstart) { try { opts.onstart(); } catch (e) { /* ignore */ } }
     };
@@ -205,15 +213,24 @@ function createSpeechReader(options = {}) {
     };
 
     current = u;
-    // Chrome 在 cancel() 同 tick 调 speak() 偶尔会静默失败，延后一个 tick 更稳。
-    setTimeout(() => {
+    // iOS/微信 WebKit 要求首次 speak 在用户手势的同步调用栈内；UI 的“朗读”点击
+    // 传入 immediate:true 时直接调用。Chrome 桌面在 cancel() 同 tick 调 speak()
+    // 偶尔会静默失败，所以默认仍延后一个 tick，并统一加启动看门狗。
+    const invoke = () => {
       if (current !== u) return;
       try { synth.speak(u); }
       catch (e) {
         if (opts.onerror) { try { opts.onerror('synthesis-failed', e); } catch (e2) { /* ignore */ } }
         finish({ type: 'error', error: 'synthesis-failed' });
       }
-    }, 20);
+    };
+    watchdog = setTimeout(() => {
+      if (settled || started || current !== u) return;
+      if (opts.onerror) { try { opts.onerror('no-start', { timeout: true }); } catch (e2) { /* ignore */ } }
+      finish({ type: 'error', error: 'no-start' });
+    }, Math.max(600, Number(opts.startTimeout) || 1800));
+    if (opts.immediate) invoke();
+    else setTimeout(invoke, 20);
 
     return { ok: true, voice: describeVoice(voice) };
   }
