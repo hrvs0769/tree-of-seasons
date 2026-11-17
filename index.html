@@ -641,6 +641,8 @@
   }
   .quartet-item figcaption b { font-size: 13px; font-weight: 620; color: #fff; }
   .quartet-note { margin-top: 14px; text-align: center; font-size: 12px; letter-spacing: .01em; color: var(--ink-3); }
+  .quartet-actions { display: flex; justify-content: center; margin-top: 14px; }
+  .quartet-actions .btn-primary { height: 44px; padding: 0 18px; font-size: 13px; }
 
   /* ---------------- 点认卡片 ---------------- */
   #partCard {
@@ -1003,6 +1005,7 @@
       <p class="start-sub">从一颗种子，到一棵大树。看春天发芽、夏天成荫、秋天落叶、冬天沉睡，还有小鸟、蜜蜂和蝴蝶来做客。</p>
       <div class="start-actions">
         <button id="startClassBtn" class="btn-primary">开始上课<svg class="icon" aria-hidden="true"><use href="#i-arrow-right"/></svg></button>
+        <button id="startGuidedBtn" class="btn-secondary" title="进入课堂后每章结束自动暂停">按章讲解</button>
         <button id="freeViewBtn" class="btn-secondary">自由观看</button>
       </div>
       <div class="start-meta"><span>14 章</span><i></i><span>4 分 20 秒</span><i></i><span>自动全屏 · 可选每章停</span></div>
@@ -1106,7 +1109,7 @@
   <div class="class-bar-side right">
     <button id="classMusicBtn" class="class-small-btn" title="背景音乐开关（M）">音乐</button>
     <div id="classVolumeWrap"><svg class="icon" aria-hidden="true"><use href="#i-volume"/></svg><input id="classVolume" type="range" min="0" max="100" step="1" value="85" aria-label="背景音乐音量"></div>
-    <button id="classVoiceBtn" class="class-small-btn" title="故事姐姐朗读">朗读</button>
+    <button id="classVoiceBtn" class="class-small-btn" title="朗读本章旁白">朗读</button>
     <button id="classReplayBtn" class="class-small-btn"><svg class="icon" style="width:12px;height:12px" aria-hidden="true"><use href="#i-replay"/></svg>重播</button>
   </div>
 </div>
@@ -1152,6 +1155,7 @@
     </div>
     <div id="quartetGrid" class="quartet-grid"></div>
     <div class="quartet-note">春天新叶，夏天枝繁叶茂，秋天叶落，冬天安静休息。你最喜欢哪个季节？</div>
+    <div class="quartet-actions"><button id="quartetSaveBtn" class="btn-primary" type="button">保存四宫格</button></div>
   </div>
 </div>
 
@@ -1243,7 +1247,7 @@
 </div>
 
 <audio id="bgm" src="./assets/tree-of-seasons-bgm-v3.mp3" preload="auto"></audio>
-<script src="./app.js?v=round5c"></script>
-<script src="./src/bgm.js?v=round5c"></script>
+<script src="./app.js?v=round6"></script>
+<script src="./src/bgm.js?v=round6"></script>
 </body>
 </html>

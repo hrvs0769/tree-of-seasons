@@ -70,8 +70,10 @@ module.exports = [
         const ss = document.getElementById('startScreen');
         const btn = document.getElementById('startClassBtn');
         const free = document.getElementById('freeViewBtn');
+        const guided = document.getElementById('startGuidedBtn');
         const r = btn.getBoundingClientRect();
         const rf = free.getBoundingClientRect();
+        const rg = guided ? guided.getBoundingClientRect() : { width: 0, height: 0 };
         return {
           ssHidden: ss.classList.contains('hidden'),
           ssRole: ss.getAttribute('role'),
@@ -81,6 +83,8 @@ module.exports = [
           btnVisible: r.width > 0 && r.height > 0 && getComputedStyle(btn).visibility !== 'hidden',
           btnDisabled: !!btn.disabled,
           freeVisible: rf.width > 0 && rf.height > 0,
+          guidedVisible: !!(guided && rg.width > 0 && rg.height > 0),
+          guidedText: guided ? guided.textContent.trim() : '',
           title: document.getElementById('startTitle') ? document.getElementById('startTitle').textContent.replace(/\s+/g, '') : '',
         };
       });
@@ -89,9 +93,10 @@ module.exports = [
       assert(info.ssRole === 'dialog' && info.ssModal === 'true', `开场页 dialog 语义异常 role=${info.ssRole} aria-modal=${info.ssModal}`);
       assert(info.labelExists && info.labelledby === 'startTitle', '开场页 aria-labelledby 未指向 startTitle');
       assert(info.btnVisible && info.freeVisible, '开始上课/自由观看按钮不可见');
+      assert(info.guidedVisible && info.guidedText.includes('按章讲解'), '「按章讲解」预设按钮不可见');
       assert(!info.btnDisabled, '#startClassBtn 被禁用');
       assert(info.title.includes('一棵树的') && info.title.includes('四季'), `开场标题异常：${info.title}`);
-      return { message: '开场页可见，开始上课/自由观看按钮均可点', actual: `title=${info.title}, dialog=ok` };
+      return { message: '开场页可见，开始上课/按章讲解/自由观看按钮均可点', actual: `title=${info.title}, guided=${info.guidedText}, dialog=ok` };
     },
   },
   {

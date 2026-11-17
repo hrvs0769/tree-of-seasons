@@ -260,6 +260,7 @@ module.exports = [
           imgs: figures.map((f) => { const im = f.querySelector('img'); return { src: im.getAttribute('src').slice(0, 22), w: im.naturalWidth, fit: getComputedStyle(im).objectFit }; }),
           ariaBusy: b.getAttribute('aria-busy'),
           disabled: b.disabled,
+          saveExists: !!document.getElementById('quartetSaveBtn'),
         };
       });
       await ctx.close(s);
@@ -269,7 +270,8 @@ module.exports = [
       assert(info.imgs.every((i) => i.src.startsWith('data:image/jpeg')), '合影不是 canvas JPEG 快照');
       assert(info.imgs.every((i) => i.fit === 'contain'), `合影 object-fit=${info.imgs.map((i) => i.fit).join('/')}`);
       assert(info.ariaBusy === 'false' && !info.disabled, '合影完成后忙状态未复位');
-      return { message: '四季合影生成夏/秋/冬/春 4 张，busy→idle 状态完整', actual: `count=4, captions=${info.captions.join(',')}` };
+      assert(info.saveExists, '四季合影缺少「保存四宫格」按钮');
+      return { message: '四季合影生成夏/秋/冬/春 4 张，busy→idle 状态完整，可保存', actual: `count=4, captions=${info.captions.join(',')}, save=true` };
     },
   },
   {

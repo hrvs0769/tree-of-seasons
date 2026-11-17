@@ -40,10 +40,9 @@
 
 ### 修改源码后重新打包
 ```bash
-cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
-"/Users/liuhuirong/Desktop/我的电脑/dsh/solar-system/node_modules/.bin/esbuild" \
-  src/main.js --bundle --format=iife --minify \
-  --alias:three=./lib/three.module.min.js --outfile=app.js --log-level=warning
+cd "$(git rev-parse --show-toplevel)"
+npm ci          # 首次或依赖变更后
+npm run build   # 等价于 esbuild src/main.js --bundle --format=iife --minify --alias:three=./lib/three.module.min.js --outfile=app.js
 ```
 `app.js` 是打包产物，**不要手工编辑 `app.js`**；改 `src/main.js` 后必须重新打包，否则本地和线上看到的还是旧 build。
 
@@ -136,6 +135,8 @@ tools/
 | [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 第三轮设计系统：token、组件清单、动效时长与 easing、交互映射、a11y、逐条验收状态、截图索引 | 改界面/组件、做 UI 回归、判断整改是否完成 |
 | [`docs/12-test-points.md`](docs/12-test-points.md) | 全项目 109 个测试点总表：10 模块、P0/P1/P2、自动/人工、预期与 automationKey 索引 | 评估项目覆盖、查某个功能验什么、新增大版本测试 |
 | [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 可视化测试看板：入口、看板结构、大版本运行流程、结果解读、如何新增测试点、常见问题 | 每次大版本发布前、维护 QA 数据、排查看板问题 |
+| [`docs/14-review-engineering-and-teacher-perspective.md`](docs/14-review-engineering-and-teacher-perspective.md) | 2026-11-17 项目复盘：工程审查（代码/构建/QA/发布） + 幼儿园教师视角（课堂卡点与改进） | 做下一轮规划、交接、课堂试用前 |
+| [`docs/15-round6-implementation.md`](docs/15-round6-implementation.md) | 2026-11-18 第六轮执行记录：语音、找一找、性能、构建/CI、按章讲解、合影保存 | 查本轮改了什么、如何验证与回退 |
 
 `ITERATIONS.md` 是历史记录，不是运行文档；当需要知道“为什么上一版这样做”时再查。`docs/10` 是旧版基线审计，`docs/11` 是 v3 的整改结果与现行规范，两篇要一起看。
 
@@ -158,6 +159,8 @@ tools/
 | [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) | 2026-11-08 | `6518080` · 第四轮 · 可视化测试看板 · **新建**：设计 token / 组件 / 动效 / 交互映射 / a11y / 逐条验收 |
 | [`docs/12-test-points.md`](docs/12-test-points.md) | 2026-11-08 | v4.1.0 · 第五轮 · 109 条测试点总表（新增 CLASS-15） |
 | [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) | 2026-11-08 | v4.1.0 · 第五轮 · 基线同步 109 条 |
+| [`docs/14-review-engineering-and-teacher-perspective.md`](docs/14-review-engineering-and-teacher-perspective.md) | 2026-11-17 | `6f83bb2` · 工程审查 + 幼教视角（审查文档，不含代码变更） |
+| [`docs/15-round6-implementation.md`](docs/15-round6-implementation.md) | 2026-11-18 | `pre-round6` 后 · 第六轮执行记录（代码/CI/UI） |
 | [`ITERATIONS.md`](ITERATIONS.md) | 2026-11-08 | 历史记录追加 r33/r34；功能说明以本文件为准 |
 
 维护规则：每次改代码或文档，先更新对应文档的 `最后更新`，再把新代码提交哈希写进本表；这样新会话能判断文档是否落后于代码。本轮所有文档头部与表中统一写 `5b1c469`（第五轮代码提交）；后续若代码再改，再全局替换为最终哈希。

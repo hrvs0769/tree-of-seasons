@@ -62,7 +62,7 @@
 
 ## 4. 开场页 `#startScreen`
 
-- 左右分栏 `.start-shell`：左侧 `.start-copy`（eyebrow「自然观察课 · 幼儿园课堂版」、两行大标题「一棵树的 / 四季」、引导语、`#startClassBtn` 主按钮 + `#freeViewBtn` 次按钮、`14 章 / 4 分 20 秒 / 自动全屏 · 可选每章停` 元信息），右侧 `.start-visual` 是纯 SVG「年轮四季」插画（`#canopySoft` 滤镜、`.art-orbit` 缓慢环绕的小圆点，`orbitSpin 46s linear infinite`）。
+- 左右分栏 `.start-shell`：左侧 `.start-copy`（eyebrow「自然观察课 · 幼儿园课堂版」、两行大标题「一棵树的 / 四季」、引导语、`#startClassBtn` 主按钮 + `#startGuidedBtn`「按章讲解」预设 + `#freeViewBtn` 次按钮、`14 章 / 4 分 20 秒 / 自动全屏 · 可选每章停` 元信息），右侧 `.start-visual` 是纯 SVG「年轮四季」插画（`#canopySoft` 滤镜、`.art-orbit` 缓慢环绕的小圆点，`orbitSpin 46s linear infinite`）。
 - `#startClassBtn` → `enterClassroomMode({reset:true, fullscreen:true, autoplay:true})`；`#freeViewBtn` → 隐藏开场页并 `playing=true`。若上次退出课堂时保留过进度，按钮文案会变成「继续观看」。
 - 入场动效：`.start-copy > *` 用 `riseIn .7s var(--ease-out)` 依次上移淡入，`.start-visual` 用 `fadeIn .9s`；`#startScreen.hidden` 用 `opacity/visibility .55s` 淡出（不是 `display:none` 硬切）。
 - `overflow:auto` + `overscroll-behavior:contain`，矮屏/横屏可滚动兜底。
@@ -242,17 +242,17 @@
 ## 19. 课堂流程（一次完整授课）
 
 1. 打开页面 → `#loading` 淡出 → `#startScreen`；点「开始上课」请求全屏并 `enterClassroomMode({reset:true, fullscreen:true, autoplay:true})`。
-2. 顶栏 / 字幕带 / 底栏依次 `chromeDown .42s`、`chromeUp .45s` 进入；`setAutoPause(true)`、`setProjector(false)`、`requestWakeLock()`。
+2. 顶栏 / 字幕带 / 底栏依次 `chromeDown .42s`、`chromeUp .45s` 进入；默认 `setAutoPause(false)`（「按章讲解」预设才设为 true）、`setProjector(false)`、`requestWakeLock()`。
 3. 如需每章停：点顶栏「每章停」开启 → 到章末 `#pausePrompt` 出现 → 老师提问（可点「教师提示」看「可以问 / 可以动」）→ 点「继续播放」或空格继续。
 4. 想重讲某句：拖 `#classProgress` 或按 `←/→`；想换章：顶栏「章节」或 `C` / `PageUp` / `PageDown`。
-5. 「找一找」按当前章节可见部位出题（含 bird / insect），点中出点认卡；「四季合影」`Q` 生成四张（按钮期间 `busy`）。
+5. 「找一找」按当前章节可见部位出题（含 bird / insect），点中出点认卡；「四季合影」`Q` 生成四张（按钮期间 `busy`），弹层内可「保存四宫格」下载 JPG。
 6. 需要时「增亮」（投影）、「朗诵」（浏览器 Web Speech，中文在线自然音优先；无语音时降级提示；BGM 自动 duck 到 18%）。
 7. 结束：到 04:20 自动停并 toast 提示可回顾合影（不强制弹层）；点「退出」→ `#exitConfirm` 确认 → 保留 `storyTime` 回到开场页，按钮变「继续观看」。
 8. 任意时刻 `?` 打开快捷键面板；`Esc` 按「弹层 → 点认卡 → 找一找 → 暂停提示 → 退出确认」逐层关闭。
 
 ## 20. 背景音乐 `src/bgm.js`
 
-独立普通脚本，在 `index.html` 底部以 `<script src="./src/bgm.js?v=round3">` 引入，**不参与 esbuild 打包**；只读播放器 DOM，3D 代码不用改。
+独立普通脚本，在 `index.html` 底部以 `<script src="./src/bgm.js?v=round6">` 引入，**不参与 esbuild 打包**；只读播放器 DOM，3D 代码不用改。
 
 | 项 | 内容 |
 |---|---|

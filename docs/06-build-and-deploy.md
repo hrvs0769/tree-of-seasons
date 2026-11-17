@@ -16,16 +16,15 @@ open /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons/index.html
 
 ## 2. 构建（修改 `src/main.js` 后必须执行）
 
-本机 esbuild 取自 solar-system 项目的依赖：
+构建依赖已在 `package.json` / `package-lock.json` 中锁定：
 
 ```bash
-cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
-"/Users/liuhuirong/Desktop/我的电脑/dsh/solar-system/node_modules/.bin/esbuild" \
-  src/main.js \
-  --bundle --format=iife --minify \
-  --alias:three=./lib/three.module.min.js \
-  --outfile=app.js --log-level=warning
+cd "$(git rev-parse --show-toplevel)"
+npm ci          # 首次或依赖变更后
+npm run build
 ```
+
+等价命令：`esbuild src/main.js --bundle --format=iife --minify --alias:three=./lib/three.module.min.js --outfile=app.js --log-level=warning`。
 
 产物：
 
@@ -39,7 +38,7 @@ cd /Users/liuhuirong/WorkBuddy/Claw/tree-of-seasons
 
 **不要直接编辑 `app.js`。** 它每次构建会被覆盖。
 
-> **第二轮优化后的硬提醒**：`src/main.js` 本轮改动很大（约 4.4k 行，新增确定性随机、`rootAge`、6 层土壤与水层、5 类生物 InstancedMesh、结尾 HUD 等）。**任何一次改完 `src/main.js` 都必须重新执行上面的 esbuild 命令生成 `app.js`**，否则：
+> **第二轮优化后的硬提醒**：`src/main.js` 本轮改动很大（约 4.9k 行，新增确定性随机、`rootAge`、6 层土壤与水层、5 类生物 InstancedMesh、结尾 HUD 等）。**任何一次改完 `src/main.js` 都必须执行 `npm run build` 重新生成 `app.js`**，否则：
 > - 本地 `index.html` 与 GitHub Pages 看到的仍是旧 build；
 > - `./tools/shoot.sh` / `./tools/visual-audit.sh` 虽然会自己打包，但手动用 Chrome 截图、课堂演示、线上部署不会；
 - `./tools/ui-shot.js`（第三轮新增）是独立 Playwright 的 UI 定点截图器，需要本机已安装 `playwright-core` 与 Chromium，不属于运行时依赖；
@@ -146,7 +145,7 @@ JSON
 
 ## 5. 缓存
 
-- 浏览器/平台可能缓存 `app.js`、`index.html`。第三轮起 `index.html` 对 `app.js` / `src/bgm.js` 加了 `?v=round3`；第四轮改为 `?v=round4`；第五轮改为 `?v=round5c`（每轮补丁递增，避免缓存旧包）。发布新版本时同步递增该参数即可强制刷新构建产物。看板数据文件由 runner 带 `no-store` 请求，通常无需额外缓存参数。
+- 浏览器/平台可能缓存 `app.js`、`index.html`。第三轮起 `index.html` 对 `app.js` / `src/bgm.js` 加了 `?v=round3`；第四轮改为 `?v=round4`；第五轮改为 `?v=round5c`；第六轮改为 `?v=round6`（每轮补丁递增，避免缓存旧包）。发布新版本时同步递增该参数即可强制刷新构建产物。看板数据文件由 runner 带 `no-store` 请求，通常无需额外缓存参数。
 - 更新后让用户访问带版本查询参数的 URL，例如：
   `https://hrvs0769.github.io/tree-of-seasons/?v=7`
 - 本地调试同样可在 URL 加 `?v=时间戳`。

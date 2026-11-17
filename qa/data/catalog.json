@@ -143,14 +143,14 @@
     {
       "id": "BOOT-04",
       "module": "boot",
-      "title": "开场页可见两按钮",
-      "summary": "开场页可见且开始上课/自由观看按钮均可点击。",
+      "title": "开场页三个操作按钮",
+      "summary": "开场页可见开始上课、按章讲解、自由观看三个操作按钮，并具备 dialog 语义。",
       "goal": "开场页是唯一入口，按钮不可见或被禁用会让课堂无法开始。",
-      "expected": "#startScreen 非 hidden；role=dialog aria-modal=true aria-labelledby=startTitle；两按钮可见可点。",
+      "expected": "#startScreen 非 hidden；role=dialog aria-modal=true aria-labelledby=startTitle；三个按钮可见可点。",
       "steps": [
-        "打开首页并等待 #loading 隐藏",
-        "检查 #startScreen 语义与标题",
-        "读取两按钮 rect 与 disabled"
+        "打开 /",
+        "等待开场页可见",
+        "检查三个操作按钮与 aria 属性"
       ],
       "priority": "P0",
       "type": "auto",
@@ -228,7 +228,7 @@
       "id": "BOOT-08",
       "module": "boot",
       "title": "构建资源带缓存版本",
-      "summary": "app.js 与 src/bgm.js 引用均带 ?v=round3 版本参数。",
+      "summary": "app.js 与 src/bgm.js 引用均带 ?v=round6 版本参数。",
       "goal": "更新后浏览器缓存旧 app.js 会导致「代码改了画面没变」，版本参数是发版保障。",
       "expected": "两个 script src 含 ?v= 参数且版本一致；升级时应递增。",
       "steps": [
@@ -1231,12 +1231,11 @@
       "title": "四季合影忙碌态",
       "summary": "生成合影时按钮进入 busy/aria-busy，完成后 4 张图按原比例完整显示。",
       "goal": "生成需要时间，没有反馈老师会重复点击；裁切会毁掉四季对比。",
-      "expected": "点击后 #classQuartetBtn.disabled + aria-busy=true + .busy；完成后 4 个 img，object-fit:contain。",
+      "expected": "点击后 #classQuartetBtn.disabled + aria-busy=true + .busy；完成后 4 个 img，object-fit:contain，且存在「保存四宫格」按钮。",
       "steps": [
-        "打开 ?class&t0=210",
-        "点击四季合影",
-        "立即读取按钮状态",
-        "等待完成检查 4 张图"
+        "打开 ?class&t0=210&freeze",
+        "点击 #classQuartetBtn",
+        "检查忙状态、4 张图和保存按钮"
       ],
       "priority": "P1",
       "type": "auto",

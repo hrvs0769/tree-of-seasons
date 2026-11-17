@@ -48,7 +48,7 @@
 | BOOT-01 | 首页冷启动无报错 | P0 | 自动 | #loading 隐藏并 display:none；console.error=0；pageerror=0。 |
 | BOOT-02 | 关键资源全部 200 | P1 | 自动 | 5 个关键资源响应 200 或 file:// 读取成功；无失败请求。 |
 | BOOT-03 | 加载层可见并退场 | P2 | 自动 | #loading 初始可见且背景 #0C100E；完成后 .hidden 并在 620ms 后 display:none；role=status。 |
-| BOOT-04 | 开场页可见两按钮 | P0 | 自动 | #startScreen 非 hidden；role=dialog aria-modal=true aria-labelledby=startTitle；两按钮可见可点。 |
+| BOOT-04 | 开场页三个操作按钮 | P0 | 自动 | #startScreen 非 hidden；role=dialog aria-modal=true aria-labelledby=startTitle；开始上课/按章讲解/自由观看三个按钮可见可点。 |
 | BOOT-05 | 开始上课进入课堂 | P0 | 自动 | classroomMode=true；body.classroom-mode；#classroomTop 可见；#startScreen.hidden。 |
 | BOOT-06 | 自由观看开始播放 | P1 | 自动 | #startScreen.hidden；classroomMode=false；playing=true；storyTime 增长；#player 可见。 |
 | BOOT-07 | 离线 file:// 可直接运行 | P1 | 自动 | file:// 下 canvas 有尺寸、无网络请求、无 console error、播放器时间码可见。 |
@@ -120,7 +120,7 @@
 | CLASS-09 | 投影增亮 | P1 | 自动 | body.classList 含 projector；canvas 亮度提升；#classProjectorBtn aria-pressed 同步。 |
 | CLASS-10 | 锁定功能已移除 | P2 | 自动 | #classLockBtn 与 #lockOverlay 不存在；state 无 touchLocked；按 L 无反应。 |
 | CLASS-11 | 故事姐姐朗诵 | P1 | 人工 | #classVoiceBtn aria-pressed 切换；优先在线自然中文语音；朗读期间 BGM 音量×0.18；无中文音时显示 #voiceNotice 降级提示。 |
-| CLASS-12 | 四季合影忙碌态 | P1 | 自动 | 点击后 #classQuartetBtn.disabled + aria-busy=true + .busy；完成后 4 个 img，object-fit:contain。 |
+| CLASS-12 | 四季合影忙碌态 | P1 | 自动 | 点击后 #classQuartetBtn.disabled + aria-busy=true + .busy；完成后 4 个 img，object-fit:contain，存在「保存四宫格」按钮。 |
 | CLASS-13 | 结束提示不弹合影 | P2 | 自动 | storyTime=259.9；playing=false；#classToast 文本含「四季合影」；无 .modal.show。 |
 | CLASS-14 | 上一章与下一章 | P2 | 自动 | 点击下一章从第 1 章到第 2 章 start=16；上一章回到 0；按钮状态同步。 |
 | CLASS-15 | 朗诵语音选择与降级提示 | P1 | 自动 | 中文在线 Natural 音（如 Microsoft Xiaoxiao Online）优先；无语音时 #voiceNotice.show 且 aria-pressed=false；仅非中文音时 reason=no-chinese。 |
@@ -211,11 +211,11 @@
 | `boot.noErrors` | BOOT-01 首页冷启动无报错 | 冷启动后 console.error 与 pageerror 均为 0，加载层正常退场。 |
 | `boot.resources` | BOOT-02 关键资源全部 200 | index.html、app.js、bgm.js、Three.js 与 BGM 音频均成功加载。 |
 | `boot.loadingHidden` | BOOT-03 加载层可见并退场 | 加载层以深色主题展示「正在生长…」，加载完成后 620ms 内消失。 |
-| `boot.startScreen` | BOOT-04 开场页可见两按钮 | 开场页可见且开始上课/自由观看按钮均可点击。 |
+| `boot.startScreen` | BOOT-04 开场页三个操作按钮 | 开场页可见且开始上课/按章讲解/自由观看按钮均可点击。 |
 | `boot.startClassEnter` | BOOT-05 开始上课进入课堂 | 点击开始上课进入课堂模式，顶栏出现且开场页隐藏。 |
 | `boot.freeView` | BOOT-06 自由观看开始播放 | 点击自由观看隐藏开场页并开始播放，时间持续前进。 |
 | `boot.fileProtocol` | BOOT-07 离线 file:// 可直接运行 | 双击 index.html 以 file:// 打开时 3D 场景与播放器正常工作。 |
-| `boot.cacheVersion` | BOOT-08 构建资源带缓存版本 | app.js 与 src/bgm.js 引用均带 ?v=round3 版本参数。 |
+| `boot.cacheVersion` | BOOT-08 构建资源带缓存版本 | app.js 与 src/bgm.js 引用均带 ?v=round6 版本参数。 |
 | `boot.themeMeta` | BOOT-09 meta 与深色主题一致 | charset、viewport、theme-color 与 color-scheme 齐全。 |
 | `boot.noExternalDeps` | BOOT-10 无外部网络依赖 | 页面不加载 CDN、网络字体、外部图片，所有资源均为本地相对路径。 |
 
@@ -279,7 +279,7 @@
 | `classroom.exit` | CLASS-08 退出确认与保留进度 | 退出先确认，取消可返回，确认后保留 storyTime 并显示继续观看。 |
 | `classroom.projector` | CLASS-09 投影增亮 | 增亮按钮切换 body.projector，画面明显变亮且 aria-pressed 同步。 |
 | `classroom.lock` | CLASS-10 锁定功能已移除 | 断言锁定按钮/遮罩/touchLocked/L 快捷键全部不存在。 |
-| `classroom.quartet` | CLASS-12 四季合影忙碌态 | 生成合影时按钮进入 busy/aria-busy，完成后 4 张图按原比例完整显示。 |
+| `classroom.quartet` | CLASS-12 四季合影忙碌态 | 生成合影时按钮进入 busy/aria-busy，完成后 4 张图按原比例完整显示并可保存。 |
 | `classroom.end` | CLASS-13 结束提示不弹合影 | 到 259.9s 自动停止，仅 toast 提示可点四季合影，不自动打开弹层。 |
 | `classroom.nextPrev` | CLASS-14 上一章与下一章 | 上一章/下一章按钮跳到相邻章节起点，边界章按钮禁用。 |
 | `classroom.voice` | CLASS-15 朗诵语音选择与降级提示 | 中文在线 Natural 音优先；无语音时显示 #voiceNotice 且 aria-pressed=false；仅非中文音时 reason=no-chinese。 |

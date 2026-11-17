@@ -120,8 +120,11 @@ function samplePalette(p, out) {
 
 /* ---------------- 基础三件套 ---------------- */
 const canvasHost = document.getElementById('app');
+const IS_COARSE_POINTER = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+const LOW_POWER = IS_COARSE_POINTER || (navigator.hardwareConcurrency || 8) <= 4;
+const DPR_CAP = LOW_POWER ? 1.3 : 1.75;
 const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, DPR_CAP));
 function appViewportSize() {
   return {
     w: Math.max(1, canvasHost.clientWidth || window.innerWidth),
@@ -314,7 +317,7 @@ scene.add(ambient);
 
 const sun = new THREE.DirectionalLight(0xffffff, 2.4);
 sun.castShadow = true;
-sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.mapSize.set(LOW_POWER ? 1024 : 2048, LOW_POWER ? 1024 : 2048);
 sun.shadow.camera.left = -20; sun.shadow.camera.right = 20;
 sun.shadow.camera.top = 18; sun.shadow.camera.bottom = -16;
 sun.shadow.camera.near = 1; sun.shadow.camera.far = 110;
@@ -2305,7 +2308,7 @@ function buildTree(seed) {
   const leaves = new THREE.InstancedMesh(LEAF_GEO, leafMat, count);
   leaves.userData.part = 'leaf';
   leaves.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-  leaves.castShadow = true;
+  leaves.castShadow = false;
   leaves.frustumCulled = false;
   group.add(leaves);
 
@@ -2789,6 +2792,7 @@ const narrationEl = document.getElementById('narration');
 
 const startScreenEl = document.getElementById('startScreen');
 const startClassBtn = document.getElementById('startClassBtn');
+const startGuidedBtn = document.getElementById('startGuidedBtn');
 const freeViewBtn = document.getElementById('freeViewBtn');
 const classroomTopEl = document.getElementById('classroomTop');
 const classChapterIndexEl = document.getElementById('classChapterIndex');
@@ -2819,6 +2823,7 @@ const teacherTitleEl = document.getElementById('teacherTitle');
 const teacherBodyEl = document.getElementById('teacherBody');
 const quartetOverlayEl = document.getElementById('quartetOverlay');
 const quartetGridEl = document.getElementById('quartetGrid');
+const quartetSaveBtn = document.getElementById('quartetSaveBtn');
 const partCardEl = document.getElementById('partCard');
 const partGlyphEl = document.getElementById('partGlyph');
 const partNameEl = document.getElementById('partName');
@@ -2877,6 +2882,7 @@ let wakeLock = null;
 let idleTimer = 0;
 let quartetBusy = false;
 let quartetAutoDone = false;
+let lastQuartetFrames = [];
 let quartetShooting = false;   // 四季合影期间关掉深根取景，保证四张照片构图一致
 
 
@@ -3078,13 +3084,17 @@ function setStoryTime(t, pause = true) {
   updateChapterUI(storyTime);
   syncPlayer();
 }
+function seekWithSpeech(t, pause = true) {
+  setStoryTime(t, pause);
+  if (classroomMode && playing && voiceOn) speakCurrentChapter({ immediate: true });
+}
 function togglePlay() {
   if (storyTime >= STORY_END - 0.01) { storyTime = 0; prevT = 0; autoPausePending = false; quartetAutoDone = false; updateChapterUI(0); }
   if (findActive) { stopFindGame(); resetFindBag(); }
   playing = !playing;
   autoPausePending = false;
   hidePausePrompt();
-  if (playing && classroomMode && voiceOn) speakCurrentChapter();
+  if (playing && classroomMode && voiceOn) speakCurrentChapter({ immediate: true });
   if (!playing) cancelSpeech();
   syncPlayer();
 }
@@ -3226,10 +3236,18 @@ function focusableIn(el) {
     (n) => !n.disabled && n.offsetParent !== null
   );
 }
+let modalResumePlaying = false;
 function openModal(el) {
   if (!el) return;
   // 同一时间只允许一个弹层，避免 Q/C 叠出两层
   document.querySelectorAll('.modal.show').forEach((m) => { if (m !== el) m.classList.remove('show'); });
+  // 课堂里打开章节/教师提示/合影时先暂停，避免老师看 3 秒提示就错过 12 秒的章节。
+  if (classroomMode && playing && !hasOpenModal()) {
+    modalResumePlaying = true;
+    playing = false;
+    cancelSpeech();
+    syncPlayer();
+  }
   if (el === chapterDrawerEl) buildChapterGrid();
   if (el === teacherPanelEl) updateTeacherCard(chapterIndexAt(storyTime));
   lastFocusedBeforeModal = document.activeElement;
@@ -3245,11 +3263,18 @@ function openModal(el) {
     }
   });
 }
+function restoreModalPlayback() {
+  if (modalResumePlaying) {
+    modalResumePlaying = false;
+    if (classroomMode) { playing = true; syncPlayer(); if (voiceOn) speakCurrentChapter({ immediate: true }); }
+  }
+}
 function closeModal(el) {
   if (!el || !el.classList.contains('show')) return;
   el.classList.add('closing');
   setTimeout(() => { el.classList.remove('show', 'closing'); }, 190);
   if (!document.querySelector('.modal.show:not(.closing)')) setBackgroundInert(false);
+  if (!document.querySelector('.modal.show:not(.closing)')) restoreModalPlayback();
   if (lastFocusedBeforeModal && lastFocusedBeforeModal.focus) {
     lastFocusedBeforeModal.focus({ preventScroll: true });
     lastFocusedBeforeModal = null;
@@ -3262,6 +3287,7 @@ function closeAllModals() {
     setTimeout(() => { m.classList.remove('show', 'closing'); }, 190);
   });
   setBackgroundInert(false);
+  if (!document.querySelector('.modal.show:not(.closing)')) restoreModalPlayback();
   if (lastFocusedBeforeModal && lastFocusedBeforeModal.focus) {
     lastFocusedBeforeModal.focus({ preventScroll: true });
     lastFocusedBeforeModal = null;
@@ -3329,9 +3355,10 @@ function updateTeacherCard(idx) {
 }
 function goToChapter(idx, pause = true) {
   idx = clamp(idx, 0, CHAPTERS.length - 1);
+  if (pause) modalResumePlaying = false;
   const t = Math.max(0.01, CHAPTERS[idx].start + 0.01);
   setStoryTime(t, pause);
-  if (!pause) { playing = true; syncPlayer(); }
+  if (!pause) { playing = true; syncPlayer(); if (classroomMode && voiceOn) speakCurrentChapter({ immediate: true }); }
 }
 function nextChapter() {
   const idx = chapterIndexAt(storyTime);
@@ -3355,7 +3382,7 @@ function updateClassroomButtons() {
     classVoiceBtn.setAttribute('aria-pressed', voiceOn ? 'true' : 'false');
     if (!vs.supported) classVoiceBtn.title = '当前浏览器不支持朗读（Web Speech API）';
     else if (!vs.available) classVoiceBtn.title = '未检测到中文语音，点击查看降级说明';
-    else classVoiceBtn.title = '故事姐姐朗读';
+    else classVoiceBtn.title = '朗读本章旁白';
   }
   if (classProjectorBtn) {
     classProjectorBtn.classList.toggle('on', projectorBright);
@@ -3381,14 +3408,14 @@ function toggleProjector() {
   showToast(projectorBright ? '投影增亮已开启' : '投影增亮已关闭');
 }
 
-/* ---- 故事姐姐朗诵：浏览器 Web Speech API
+/* ---- 朗读：浏览器 Web Speech API
  * 中文语音优先；中文里优先在线自然音；没有可用语音时用 #voiceNotice 做降级提示。
  * 不下载任何音频文件，也不依赖后端。 ---- */
 function cancelSpeech() {
   speechReader.cancel();
   lastSpokenChapter = -1;
 }
-function speakCurrentChapter() {
+function speakCurrentChapter(opts = {}) {
   if (!voiceOn || !speechSupported || FREEZE_T !== null || VIDEO) return;
   const idx = chapterIndexAt(storyTime);
   if (lastSpokenChapter === idx && speechReader.isSpeaking()) return;
@@ -3396,8 +3423,14 @@ function speakCurrentChapter() {
     rate: 0.92,
     pitch: 1.04,
     volume: 1,
+    immediate: !!opts.immediate,
     onerror: (err) => {
-      if (!/canceled|interrupted/i.test(String(err || ''))) showVoiceNotice('error');
+      if (/canceled|interrupted/i.test(String(err || ''))) return;
+      // 语音失败不能留下“朗读已开启”的假状态；尤其是 iOS/微信没有真正出声时。
+      voiceOn = false;
+      lastSpokenChapter = -1;
+      updateClassroomButtons();
+      showVoiceNotice('error');
     },
   });
   if (!res.ok) {
@@ -3428,19 +3461,29 @@ async function toggleVoice() {
       showVoiceNotice('unsupported');
       return;
     }
-    // 语音列表可能还没加载完；最多等 1.2 秒，仍没有就明确降级
-    const checked = await speechReader.ensureAvailable(1200);
+    // 先同步刷新一次：语音列表已就绪时，首次 speak 必须在 click 的同步调用栈里，
+    // 不能先 await 再 setTimeout，否则 iOS/微信 WebKit 会静默忽略。
+    speechReader.refresh();
+    let checked = speechReader.state();
+    if (!checked.available && FREEZE_T === null && !VIDEO) {
+      // 列表异步加载时只做“准备”，不把用户激活浪费在等待上；让老师再点一次。
+      checked = await speechReader.ensureAvailable(1200);
+    }
     if (!checked.available) {
       voiceOn = false;
       updateClassroomButtons();
       showVoiceNotice(checked.reason);
       return;
     }
+    if (FREEZE_T !== null || VIDEO) {
+      showToast('定帧/导出模式不朗读');
+      return;
+    }
     voiceOn = true;
     updateClassroomButtons();
     hideVoiceNotice();
     showToast('朗读已开启', 1800);
-    if (classroomMode && playing) speakCurrentChapter();
+    if (classroomMode && playing) speakCurrentChapter({ immediate: true });
   } finally {
     voiceChecking = false;
   }
@@ -3511,7 +3554,7 @@ function enterClassroomMode(opts = {}) {
   }
   if (freeViewBtn) freeViewBtn.textContent = '自由观看';
   playing = false;
-  setAutoPause(false);
+  setAutoPause(opts.autoPause === true);
   setProjector(false);
   updateClassroomButtons();
   updateChapterUI(storyTime);
@@ -3520,7 +3563,7 @@ function enterClassroomMode(opts = {}) {
   if (canPlay && opts.autoplay !== false) {
     playing = true;
     syncPlayer();
-    if (voiceOn) speakCurrentChapter();
+    if (voiceOn) speakCurrentChapter({ immediate: true });
   }
   if (opts.fullscreen) requestFullscreenSafe();
   requestWakeLock();
@@ -3560,17 +3603,17 @@ function partFromObject(obj) {
   }
   return null;
 }
-function partVisibleAt(part, t) {
+function partVisibleAt(part, t = storyTime) {
   // 透明但仍在场景里的实例（春花、果实、积雪）不能参与拾取，否则夏天会点到“雪”。
   // 先问真实显隐，再叠加章节时间白名单，避免「老师说有、孩子点不中」。
-  if (!tree || !partHasVisibleState(part)) return false;
+  if (!tree || !partHasVisibleState(part, t)) return false;
   const p = ((storySeason(t) % 1) + 1) % 1;
   if (part === 'seed') return t < 80;
   if (part === 'cotyledon') return t >= 60 && t <= 100;
   if (part === 'root') return t >= 30;
   if (part === 'trunk') return t >= 56;
   if (part === 'branch') return t >= 90;
-  if (part === 'leaf') return t >= 74 && p < 0.70;   // 秋末/冬季叶已落光
+  if (part === 'leaf') return t >= 74 && p < 0.72;   // 秋末/冬季叶已落光
   if (part === 'flower') return t >= 180 && t <= 206;
   if (part === 'fruit') return t >= 220 && t <= 242;
   if (part === 'snow') return (t >= 160 && t <= 180) || (t >= 240 && t <= 260);
@@ -3578,30 +3621,38 @@ function partVisibleAt(part, t) {
   if (part === 'insect') return t >= 198 && t <= 220;
   return true;
 }
-function partHasVisibleState(part) {
+function partHasVisibleState(part, t = storyTime) {
   if (!tree) return false;
-  const g = growthAt(storyTime);
+  const g = growthAt(t);
+  const p = ((storySeason(t) % 1) + 1) % 1;
   if (part === 'seed') return !!(tree.seedMesh && tree.seedMesh.visible && tree.seedMesh.scale.x > 0.008);
   if (part === 'root') return tree.roots.some((r) => r.mesh.visible);
   if (part === 'trunk') return !!(tree.branches[0] && tree.branches[0].mesh.visible && g > 0.11);
   if (part === 'branch') return tree.branches.some((b, i) => i > 0 && b.mesh.visible) && g > 0.24;
   if (part === 'leaf') {
-    const p = ((storySeason(storyTime) % 1) + 1) % 1;
-    return g > 0.13 && (p < 0.05 || p < 0.70);
+    // 不能只看 g / p 区间：t=180 时 p=0，leafAmount=0，所有叶子缩放到 0.0001。
+    // 必须把“本帧实际会长多大”算进来，否则找一找会出看不见的叶子。
+    const leafAmount = p < 0.05 ? smoothstep(0.0, 0.05, p) : 1;
+    return g > 0.13 && leafAmount > 0.02 && p < 0.72;
   }
   if (part === 'cotyledon') return tree.cotyledons.some((m) => m.visible && m.scale.x > 0.04);
-  if (part === 'flower') return !!(tree.blossoms && tree.blossoms.visible && tree.blossomMat.opacity > 0.05);
+  if (part === 'flower') {
+    const blossomK = storyYear(t) >= 2 ? smoothstep(0.02, 0.07, p) * (1 - smoothstep(0.22, 0.30, p)) : 0;
+    return !!(tree.blossoms && blossomK > 0.05);
+  }
   if (part === 'fruit') {
-    const p = ((storySeason(storyTime) % 1) + 1) % 1;
-    const grow = storyYear(storyTime) >= 2 ? smoothstep(0.50, 0.58, p) : 0;
+    const grow = storyYear(t) >= 2 ? smoothstep(0.50, 0.58, p) : 0;
     return grow > 0.02 && p < 0.80;
   }
-  if (part === 'snow') return !!(tree.snowCaps && tree.snowCaps.visible && tree.snowCapMat.opacity > 0.05);
-  if (part === 'bird') return perchBirds.visible && birdWorldPoints.length >= 2;
-  if (part === 'insect') return butterflies.visible && insectWorldPoints.length >= 2;
+  if (part === 'snow') {
+    const snowCapK = smoothstep(0.75, 0.85, p) * (1 - smoothstep(0.92, 0.99, p));
+    return !!(tree.snowCaps && snowCapK > 0.05);
+  }
+  if (part === 'bird') return t >= 196 && t <= 222 && perchBirds.visible && birdWorldPoints.length >= 2;
+  if (part === 'insect') return t >= 196 && t <= 222 && butterflies.visible && insectWorldPoints.length >= 2;
   return false;
 }
-function partWorldPoints(part) {
+function partWorldPoints(part, t = storyTime) {
   if (!tree || !tree.group) return [];
   const pts = [];
   const addLocal = (v) => {
@@ -3633,11 +3684,15 @@ function partWorldPoints(part) {
       for (let i = 0; i < b.pts.length; i += 2) addLocal(b.pts[i]);
     }
   } else if (part === 'leaf') {
-    const g = growthAt(storyTime);
-    for (let i = 0; i < tree.leafData.length; i += 25) {
-      const d = tree.leafData[i];
-      if (d.grow != null && d.grow > g + 0.02) continue;
-      addLocal(d.pos);
+    const g = growthAt(t);
+    const p = ((storySeason(t) % 1) + 1) % 1;
+    const leafAmount = p < 0.05 ? smoothstep(0.0, 0.05, p) : 1;
+    if (leafAmount > 0.02 && p < 0.72) {
+      for (let i = 0; i < tree.leafData.length; i += 25) {
+        const d = tree.leafData[i];
+        if (d.grow != null && d.grow > g + 0.02) continue;
+        addLocal(d.pos);
+      }
     }
   } else if (part === 'cotyledon') {
     for (const m of tree.cotyledons) if (m.visible && m.scale.x > 0.04) addWorld(m.getWorldPosition(new THREE.Vector3()));
@@ -3654,12 +3709,12 @@ function partWorldPoints(part) {
   }
   return pts;
 }
-function partScreenPoints(part) {
+function partScreenPoints(part, t = storyTime) {
   if (!tree || !tree.group) return [];
   const rect = renderer.domElement.getBoundingClientRect();
   const out = [];
   const v = new THREE.Vector3();
-  for (const p of partWorldPoints(part)) {
+  for (const p of partWorldPoints(part, t)) {
     v.copy(p).project(camera);
     if (v.z < -1 || v.z > 1) continue;
     const x = rect.left + (v.x * 0.5 + 0.5) * rect.width;
@@ -3669,11 +3724,11 @@ function partScreenPoints(part) {
   }
   return out;
 }
-function findablePartsAt(t) {
+function findablePartsAt(t = storyTime) {
   const preferred = CHAPTER_PARTS[chapterIndexAt(t)] || [];
   return preferred.filter((p) => {
-    if (!partVisibleAt(p, t) || !partHasVisibleState(p)) return false;
-    const count = partScreenPoints(p).length;
+    if (!partVisibleAt(p, t) || !partHasVisibleState(p, t)) return false;
+    const count = partScreenPoints(p, t).length;
     // 种子很小但它是核心观察对象，允许 1 个投影点；其他部位至少 2 个点，避免选到几乎看不见的目标
     return count >= (p === 'seed' ? 1 : 2);
   });
@@ -3683,7 +3738,7 @@ function isNearFindTarget(clientX, clientY) {
   const rect = renderer.domElement.getBoundingClientRect();
   const radius = Math.max(40, Math.min(80, rect.width * 0.055));
   const rr = radius * radius;
-  for (const p of partScreenPoints(findTarget)) {
+  for (const p of partScreenPoints(findTarget, storyTime)) {
     const dx = p.x - clientX, dy = p.y - clientY;
     if (dx * dx + dy * dy <= rr) return true;
   }
@@ -3698,7 +3753,7 @@ function pickPartAt(clientX, clientY) {
   const hits = raycaster.intersectObject(tree.group, true);
   for (const h of hits) {
     const part = partFromObject(h.object);
-    if (part && partVisibleAt(part, storyTime) && partHasVisibleState(part)) return part;
+    if (part && partVisibleAt(part, storyTime) && partHasVisibleState(part, storyTime)) return part;
   }
   return null;
 }
@@ -3841,6 +3896,48 @@ function setQuartetBusy(busy) {
     btn.classList.toggle('busy', busy);
   }
 }
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+async function saveQuartetImage() {
+  if (!lastQuartetFrames.length) return;
+  let imgs;
+  try { imgs = await Promise.all(lastQuartetFrames.map((f) => loadImage(f.url))); }
+  catch (e) { showToast('合影保存失败，请重试'); return; }
+  const gap = 24, pad = 28, labelH = 56;
+  const cellW = Math.max(...imgs.map((i) => i.width));
+  const cellH = Math.max(...imgs.map((i) => i.height));
+  const c = document.createElement('canvas');
+  c.width = pad * 2 + cellW * 2 + gap;
+  c.height = pad * 2 + (cellH + labelH) * 2 + gap;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0C100E'; ctx.fillRect(0, 0, c.width, c.height);
+  imgs.forEach((img, idx) => {
+    const col = idx % 2, row = Math.floor(idx / 2);
+    const x = pad + col * (cellW + gap);
+    const y = pad + row * (cellH + labelH + gap);
+    ctx.drawImage(img, x, y, img.width, img.height);
+    const frame = lastQuartetFrames[idx];
+    ctx.fillStyle = 'rgba(0,0,0,.62)';
+    ctx.fillRect(x, y + img.height - 38, Math.min(img.width, 230), 38);
+    ctx.fillStyle = '#F2F4F0';
+    ctx.font = '600 20px "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.fillText(frame.label + ' · ' + frame.year, x + 12, y + img.height - 12);
+  });
+  const blob = await new Promise((resolve) => c.toBlob(resolve, 'image/jpeg', 0.92));
+  if (!blob) { showToast('合影保存失败，请重试'); return; }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '一棵树的四季-四季合影.jpg';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+  showToast('四季合影已保存');
+}
 async function captureQuartet() {
   if (quartetBusy) return;
   quartetBusy = true;
@@ -3857,16 +3954,20 @@ async function captureQuartet() {
       renderer.render(scene, camera);
       frames.push({ label, year, url: snapshotCanvas() });
     }
+    lastQuartetFrames = frames;
     if (quartetGridEl) {
       quartetGridEl.innerHTML = frames.map((f) =>
         '<figure class="quartet-item"><img src="' + f.url + '" alt="' + f.label + '"><figcaption><b>' + f.label + '</b><span>' + f.year + '</span></figcaption></figure>'
       ).join('');
     }
+    modalResumePlaying = old.playing;
+    playing = false;
     openModal(quartetOverlayEl);
   } finally {
     freezeOverride = null;
     quartetShooting = false;
-    storyTime = old.t; prevT = old.prevT; playing = old.playing;
+    storyTime = old.t; prevT = old.prevT;
+    playing = old.playing && !(quartetOverlayEl && quartetOverlayEl.classList.contains('show'));
     cam.theta = old.theta; cam.radius = old.radius; cam.phi = old.phi;
     syncPlayer(); updateChapterUI(storyTime);
     quartetBusy = false;
@@ -3888,7 +3989,7 @@ pausePromptEl.addEventListener('click', (e) => {
   if (storyTime >= STORY_END - 0.01) return;
   playing = true;
   syncPlayer();
-  if (classroomMode && voiceOn) speakCurrentChapter();
+  if (classroomMode && voiceOn) speakCurrentChapter({ immediate: true });
 });
 function hidePausePrompt() {
   if (pausePromptEl) pausePromptEl.classList.remove('show');
@@ -3924,7 +4025,7 @@ function endScrub() {
   scrubbing = false;
   if (scrubResume) { playing = true; scrubResume = false; }
   syncPlayer();
-  if (classroomMode && playing && voiceOn) speakCurrentChapter();
+  if (classroomMode && playing && voiceOn) speakCurrentChapter({ immediate: true });
 }
 timelineEl.addEventListener('pointerdown', () => { beginScrub(); });
 timelineEl.addEventListener('input', (e) => { setStoryTime(parseFloat(e.target.value), !scrubResume); });
@@ -3957,12 +4058,14 @@ if (classProgressEl) {
   classProgressEl.addEventListener('pointerup', (e) => {
     try { if (classProgressEl.hasPointerCapture(e.pointerId)) classProgressEl.releasePointerCapture(e.pointerId); } catch (err) {}
     if (classScrubResume) { playing = true; classScrubResume = false; syncPlayer(); }
+    if (classroomMode && playing && voiceOn) speakCurrentChapter({ immediate: true });
   });
   classProgressEl.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
       e.stopPropagation();
       setStoryTime(storyTime + (e.key === 'ArrowLeft' ? -5 : 5), !playing);
+      if (classroomMode && playing && voiceOn) speakCurrentChapter({ immediate: true });
     }
   });
 }
@@ -3974,6 +4077,7 @@ document.getElementById('replant').addEventListener('click', () => {
 });
 
 startClassBtn.addEventListener('click', () => enterClassroomMode({ reset: true, fullscreen: true, autoplay: true }));
+startGuidedBtn.addEventListener('click', () => enterClassroomMode({ reset: true, fullscreen: true, autoplay: true, autoPause: true }));
 freeViewBtn.addEventListener('click', () => {
   startScreenVisible = false;
   startScreenEl.classList.add('hidden');
@@ -3988,12 +4092,13 @@ classNextBtn.addEventListener('click', nextChapter);
 classReplayBtn.addEventListener('click', () => {
   storyTime = 0; prevT = 0; playing = true; autoPausePending = false; quartetAutoDone = false;
   currentChapter = -1; updateChapterUI(0); syncPlayer();
-  if (voiceOn) speakCurrentChapter();
+  if (voiceOn) speakCurrentChapter({ immediate: true });
 });
 classChapterBtn.addEventListener('click', () => openModal(chapterDrawerEl));
 classTeacherBtn.addEventListener('click', () => openModal(teacherPanelEl));
 classFindBtn.addEventListener('click', startFindGame);
 classQuartetBtn.addEventListener('click', captureQuartet);
+if (quartetSaveBtn) quartetSaveBtn.addEventListener('click', saveQuartetImage);
 classAutoBtn.addEventListener('click', toggleAutoPause);
 classProjectorBtn.addEventListener('click', toggleProjector);
 classExitBtn.addEventListener('click', showExitConfirm);
@@ -4038,10 +4143,10 @@ window.addEventListener('keydown', (e) => {
   // 焦点在按钮/输入控件上时，空格交给控件本身，不触发全局播放
   if (e.code === 'Space' && e.target && e.target.closest && e.target.closest('button, a, input, textarea, select, [contenteditable="true"]')) return;
   if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
-  else if (e.key === 'ArrowLeft') { e.preventDefault(); setStoryTime(storyTime - 5, !playing); }
-  else if (e.key === 'ArrowRight') { e.preventDefault(); setStoryTime(storyTime + 5, !playing); }
-  else if (e.key === 'Home') { e.preventDefault(); setStoryTime(0, !playing); }
-  else if (e.key === 'End') { e.preventDefault(); setStoryTime(STORY_END, !playing); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); seekWithSpeech(storyTime - 5, !playing); }
+  else if (e.key === 'ArrowRight') { e.preventDefault(); seekWithSpeech(storyTime + 5, !playing); }
+  else if (e.key === 'Home') { e.preventDefault(); seekWithSpeech(0, !playing); }
+  else if (e.key === 'End') { e.preventDefault(); seekWithSpeech(STORY_END, !playing); }
   else if (e.key === 'PageUp') { e.preventDefault(); prevChapter(); }
   else if (e.key === 'PageDown') { e.preventDefault(); nextChapter(); }
   else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleFullscreen(); }
@@ -4375,44 +4480,50 @@ function animate() {
   const blossomF = 0;   // 春天用独立的小花实例，不再给整树叶子染白
 
   const leaves = tree.leaves;
-  for (let i = 0; i < tree.leafData.length; i++) {
-    const d = tree.leafData[i];
-    const branchK = d.branch ? smoothstep(d.branch.g0, d.branch.g1, g) : 1;
-    // 叶片只在枝条真正长到它那一段之后才出现，并跟着当前枝梢走
-    const reach = d.branch ? smoothstep(Math.max(0.02, d.siteT - 0.06), d.siteT + 0.06, branchK) : 1;
-    const growK = smoothstep(d.grow, Math.min(1.0, d.grow + 0.10), g) * reach;
-    const dropT = smoothstep(0.58 + d.stag * 0.08, 0.72 + d.stag * 0.05, p); // 秋天中后段一片片落下，冬天前落完
-    const sc = d.size * growK * leafAmount * (1 - dropT);
-    if (sc < 0.002) {
-      _m.makeScale(0.0001, 0.0001, 0.0001);
+  // 冬季/种子期整组叶子都不参与渲染：否则 24.5k 个缩放 0.0001 的实例
+  // 仍会绘制约 39 万个零尺寸三角形，并每帧上传整块 instanceMatrix。
+  const leavesVisible = g > 0.13 && leafAmount > 0.01 && p < 0.72;
+  tree.leaves.visible = leavesVisible;
+  if (leavesVisible) {
+    for (let i = 0; i < tree.leafData.length; i++) {
+      const d = tree.leafData[i];
+      const branchK = d.branch ? smoothstep(d.branch.g0, d.branch.g1, g) : 1;
+      // 叶片只在枝条真正长到它那一段之后才出现，并跟着当前枝梢走
+      const reach = d.branch ? smoothstep(Math.max(0.02, d.siteT - 0.06), d.siteT + 0.06, branchK) : 1;
+      const growK = smoothstep(d.grow, Math.min(1.0, d.grow + 0.10), g) * reach;
+      const dropT = smoothstep(0.58 + d.stag * 0.08, 0.72 + d.stag * 0.05, p); // 秋天中后段一片片落下，冬天前落完
+      const sc = d.size * growK * leafAmount * (1 - dropT);
+      if (sc < 0.002) {
+        _m.makeScale(0.0001, 0.0001, 0.0001);
+        leaves.setMatrixAt(i, _m);
+        continue;
+      }
+      const sway = Math.sin(t * 1.6 + d.phase) * 0.06 * growK;
+      if (d.branch) {
+        pointOnPolyline(d.branch.pts, Math.min(d.siteT, branchK), _leafP);
+        _p.copy(_leafP).add(d.offset);
+      } else {
+        _p.copy(d.pos);
+      }
+      _p.x += sway; _p.z += Math.cos(t * 1.3 + d.phase) * 0.05 * growK;
+      _q.copy(d.quat);
+      _e.set(sway * 0.8, sway * 0.5, sway * 0.6);
+      _q.multiply(_q2.setFromEuler(_e));
+      _s.setScalar(sc);
+      _m.compose(_p, _q, _s);
       leaves.setMatrixAt(i, _m);
-      continue;
-    }
-    const sway = Math.sin(t * 1.6 + d.phase) * 0.06 * growK;
-    if (d.branch) {
-      pointOnPolyline(d.branch.pts, Math.min(d.siteT, branchK), _leafP);
-      _p.copy(_leafP).add(d.offset);
-    } else {
-      _p.copy(d.pos);
-    }
-    _p.x += sway; _p.z += Math.cos(t * 1.3 + d.phase) * 0.05 * growK;
-    _q.copy(d.quat);
-    _e.set(sway * 0.8, sway * 0.5, sway * 0.6);
-    _q.multiply(_q2.setFromEuler(_e));
-    _s.setScalar(sc);
-    _m.compose(_p, _q, _s);
-    leaves.setMatrixAt(i, _m);
 
-    // 颜色：嫩绿 → 深绿 → 秋色 → 花白
-    const autumnK = smoothstep(0.46 + d.stag * 0.1, 0.62 + d.stag * 0.1, p);
-    _color.setHex(0x4f8a2d).lerp(tmpA.setHex(0x2b5c1e), greenToDeep);
-    _color.lerp(d.autumn, autumnK);
-    if (blossomF > 0.01) _color.lerp(tmpB.setHex(0xffd9e6), blossomF * 0.75);
-    _color.multiplyScalar(d.tone);
-    leaves.setColorAt(i, _color);
+      // 颜色：嫩绿 → 深绿 → 秋色 → 花白
+      const autumnK = smoothstep(0.46 + d.stag * 0.1, 0.62 + d.stag * 0.1, p);
+      _color.setHex(0x4f8a2d).lerp(tmpA.setHex(0x2b5c1e), greenToDeep);
+      _color.lerp(d.autumn, autumnK);
+      if (blossomF > 0.01) _color.lerp(tmpB.setHex(0xffd9e6), blossomF * 0.75);
+      _color.multiplyScalar(d.tone);
+      leaves.setColorAt(i, _color);
+    }
+    leaves.instanceMatrix.needsUpdate = true;
+    if (leaves.instanceColor) leaves.instanceColor.needsUpdate = true;
   }
-  leaves.instanceMatrix.needsUpdate = true;
-  if (leaves.instanceColor) leaves.instanceColor.needsUpdate = true;
 
   /* —— 春花与枝头积雪 —— */
   // 花只在第 2 年春天开（旧版 g 门槛让第一年 114–123s 提前开过一次）

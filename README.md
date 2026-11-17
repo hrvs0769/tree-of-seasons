@@ -84,11 +84,11 @@
 - 自动全屏，深色顶栏 + 深色大字幕带 + 深色控制条，所有控件都在 3D 画面之外；桌面顶栏 7 个工具按钮，移动端两行、每个 44px 高
 - 底栏有细进度条 `#classProgress`，可点击 / 拖动 / 键盘 `← →` 跳到任意秒，老师能重讲某一句
 - 每章结束自动暂停为可选功能，默认关闭；需要时点「每章停」开启，提示条上可直接点「继续播放」
-- 课堂音量、14 张章节卡片（打开自动滚到当前章）、可开启“故事姐姐”朗诵（浏览器 Web Speech，不加载音频）
+- 课堂音量、14 张章节卡片（打开自动滚到当前章）、可开启朗读（浏览器 Web Speech，不加载音频）；开场页另有「按章讲解」预设（默认仍是连续观看，按章讲解才开启每章停）
 - 大字幕自动高亮关键词（种子、根、芽、叶、花、果、小鸟、昆虫、蜜蜂、蝴蝶、瓢虫）
 - 点一下树上的部位，认读卡片会锚定在点击位置（移动端固定底部），显示「种子 / 根 / 树干 / 树枝 / 叶 / 花 / 果 / 雪 / 小鸟 / 昆虫」专用字
 - 「找一找」小游戏按当前章节**真实可见部位**依次出题（含鸟虫），错误提示在页面底部、不盖任务条
-- 细环季节转盘 + 「四季合影」（生成时按钮有忙碌态，图片按原比例完整显示）
+- 细环季节转盘 + 「四季合影」（生成时按钮有忙碌态，图片按原比例完整显示；弹层内可「保存四宫格」下载 JPG）
 - 投影增亮、屏幕常亮；每章停 / 增亮 / 朗诵都有 `aria-pressed` 状态
 - 退出课堂先弹确认层，**保留当前进度**，再进入可点「继续观看」
 - 支持翻页笔：空格暂停，PageUp / PageDown 切换上一章 / 下一章
@@ -120,8 +120,7 @@
 - `src/main.js` — 全部场景逻辑：递归树/根系生成、生长时间轴、四季调色板、实例化树叶/草/花/雪、程序化天空与远山、土壤剖面与地下水层、鸟虫与树荫、HUD 和播放器
 - `src/speech.js` — 朗诵器：浏览器 `speechSynthesis` 中文语音选择（在线自然音优先）、异步语音列表与无语音降级；由 esbuild 打进 `app.js`
 - `lib/three.module.min.js` — Three.js（取自本机 solar-system 项目的依赖）
-- `app.js` — esbuild 打包产物：
-  `esbuild src/main.js --bundle --format=iife --minify --alias:three=./lib/three.module.min.js --outfile=app.js`
+- `app.js` — esbuild 打包产物：`npm ci && npm run build`（本地依赖版本由 `package-lock.json` 锁定）
 - 场景结构：半圆岛（z ≤ 0）＋ 正对镜头的土壤断面（6 层土壤、3D 团粒/石子/草根、地下水层）＋ 有体积的根系
 - 生长时间轴：`GROW_KEYS` 控制 0–120 秒的非线性生长；季节从长成后开始每季 20 秒；根系另用 `rootAge` 在第 2 年继续深扎
 - 镜头：种子微距 → 根系剖面 → 破土 → 幼苗 → 后拉看全树；t=120–130 平滑交接，最后两章渐进露出含水层
@@ -160,4 +159,6 @@
 - [`docs/11-round3-ui-system.md`](docs/11-round3-ui-system.md) — 第三轮设计系统：token、组件、动效、交互映射、a11y、逐条验收与截图索引
 - [`docs/12-test-points.md`](docs/12-test-points.md) — 全项目 109 个测试点总表（10 模块 / P0-P1-P2 / 自动-人工）
 - [`docs/13-test-dashboard.md`](docs/13-test-dashboard.md) — 可视化测试看板使用手册：入口、数据契约、大版本运行流程、如何新增测试点
+- [`docs/14-review-engineering-and-teacher-perspective.md`](docs/14-review-engineering-and-teacher-perspective.md) — 2026-11-17 项目复盘：高级工程师审查 + 幼儿园教师视角（问题清单与改进路线）
+- [`docs/15-round6-implementation.md`](docs/15-round6-implementation.md) — 2026-11-18 第六轮执行记录：语音、找一找、性能、构建/CI、按章讲解、合影保存
 - [`qa/README.md`](qa/README.md) — QA 看板目录说明与命令速查
